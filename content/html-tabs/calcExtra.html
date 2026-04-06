@@ -1,0 +1,87 @@
+<!-- ═══ CALCULATOR ═══ -->
+  <div id="tab-calc" class="tcontent content hidden">
+    <div class="sh"><span class="i-en">🧮 Investment Calculator</span><span class="i-ru">🧮 Инвестиционный калькулятор</span></div>
+    <p class="ss"><span class="i-en">Net yield & payback period based on real Phuket STR operating costs · Adjust all inputs for your scenario</span><span class="i-ru">Чистая доходность и срок окупаемости с учётом реальных операционных расходов Пхукета · Меняйте параметры под ваш сценарий</span></p>
+
+    <div class="calc-grid">
+      <div class="calc-panel">
+        <div class="calc-title"><span class="i-en">Property Parameters</span><span class="i-ru">Параметры объекта</span></div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">Purchase Price (฿)</span><span class="i-ru">Цена покупки (฿)</span> <span id="cPriceVal">10,000,000</span></div>
+          <input type="range" class="calc-slider" id="cPrice" min="2000000" max="100000000" step="500000" value="10000000" oninput="calcUpdate()">
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">Unit Size (sqm)</span><span class="i-ru">Площадь (м²)</span> <span id="cSqmVal">45</span></div>
+          <input type="range" class="calc-slider" id="cSqm" min="25" max="300" step="5" value="45" oninput="calcUpdate()">
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">Average Daily Rate (฿ / night)</span><span class="i-ru">Средняя цена ночи (฿)</span> <span id="cADRVal">3,500</span></div>
+          <input type="range" class="calc-slider" id="cADR" min="1000" max="20000" step="250" value="3500" oninput="calcUpdate()">
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">Occupancy Rate</span><span class="i-ru">Заполняемость</span> <span id="cOccVal">68%</span></div>
+          <input type="range" class="calc-slider" id="cOcc" min="40" max="90" step="1" value="68" oninput="calcUpdate()">
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">Management Fee (% of gross)</span><span class="i-ru">Комиссия управляющего (%)</span> <span id="cMgmtVal">40%</span></div>
+          <input type="range" class="calc-slider" id="cMgmt" min="15" max="60" step="1" value="40" oninput="calcUpdate()">
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">CAM Fee (฿/sqm/month)</span><span class="i-ru">Общие расходы (฿/м²/мес)</span> <span id="cCAMVal">80</span></div>
+          <input type="range" class="calc-slider" id="cCAM" min="40" max="150" step="5" value="80" oninput="calcUpdate()">
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-lbl"><span class="i-en">Annual Appreciation</span><span class="i-ru">Прирост стоимости в год</span> <span id="cAppVal">6%</span></div>
+          <input type="range" class="calc-slider" id="cApp" min="0" max="15" step="0.5" value="6" oninput="calcUpdate()">
+        </div>
+      </div>
+
+      <div class="calc-panel">
+        <div class="calc-title"><span class="i-en">Results · Year 1</span><span class="i-ru">Результаты · Год 1</span></div>
+        <div class="calc-result-grid" id="calcResults">
+          <div class="cr highlight"><div class="cr-v" id="rNetYield">—</div><div class="cr-l"><span class="i-en">Net Yield</span><span class="i-ru">Чистая доходность</span></div></div>
+          <div class="cr highlight"><div class="cr-v" id="rGrossYield">—</div><div class="cr-l"><span class="i-en">Gross Yield</span><span class="i-ru">Валовая доходность</span></div></div>
+          <div class="cr"><div class="cr-v" id="rGrossIncome">—</div><div class="cr-l"><span class="i-en">Gross Income / yr</span><span class="i-ru">Валовой доход / год</span></div></div>
+          <div class="cr"><div class="cr-v" id="rNetIncome">—</div><div class="cr-l"><span class="i-en">Net Income / yr</span><span class="i-ru">Чистый доход / год</span></div></div>
+          <div class="cr"><div class="cr-v" id="rCAM">—</div><div class="cr-l"><span class="i-en">CAM / yr</span><span class="i-ru">Расходы / год</span></div></div>
+          <div class="cr"><div class="cr-v" id="rTax">—</div><div class="cr-l"><span class="i-en">Rental Tax 12.5%</span><span class="i-ru">Налог 12.5%</span></div></div>
+          <div class="cr"><div class="cr-v" id="rPayback">—</div><div class="cr-l"><span class="i-en">Payback (yield only)</span><span class="i-ru">Окупаемость (доходность)</span></div></div>
+          <div class="cr highlight"><div class="cr-v" id="rExit5">—</div><div class="cr-l"><span class="i-en">Exit Value (5yr)</span><span class="i-ru">Стоимость выхода (5 лет)</span></div></div>
+        </div>
+
+        <div style="margin-top:14px;background:var(--sur2);border-radius:var(--rs);padding:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px"><span class="i-en">Cost Breakdown</span><span class="i-ru">Структура расходов</span></div>
+          <div id="costBar" style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:8px;gap:1px"></div>
+          <div id="costLegend" style="font-size:10px;color:var(--txt2);display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+
+        <div class="calc-note">
+          <span class="i-en">Net yield = Gross income × (1 − Mgmt%) − CAM − Tax 12.5% on net. Occupancy: Phuket market range 55–80% depending on zone and management quality. Appreciation: Cherngtalay/Bang Tao avg 8–12% last 18mo (Siam Expat 2026).</span>
+          <span class="i-ru">Чистая доходность = Валовой доход × (1 − Комиссия%) − CAM − Налог 12.5%. Заполняемость: 55–80% в зависимости от зоны. Прирост: Cherngtalay/Bang Tao +8–12% за 18 мес (Siam Expat 2026).</span>
+        </div>
+
+        <div style="margin-top:12px">
+          <a href="https://wa.me/66922407355?text=Calculation+request" target="_blank" style="display:block;text-align:center;background:var(--ink);color:var(--gold);padding:10px;border-radius:var(--rs);font-family:'Josefin Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;text-decoration:none"><span class="i-en">📞 Get Real Comparable Data from Ignatev Estate</span><span class="i-ru">📞 Запросить реальные данные у Ignatev Estate</span></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sh"><span class="i-en">Typical Phuket STR Benchmarks</span><span class="i-ru">Типичные STR-ориентиры Пхукета</span></div>
+    <p class="ss"><span class="i-en">Based on AirDNA data, C9 Hotelworks, and Ignatev Estate portfolio of 35 managed properties</span><span class="i-ru">На основе AirDNA, C9 Hotelworks и портфеля Ignatev Estate из 35 управляемых объектов</span></p>
+    <table class="ft"><thead><tr><th><span class="i-en">Zone</span><span class="i-ru">Зона</span></th><th>ADR ฿</th><th><span class="i-en">Occupancy</span><span class="i-ru">Заполн.</span></th><th><span class="i-en">Gross Yield</span><span class="i-ru">Валовой</span></th><th><span class="i-en">Net Yield (after mgmt 40%)</span><span class="i-ru">Чистый (после 40%)</span></th></tr></thead><tbody>
+    <tr><td>Bang Tao / Cherngtalay</td><td>฿3,500–6,000</td><td>68–78%</td><td>7–9%</td><td style="color:#1A6B42;font-weight:600">4.2–5.4%</td></tr>
+    <tr><td>Kamala / Surin</td><td>฿4,000–8,000</td><td>65–75%</td><td>6–9%</td><td style="color:#1A6B42;font-weight:600">3.6–5.4%</td></tr>
+    <tr><td>Rawai / Nai Harn</td><td>฿2,500–4,500</td><td>70–82%</td><td>6–8%</td><td style="color:#1A6B42;font-weight:600">3.6–4.8%</td></tr>
+    <tr><td>Laguna (Banyan managed)</td><td>฿3,000–5,000</td><td>~80%</td><td>6–8%</td><td style="color:#1A6B42;font-weight:600">3.6–4.8%</td></tr>
+    <tr><td>Kata / Karon</td><td>฿2,000–3,500</td><td>60–72%</td><td>5–7%</td><td style="color:#C46800;font-weight:600">3.0–4.2%</td></tr>
+    <tr><td>Nai Yang / Mai Khao</td><td>฿2,000–3,500</td><td>55–68%</td><td>5–7%</td><td style="color:#C46800;font-weight:600">3.0–4.2%</td></tr>
+    </tbody></table>
+  </div>
+  

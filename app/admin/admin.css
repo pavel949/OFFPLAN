@@ -1,0 +1,404 @@
+/* =============================================================================
+   ADMIN — Back-office interface styles
+   Tokens available from design-system.css (loaded via root globals.css)
+   =============================================================================
+   Design: Professional, information-dense, clear hierarchy.
+   High contrast for quick scanning of large data sets.
+   ============================================================================= */
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADMIN ROOT LAYOUT
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-root {
+  display: flex;
+  min-height: 100vh;
+  background: #F0F2F5;
+  color: var(--ink);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADMIN SIDEBAR NAV
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-nav {
+  width: var(--admin-sw);
+  flex-shrink: 0;
+  border-right: 1px solid rgba(10,28,54,.08);
+  background: var(--sur);
+  padding: 24px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 1px 0 0 rgba(10,28,54,.05);
+}
+
+.admin-nav-title {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0 0 20px 4px;
+  color: var(--ink);
+  letter-spacing: var(--ls-tight);
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt2);
+  text-decoration: none;
+  transition: background var(--tr), color var(--tr);
+  letter-spacing: .01em;
+}
+.admin-nav-link:hover {
+  background: rgba(10,28,54,.05);
+  color: var(--ink);
+}
+.admin-nav-link.on {
+  background: var(--ink);
+  color: var(--gold);
+}
+
+.admin-nav-foot {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--bdr2);
+}
+.admin-nav-out {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--rs);
+  border: 1.5px solid var(--bdr);
+  background: transparent;
+  font-family: var(--font-josefin), sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--txt2);
+  cursor: pointer;
+  transition: border-color var(--tr), color var(--tr), background var(--tr);
+}
+.admin-nav-out:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--rbg);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADMIN MAIN CONTENT
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 36px 40px 64px;
+  width: 100%;
+}
+
+/* Page headings */
+.admin-main > h1.serif {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: var(--ls-tight);
+  color: var(--ink);
+  line-height: var(--lh-tight);
+  margin-bottom: 2px;
+}
+.admin-main > p.text-sm {
+  max-width: 56ch;
+  line-height: var(--lh-relaxed);
+  color: var(--txt2);
+  font-size: 13px;
+}
+.admin-main h2.serif.text-lg {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: var(--sp-2);
+  letter-spacing: var(--ls-tight);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADMIN LOGIN
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(155deg, var(--sur) 0%, var(--bg) 100%);
+}
+.admin-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 28px;
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-lg);
+  background: var(--sur);
+  box-shadow: var(--sh-lg);
+}
+.admin-login-card h1 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--ink);
+  letter-spacing: var(--ls-tight);
+}
+.admin-login-card p {
+  margin: 0 0 24px;
+  font-size: 13px;
+  color: var(--txt2);
+  line-height: var(--lh-relaxed);
+}
+
+/* Form inputs */
+.admin-inp {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--rs);
+  font-family: var(--font-josefin), sans-serif;
+  font-size: 14px;
+  margin-bottom: 14px;
+  background: var(--sur);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--tr), box-shadow var(--tr);
+}
+.admin-inp:focus {
+  border-color: var(--gold);
+  box-shadow: var(--ring-gold);
+}
+
+/* Primary button */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: var(--rs);
+  border: none;
+  background: var(--ink);
+  color: var(--gold);
+  font-family: var(--font-josefin), sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background var(--tr), box-shadow var(--tr);
+}
+.admin-btn:hover {
+  background: var(--c-navy-800);
+  box-shadow: var(--sh-sm);
+}
+
+.admin-err {
+  color: var(--red);
+  font-size: 13px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  background: var(--rbg);
+  border-radius: var(--rs);
+  border: 1px solid var(--rbdr);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STAT GRID — Dashboard KPI cards
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.admin-stat {
+  padding: 18px 16px;
+  border-radius: var(--r);
+  border: 1px solid rgba(10,28,54,.07);
+  background: var(--sur);
+  box-shadow: var(--sh-xs);
+  transition: box-shadow var(--tr);
+}
+.admin-stat:hover { box-shadow: var(--sh-sm); }
+.admin-stat-v {
+  font-size: 1.7rem;
+  font-weight: 700;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.admin-stat-l {
+  font-size: 11.5px;
+  color: var(--txt2);
+  margin-top: 5px;
+  line-height: var(--lh-snug);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DATA TABLE
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(10,28,54,.07);
+  border-radius: var(--r);
+  background: var(--sur);
+  box-shadow: var(--sh-xs);
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.admin-table th,
+.admin-table td {
+  padding: 11px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(10,28,54,.06);
+  vertical-align: top;
+}
+.admin-table th {
+  font-weight: 700;
+  color: var(--txt2);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-caps);
+  position: sticky;
+  top: 0;
+  background: var(--sur);
+  z-index: 1;
+  box-shadow: 0 1px 0 rgba(10,28,54,.07);
+}
+.admin-table tbody tr:nth-child(even) td {
+  background: rgba(10,28,54,.018);
+}
+.admin-table tbody tr:hover td {
+  background: rgba(184,135,42,.05);
+}
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.admin-table a:hover { text-decoration: underline; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STATUS BADGES (leads, etc.)
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: var(--r-full);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.admin-badge.new {
+  background: var(--gbg);
+  color: var(--grn);
+  border: 1px solid var(--gbdr);
+}
+.admin-badge.contacted {
+  background: var(--gpale);
+  color: #8a6a24;
+  border: 1px solid rgba(184,135,42,.22);
+}
+.admin-badge.qualified {
+  background: var(--bbg);
+  color: var(--blu);
+  border: 1px solid var(--bbdr);
+}
+.admin-badge.closed {
+  background: rgba(100,112,128,.10);
+  color: var(--txt2);
+  border: 1px solid rgba(100,112,128,.2);
+}
+.admin-badge.lost {
+  background: var(--rbg);
+  color: var(--red);
+  border: 1px solid var(--rbdr);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FILTERS BAR
+   ─────────────────────────────────────────────────────────────────────────── */
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+.admin-filters select,
+.admin-filters input {
+  padding: 8px 11px;
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-family: var(--font-josefin), sans-serif;
+  background: var(--sur);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--tr);
+}
+.admin-filters select:focus,
+.admin-filters input:focus {
+  border-color: var(--gold);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LEAD DETAIL — dl / dt / dd grid
+   ─────────────────────────────────────────────────────────────────────────── */
+.lead-detail-grid {
+  display: grid;
+  gap: 0;
+  max-width: 580px;
+  margin-bottom: 28px;
+  font-size: 14px;
+  line-height: var(--lh-relaxed);
+}
+.lead-detail-grid dt {
+  color: var(--txt2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding-top: 10px;
+}
+.lead-detail-grid dd {
+  margin: 0 0 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bdr2);
+}
+.lead-detail-grid dd:last-child { border-bottom: none; }
+
+.lead-form textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 13px;
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--rs);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--tr);
+}
+.lead-form textarea:focus { border-color: var(--gold); }

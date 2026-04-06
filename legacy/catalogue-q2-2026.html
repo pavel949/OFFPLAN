@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phuket Off-Plan — Q2 2026 (legacy)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #171e26;
+      --text: #e8e4dc;
+      --muted: #9aa4b2;
+      --accent: #c9a962;
+      --line: #2a3441;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Josefin Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-weight: 400;
+    }
+    h1, h2, h3 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    header {
+      border-bottom: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; justify-content: space-between;
+    }
+    .kpi { display: flex; gap: 1.25rem; font-size: 0.9rem; color: var(--muted); }
+    .kpi strong { color: var(--accent); font-size: 1.1rem; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 1rem 0; }
+    .tabs button {
+      background: var(--panel); border: 1px solid var(--line); color: var(--text);
+      padding: 0.45rem 0.75rem; cursor: pointer; font-family: inherit; font-size: 0.85rem;
+    }
+    .tabs button.active { border-color: var(--accent); color: var(--accent); }
+    .panel { display: none; border: 1px solid var(--line); padding: 1rem; background: var(--panel); }
+    .panel.active { display: block; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+    .filters label { font-size: 0.7rem; color: var(--muted); display: block; }
+    select, input { width: 100%; background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 0.35rem; font-family: inherit; }
+    .cards { display: grid; gap: 0.75rem; }
+    .card { border: 1px solid var(--line); padding: 0.75rem; }
+    .rec-BUY { color: #7dffb3; }
+    .rec-WATCH { color: #ffd27d; }
+    .rec-AVOID { color: #ff8b8b; }
+    .i-ru { display: none; }
+    html[data-lang="ru"] .i-en { display: none; }
+    html[data-lang="ru"] .i-ru { display: inline; }
+    table.bench { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.bench th, table.bench td { border: 1px solid var(--line); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+    .bar { display: flex; height: 10px; border-radius: 2px; overflow: hidden; margin-top: 0.35rem; }
+    .bar span { display: block; height: 100%; }
+    .b-cam { background: #5b8cff; }
+    .b-tax { background: #c45cff; }
+    .b-oth { background: #888; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1 style="margin:0">Phuket Off-Plan <span class="i-en">Catalog</span><span class="i-ru">Каталог</span></h1>
+        <p class="kpi" id="kpiRow">
+          <span><span class="i-en">Projects</span><span class="i-ru">Проектов</span>: <strong id="kpiCount">0</strong></span>
+          <span><span class="i-en">BUY / WATCH / AVOID</span><span class="i-ru">BUY / WATCH / AVOID</span>:
+            <strong id="kpiRec">0 / 0 / 0</strong></span>
+        </p>
+      </div>
+      <button type="button" id="langBtn" style="align-self:start;background:var(--panel);border:1px solid var(--line);color:var(--accent);padding:0.35rem 0.6rem;cursor:pointer">RU</button>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="catalog">Catalog</button>
+      <button type="button" class="tab" data-tab="analytics">Analytics</button>
+      <button type="button" class="tab" data-tab="risk">Risk</button>
+      <button type="button" class="tab" data-tab="devs">Developers</button>
+      <button type="button" class="tab" data-tab="calc">Calculator</button>
+      <button type="button" class="tab" data-tab="shortlist">Shortlist</button>
+      <button type="button" class="tab" data-tab="services">Services</button>
+    </div>
+
+    <section id="panel-catalog" class="panel active">
+      <div class="filters">
+        <div><label for="fSeg">Segment</label><select id="fSeg"><option value="">All</option><option>Beachfront</option><option>Hills</option><option>Resort</option><option>Urban</option><option>Marina</option></select></div>
+        <div><label for="fSt">Status</label><select id="fSt"><option value="">All</option><option>Off-plan</option><option>Resale</option></select></div>
+        <div><label for="fZone">Zone</label><select id="fZone"><option value="">All</option><option>Bang Tao</option><option>Surin</option><option>Layan</option><option>Rawai</option><option>Nai Harn</option><option>Patong</option><option>Kamala</option><option>Cherngtalay</option><option>Kata</option><option>Panwa</option><option>Chalong</option><option>Thalang</option></select></div>
+        <div><label for="fDt">Developer</label><select id="fDt"><option value="">All</option><option>SANS</option><option>ORI</option><option>LAG</option><option>PHU</option></select></div>
+        <div><label for="fYear">Handover</label><select id="fYear"><option value="">All</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select></div>
+        <div><label for="fRec">Rec</label><select id="fRec"><option value="">All</option><option>BUY</option><option>WATCH</option><option>AVOID</option></select></div>
+        <div><label for="fQ">Search</label><input id="fQ" type="search" placeholder="Name…" /></div>
+      </div>
+      <div id="catalogCards" class="cards"></div>
+    </section>
+
+    <section id="panel-analytics" class="panel"><p class="i-en">Static analytics placeholder (parity with Next app).</p><p class="i-ru">Заглушка аналитики.</p></section>
+    <section id="panel-risk" class="panel"><p class="i-en">Risk methodology placeholder.</p><p class="i-ru">Методология рисков.</p></section>
+    <section id="panel-devs" class="panel"><p class="i-en">Developer notes placeholder.</p><p class="i-ru">Застройщики.</p></section>
+
+    <section id="panel-calc" class="panel">
+      <h3 style="margin-top:0">STR benchmarks</h3>
+      <table class="bench">
+        <thead><tr><th>Area</th><th>ADR</th><th>Occ.</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Bang Tao</td><td>฿</td><td>%</td><td><div class="bench-note">Sample</div></td></tr>
+          <!-- Rawai / Nai Harn: single inner div only — no stray closing div before </td> -->
+          <tr>
+            <td>Rawai / Nai Harn</td>
+            <td>฿</td>
+            <td>%</td>
+            <td><div class="bench-note">Split market</div></td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Yield</h3>
+      <label>Price (฿) <input id="cPrice" type="number" value="8000000" /></label>
+      <label>Gross rent / yr <input id="cRent" type="number" value="520000" /></label>
+      <label>CAM % of gross <input id="cCam" type="number" value="12" /></label>
+      <label>Tax % of gross <input id="cTax" type="number" value="12.5" /></label>
+      <label>Other % of gross <input id="cOth" type="number" value="8" /></label>
+      <p>Gross yield: <strong id="cGross">—</strong> · Net: <strong id="cNet">—</strong></p>
+      <div class="bar" id="cBar" title="Expense mix"></div>
+    </section>
+
+    <section id="panel-shortlist" class="panel">
+      <p class="i-en">Shortlist uses localStorage key <code>phuket_sl</code> in the Next app.</p>
+      <div id="shortlistCards" class="cards"></div>
+    </section>
+    <section id="panel-services" class="panel"><p class="i-en">Services placeholder.</p><p class="i-ru">Услуги.</p></section>
+  </div>
+
+  <script type="application/json" id="seed-data">[{"id":"p001","slug":"azure-bang-tao","name":"Azure Bang Tao","seg":"Beachfront","zone":"Bang Tao","stK":"Off-plan","rec":"BUY","risk":2,"dt":"SANS","handoverYear":2026,"beach":"Bang Tao","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"Mid","yieldGuess":6.1},{"id":"p002","slug":"surin-heights","name":"Surin Heights","seg":"Hills","zone":"Surin","stK":"Off-plan","rec":"WATCH","risk":3,"dt":"ORI","handoverYear":2027,"beach":"Surin","ownership":"Freehold","mgmt":"Rental","focus":"LTR","priceBand":"High","yieldGuess":5.4},{"id":"p003","slug":"layan-breeze","name":"Layan Breeze","seg":"Resort","zone":"Layan","stK":"Off-plan","rec":"BUY","risk":2,"dt":"LAG","handoverYear":2026,"beach":"Layan","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"Mid","yieldGuess":6.0},{"id":"p004","slug":"rawai-pier","name":"Rawai Pier Residences","seg":"Urban","zone":"Rawai","stK":"Off-plan","rec":"WATCH","risk":3,"dt":"PHU","handoverYear":2028,"beach":"Rawai","ownership":"Leasehold","mgmt":"Owner","focus":"Mixed","priceBand":"Entry","yieldGuess":5.8},{"id":"p005","slug":"nai-harn-view","name":"Nai Harn View","seg":"Hills","zone":"Nai Harn","stK":"Off-plan","rec":"BUY","risk":2,"dt":"ORI","handoverYear":2026,"beach":"Nai Harn","ownership":"Freehold","mgmt":"Rental","focus":"STR","priceBand":"High","yieldGuess":6.3},{"id":"p006","slug":"patong-edge","name":"Patong Edge","seg":"Urban","zone":"Patong","stK":"Resale","rec":"AVOID","risk":4,"dt":"PHU","handoverYear":2024,"beach":"Patong","ownership":"Leasehold","mgmt":"Owner","focus":"STR","priceBand":"Mid","yieldGuess":4.9},{"id":"p007","slug":"kamala-bay","name":"Kamala Bay Suites","seg":"Beachfront","zone":"Kamala","stK":"Off-plan","rec":"BUY","risk":2,"dt":"SANS","handoverYear":2026,"beach":"Kamala","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"High","yieldGuess":5.9},{"id":"p008","slug":"cherngtalay-park","name":"Cherngtalay Park","seg":"Resort","zone":"Cherngtalay","stK":"Off-plan","rec":"WATCH","risk":3,"dt":"LAG","handoverYear":2027,"beach":"Bang Tao","ownership":"Leasehold","mgmt":"Rental","focus":"LTR","priceBand":"Mid","yieldGuess":5.5},{"id":"p009","slug":"laguna-lakeside","name":"Laguna Lakeside","seg":"Resort","zone":"Bang Tao","stK":"Off-plan","rec":"BUY","risk":2,"dt":"LAG","handoverYear":2025,"beach":"Bang Tao","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"High","yieldGuess":6.0},{"id":"p010","slug":"kata-cliff","name":"Kata Cliff Villas","seg":"Hills","zone":"Kata","stK":"Off-plan","rec":"BUY","risk":3,"dt":"ORI","handoverYear":2026,"beach":"Kata","ownership":"Freehold","mgmt":"Owner","focus":"LTR","priceBand":"High","yieldGuess":5.2},{"id":"p011","slug":"panwa-marina","name":"Panwa Marina","seg":"Marina","zone":"Panwa","stK":"Off-plan","rec":"WATCH","risk":3,"dt":"PHU","handoverYear":2028,"beach":"Panwa","ownership":"Leasehold","mgmt":"Rental","focus":"Mixed","priceBand":"Mid","yieldGuess":5.0},{"id":"p012","slug":"chalong-ridge","name":"Chalong Ridge","seg":"Hills","zone":"Chalong","stK":"Off-plan","rec":"AVOID","risk":4,"dt":"PHU","handoverYear":2029,"beach":"Chalong","ownership":"Leasehold","mgmt":"Owner","focus":"LTR","priceBand":"Entry","yieldGuess":4.5},{"id":"p013","slug":"thalang-commons","name":"Thalang Commons","seg":"Urban","zone":"Thalang","stK":"Off-plan","rec":"WATCH","risk":3,"dt":"SANS","handoverYear":2027,"beach":"Bang Tao","ownership":"Leasehold","mgmt":"Rental","focus":"LTR","priceBand":"Entry","yieldGuess":5.6},{"id":"p014","slug":"surin-sands","name":"Surin Sands","seg":"Beachfront","zone":"Surin","stK":"Off-plan","rec":"BUY","risk":2,"dt":"SANS","handoverYear":2026,"beach":"Surin","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"High","yieldGuess":6.2},{"id":"p015","slug":"rawai-sunset","name":"Rawai Sunset","seg":"Resort","zone":"Rawai","stK":"Off-plan","rec":"BUY","risk":2,"dt":"ORI","handoverYear":2026,"beach":"Rawai","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"Mid","yieldGuess":5.9},{"id":"p016","slug":"nai-harn-bay","name":"Nai Harn Bay","seg":"Beachfront","zone":"Nai Harn","stK":"Off-plan","rec":"WATCH","risk":3,"dt":"LAG","handoverYear":2027,"beach":"Nai Harn","ownership":"Freehold","mgmt":"Rental","focus":"STR","priceBand":"High","yieldGuess":5.7},{"id":"p017","slug":"patong-tower","name":"Patong Tower","seg":"Urban","zone":"Patong","stK":"Resale","rec":"AVOID","risk":4,"dt":"PHU","handoverYear":2023,"beach":"Patong","ownership":"Leasehold","mgmt":"Owner","focus":"STR","priceBand":"Entry","yieldGuess":4.8},{"id":"p018","slug":"kamala-forest","name":"Kamala Forest","seg":"Hills","zone":"Kamala","stK":"Off-plan","rec":"BUY","risk":2,"dt":"ORI","handoverYear":2026,"beach":"Kamala","ownership":"Leasehold","mgmt":"Rental","focus":"LTR","priceBand":"Mid","yieldGuess":5.8},{"id":"p019","slug":"layan-orchid","name":"Layan Orchid","seg":"Resort","zone":"Layan","stK":"Off-plan","rec":"BUY","risk":2,"dt":"SANS","handoverYear":2026,"beach":"Layan","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"Mid","yieldGuess":6.0},{"id":"p020","slug":"bang-tao-quartz","name":"Bang Tao Quartz","seg":"Beachfront","zone":"Bang Tao","stK":"Off-plan","rec":"BUY","risk":2,"dt":"LAG","handoverYear":2025,"beach":"Bang Tao","ownership":"Leasehold","mgmt":"Rental","focus":"STR","priceBand":"High","yieldGuess":6.1}]</script>
+  <script>
+    (function () {
+      var el = document.getElementById('seed-data');
+      var P = JSON.parse(el.textContent || '[]');
+      /** No fBR — removed from legacy FILTER_IDS */
+      var FILTER_IDS = ['fSeg','fSt','fZone','fDt','fYear','fRec','fQ'];
+
+      function gv(id) {
+        var n = document.getElementById(id);
+        return n ? String(n.value || '').trim() : '';
+      }
+
+      function applyF() {
+        var f = {
+          seg: gv('fSeg'),
+          stK: gv('fSt'),
+          zone: gv('fZone'),
+          dt: gv('fDt'),
+          handoverYear: gv('fYear'),
+          rec: gv('fRec'),
+          q: gv('fQ')
+        };
+        var q = f.q.toLowerCase();
+        var out = P.filter(function (p) {
+          if (f.seg && p.seg !== f.seg) return false;
+          if (f.stK && p.stK !== f.stK) return false;
+          if (f.zone && p.zone.indexOf(f.zone) === -1) return false;
+          if (f.dt && p.dt !== f.dt) return false;
+          if (f.handoverYear && String(p.handoverYear) !== f.handoverYear) return false;
+          if (f.rec && p.rec !== f.rec) return false;
+          if (q) {
+            var hay = (p.name + ' ' + p.slug + ' ' + p.zone + ' ' + p.dt).toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+          }
+          return true;
+        });
+        renderCards(out, document.getElementById('catalogCards'));
+        var buy = 0, watch = 0, avoid = 0;
+        P.forEach(function (p) {
+          if (p.rec === 'BUY') buy++;
+          else if (p.rec === 'WATCH') watch++;
+          else if (p.rec === 'AVOID') avoid++;
+        });
+        document.getElementById('kpiCount').textContent = String(P.length);
+        document.getElementById('kpiRec').textContent = buy + ' / ' + watch + ' / ' + avoid;
+      }
+
+      function renderCards(list, root) {
+        root.innerHTML = list.map(function (p) {
+          return '<div class="card"><strong>' + p.name + '</strong> · <span class="rec-' + p.rec + '">' + p.rec + '</span><br/><small>' + p.zone + ' · ' + p.dt + ' · risk ' + p.risk + '</small></div>';
+        }).join('');
+      }
+
+      function calcUpdate() {
+        var price = Number(document.getElementById('cPrice').value) || 0;
+        var rent = Number(document.getElementById('cRent').value) || 0;
+        var cam = Number(document.getElementById('cCam').value) || 0;
+        var tax = Number(document.getElementById('cTax').value) || 0;
+        var oth = Number(document.getElementById('cOth').value) || 0;
+        var grossY = price > 0 ? (rent / price) * 100 : 0;
+        var camAmt = rent * (cam / 100);
+        var taxAmt = rent * (tax / 100);
+        var othAmt = rent * (oth / 100);
+        var total = camAmt + taxAmt + othAmt;
+        var netRent = rent - total;
+        var netY = price > 0 ? (netRent / price) * 100 : 0;
+        document.getElementById('cGross').textContent = grossY.toFixed(2) + '%';
+        document.getElementById('cNet').textContent = netY.toFixed(2) + '%';
+        var bar = document.getElementById('cBar');
+        bar.innerHTML = '';
+        if (total === 0) {
+          return;
+        }
+        var wCam = (camAmt / total) * 100;
+        var wTax = (taxAmt / total) * 100;
+        var wOth = (othAmt / total) * 100;
+        bar.innerHTML =
+          '<span class="b-cam" style="width:' + wCam + '%"></span>' +
+          '<span class="b-tax" style="width:' + wTax + '%"></span>' +
+          '<span class="b-oth" style="width:' + wOth + '%"></span>';
+      }
+
+      FILTER_IDS.forEach(function (id) {
+        var n = document.getElementById(id);
+        if (n) n.addEventListener('input', applyF);
+        if (n) n.addEventListener('change', applyF);
+      });
+
+      document.querySelectorAll('.tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var t = btn.getAttribute('data-tab');
+          document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b === btn); });
+          document.querySelectorAll('.panel').forEach(function (p) {
+            p.classList.toggle('active', p.id === 'panel-' + t);
+          });
+        });
+      });
+
+      ['cPrice','cRent','cCam','cTax','cOth'].forEach(function (id) {
+        var n = document.getElementById(id);
+        if (n) n.addEventListener('input', calcUpdate);
+      });
+
+      function toggleLang() {
+        var h = document.documentElement;
+        var cur = h.getAttribute('data-lang') === 'ru' ? 'ru' : 'en';
+        var next = cur === 'en' ? 'ru' : 'en';
+        h.setAttribute('data-lang', next);
+        h.setAttribute('lang', next);
+        try { localStorage.setItem('phuket_lang', next); } catch (e) {}
+        document.getElementById('langBtn').textContent = next === 'en' ? 'RU' : 'EN';
+      }
+      document.getElementById('langBtn').addEventListener('click', toggleLang);
+
+      try {
+        var saved = localStorage.getItem('phuket_lang');
+        if (saved === 'ru' || saved === 'en') {
+          document.documentElement.setAttribute('data-lang', saved);
+          document.documentElement.setAttribute('lang', saved);
+          document.getElementById('langBtn').textContent = saved === 'en' ? 'RU' : 'EN';
+        }
+      } catch (e) {}
+
+      applyF();
+      calcUpdate();
+    })();
+  </script>
+</body>
+</html>

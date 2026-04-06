@@ -1,0 +1,203 @@
+/* =============================================================================
+   LEAD INQUIRY MODAL
+   Tokens from design-system.css (available globally via root layout)
+   ============================================================================= */
+
+/* ── Backdrop ── */
+.lead-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(5, 12, 28, 0.60);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modal-fade-in .18s ease;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal panel ── */
+.lead-modal {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  background: var(--sur);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r-lg);
+  padding: 28px 26px 22px;
+  box-shadow: var(--sh-modal);
+  animation: modal-slide-up .22s cubic-bezier(0,.6,.4,1);
+}
+
+@keyframes modal-slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Close button */
+.lead-modal-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--sur2);
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--txt2);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--tr), color var(--tr);
+}
+.lead-modal-x:hover {
+  background: var(--bdr2);
+  color: var(--ink);
+}
+
+/* Header */
+.lead-modal-title {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: var(--ls-tight);
+  margin: 0 36px 8px 0;
+  color: var(--ink);
+  line-height: var(--lh-snug);
+}
+.lead-modal-sub {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--txt2);
+  line-height: var(--lh-relaxed);
+}
+.lead-modal-proj {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--ink);
+  padding: 8px 12px;
+  background: var(--sur2);
+  border-radius: var(--rs);
+  border: 1px solid var(--bdr2);
+}
+.lead-modal-proj-l {
+  color: var(--txt2);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Honeypot (anti-spam) */
+.lead-modal-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* Form fields */
+.lead-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 13px;
+}
+.lead-modal-field span {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--txt2);
+}
+.lead-modal-field input,
+.lead-modal-field textarea {
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--rs);
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--sur);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--tr), box-shadow var(--tr);
+}
+.lead-modal-field input:focus,
+.lead-modal-field textarea:focus {
+  border-color: var(--gold);
+  box-shadow: var(--ring-gold);
+}
+.lead-modal-field textarea {
+  resize: vertical;
+  min-height: 92px;
+  line-height: var(--lh-relaxed);
+}
+
+/* Messages */
+.lead-modal-err {
+  color: var(--red);
+  font-size: 12.5px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  background: var(--rbg);
+  border: 1px solid var(--rbdr);
+  border-radius: var(--rs);
+}
+.lead-modal-ok {
+  color: var(--grn);
+  font-size: 13.5px;
+  margin: 10px 0 0;
+  line-height: var(--lh-relaxed);
+  padding: 10px 13px;
+  background: var(--gbg);
+  border: 1px solid var(--gbdr);
+  border-radius: var(--rs);
+  font-weight: 600;
+}
+
+/* Action buttons */
+.lead-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.lead-modal-btn {
+  padding: 9px 18px;
+  border-radius: var(--rs);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-josefin), sans-serif;
+  transition: background var(--tr), color var(--tr), box-shadow var(--tr);
+}
+.lead-modal-btn.ghost {
+  background: transparent;
+  color: var(--txt2);
+}
+.lead-modal-btn.ghost:hover {
+  background: var(--sur2);
+  color: var(--ink);
+}
+.lead-modal-btn.primary {
+  background: var(--ink);
+  color: var(--gold);
+  letter-spacing: .03em;
+}
+.lead-modal-btn.primary:hover {
+  background: var(--c-navy-800);
+  box-shadow: var(--sh-sm);
+}

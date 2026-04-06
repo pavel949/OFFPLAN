@@ -1,0 +1,140 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { COOKIE_NAME, verifyAdminToken } from "@/lib/admin-session";
+import { leadSubmitSchema } from "@/lib/leads/schema";
+import {
+  appendLeadUnified,
+  getLeadUnified,
+  listLeadsUnified,
+  updateLeadUnified,
+} from "@/lib/leads/unified";
+import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
+
+async function assertAdmin(): Promise<boolean> {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) return false;
+  const jar = await cookies();
+  const t = jar.get(COOKIE_NAME)?.value;
+  if (!t) return false;
+  return verifyAdminToken(t, secret);
+}
+
+export type SubmitLeadState = { ok: boolean; error?: string };
+
+function parseUtmJson(raw: string | null): Record<string, string> | null {
+  if (!raw || typeof raw !== "string") return null;
+  const t = raw.trim();
+  if (!t) return null;
+  try {
+    const o = JSON.parse(t) as unknown;
+    if (!o || typeof o !== "object") return null;
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (typeof v === "string" && v.trim()) out[k] = v.trim();
+    }
+    return Object.keys(out).length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function submitLead(
+  _prev: SubmitLeadState,
+  formData: FormData,
+): Promise<SubmitLeadState> {
+  if (String(formData.get("_hp") ?? "").trim() !== "") {
+    return { ok: true };
+  }
+  const pidRaw = formData.get("projectId");
+  let projectId: number | null = null;
+  if (typeof pidRaw === "string" && pidRaw.trim() !== "") {
+    const n = Number(pidRaw);
+    if (Number.isFinite(n)) projectId = n;
+  }
+  const pn = String(formData.get("projectName") ?? "").trim();
+  const raw = {
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    message: formData.get("message"),
+    projectId,
+    projectName: pn === "" ? null : pn,
+    locale: formData.get("locale"),
+  };
+  const parsed = leadSubmitSchema.safeParse(raw);
+  if (!parsed.success) {
+    const err = parsed.error.flatten().fieldErrors;
+    const first =
+      Object.values(err).flat()[0] ||
+      parsed.error.issues[0]?.message ||
+      "Проверьте поля";
+    return { ok: false, error: first };
+  }
+  const utm = parseUtmJson(String(formData.get("utm_json") ?? ""));
+  try {
+    await appendLeadUnified({
+      name: parsed.data.name,
+      email: parsed.data.email,
+      phone: parsed.data.phone ?? "",
+      message: parsed.data.message ?? "",
+      projectId: parsed.data.projectId ?? null,
+      projectName: parsed.data.projectName ?? null,
+      locale: parsed.data.locale,
+      utm,
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Не удалось сохранить заявку",
+    };
+  }
+  return { ok: true };
+}
+
+export async function adminListLeads(): Promise<LeadRecord[]> {
+  if (!(await assertAdmin())) return [];
+  return listLeadsUnified();
+}
+
+export async function adminGetLead(id: string): Promise<LeadRecord | null> {
+  if (!(await assertAdmin())) return null;
+  return (await getLeadUnified(id)) ?? null;
+}
+
+export async function adminUpdateLead(
+  id: string,
+  patch: { status?: LeadStatus; notes?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  if (!(await assertAdmin())) {
+    return { ok: false, error: "Unauthorized" };
+  }
+  const next = await updateLeadUnified(id, patch);
+  if (!next) return { ok: false, error: "Лид не найден" };
+  return { ok: true };
+}
+
+export async function updateLeadFromForm(
+  _prev: { ok: boolean; error?: string },
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!(await assertAdmin())) {
+    return { ok: false, error: "Нет доступа" };
+  }
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as LeadStatus;
+  const notes = String(formData.get("notes") ?? "");
+  const allowed: LeadStatus[] = [
+    "new",
+    "contacted",
+    "qualified",
+    "closed",
+    "lost",
+  ];
+  if (!allowed.includes(status)) {
+    return { ok: false, error: "Некорректный статус" };
+  }
+  const next = await updateLeadUnified(id, { status, notes });
+  if (!next) return { ok: false, error: "Лид не найден" };
+  return { ok: true };
+}

@@ -1,0 +1,10 @@
+# Supabase
+.branches
+# Keep project ref in git so `db push` works after clone (ref is public in dashboard URL).
+.temp/*
+!.temp/project-ref
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local

@@ -1,0 +1,597 @@
+/* =============================================================================
+   IGNATEV ESTATE — DESIGN SYSTEM
+   Phuket Off-Plan Property Catalogue · Q2 2026
+   =============================================================================
+
+   TABLE OF CONTENTS
+   ─────────────────
+   1. BRAND IDENTITY
+   2. COLOR TOKENS — Raw palette
+   3. SEMANTIC TOKENS — Purpose-mapped colors
+   4. TYPOGRAPHY — Scale, families, weights
+   5. SPACING — 8pt grid
+   6. BORDER RADIUS
+   7. SHADOWS & ELEVATION
+   8. MOTION & TRANSITIONS
+   9. LAYOUT METRICS
+   10. Z-INDEX SCALE
+   11. STATUS SYSTEM — Risk, completion, recommendation
+   12. BASE STYLES — Reset + global defaults
+
+   Design Principles:
+   · Luxury, aspirational — premium Phuket real estate
+   · Trust through clarity — financial data, transparent hierarchy
+   · International audience — EN/RU, dense but readable
+   · Gold accent as a mark of quality, not decoration
+   · Navy grounding establishes authority and trust
+   ============================================================================= */
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. TYPOGRAPHY FAMILIES
+   ─────────────────────────────────────────────────────────────────────────── */
+/* --font-josefin and --font-cormorant are set by Next.js font loader */
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. COLOR TOKENS — RAW PALETTE
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+
+  /* ── Navy Scale ─── */
+  --c-navy-950:  #060F1E;   /* deepest — backgrounds on dark surfaces */
+  --c-navy-900:  #0A1C36;   /* primary brand dark                     */
+  --c-navy-800:  #122542;   /* secondary dark                         */
+  --c-navy-700:  #1A3256;   /* medium dark                            */
+  --c-navy-600:  #1E3A64;   /* medium                                 */
+  --c-navy-400:  #4A6B96;   /* muted navy                             */
+  --c-navy-200:  #A8BDD6;   /* light navy tint                        */
+  --c-navy-100:  #D4E0EC;   /* very light navy tint                   */
+  --c-navy-50:   #EBF1F7;   /* near-white with navy hint              */
+
+  /* ── Gold Scale ─── */
+  --c-gold-800:  #7A5A1A;   /* deep gold                              */
+  --c-gold-700:  #9A7020;   /* dark gold                              */
+  --c-gold-600:  #B8872A;   /* primary gold — refined, not orange     */
+  --c-gold-500:  #CC9E3E;   /* medium gold                            */
+  --c-gold-400:  #D9B45A;   /* light gold                             */
+  --c-gold-300:  #E8C97A;   /* pale gold                              */
+  --c-gold-200:  #F0DBA8;   /* very pale gold                         */
+  --c-gold-100:  #FAF1DA;   /* gold tint background                   */
+  --c-gold-50:   #FDFAF0;   /* gold wash                              */
+
+  /* ── Neutral / Sand Scale ─── */
+  --c-neutral-950: #0A0906;
+  --c-neutral-900: #1A1714;
+  --c-neutral-800: #2E2A26;
+  --c-neutral-700: #46413C;
+  --c-neutral-600: #5C5650;
+  --c-neutral-500: #7A7368;
+  --c-neutral-400: #9C9590;
+  --c-neutral-300: #BDB8B2;
+  --c-neutral-200: #D6D0CA;
+  --c-neutral-150: #E2DBD4;
+  --c-neutral-100: #EDE8E2;
+  --c-neutral-75:  #F2EDE6;
+  --c-neutral-50:  #F7F3EE;
+  --c-neutral-25:  #FAF8F4;
+  --c-white:       #FFFFFF;
+
+  /* ── Status: Green / Growth ─── */
+  --c-green-800: #0D4024;
+  --c-green-700: #145C34;
+  --c-green-600: #166534;  /* primary green                          */
+  --c-green-400: #2A9A58;
+  --c-green-200: #9ADCBC;
+  --c-green-100: #D4F0E4;
+  --c-green-50:  #E6F7EE;
+
+  /* ── Status: Blue / Information ─── */
+  --c-blue-800:  #0E2860;
+  --c-blue-700:  #163888;
+  --c-blue-600:  #1845A0;  /* primary blue                           */
+  --c-blue-400:  #3672CC;
+  --c-blue-100:  #D4E4F9;
+  --c-blue-50:   #E8F0FC;
+
+  /* ── Status: Amber / Caution ─── */
+  --c-amber-800: #6B3A00;
+  --c-amber-700: #884A00;
+  --c-amber-600: #9E5C00;  /* primary amber                          */
+  --c-amber-400: #C07A10;
+  --c-amber-100: #FDE8B8;
+  --c-amber-50:  #FEF4DF;
+
+  /* ── Status: Red / Risk ─── */
+  --c-red-800:   #6E1208;
+  --c-red-700:   #8C1A0E;
+  --c-red-600:   #A8200F;  /* primary red                            */
+  --c-red-400:   #CC3E2C;
+  --c-red-100:   #FDD4CE;
+  --c-red-50:    #FDEEE9;
+
+  /* ── Status: Purple / Premium ─── */
+  --c-purple-700: #481070;
+  --c-purple-600: #5E1A88;  /* primary purple                        */
+  --c-purple-100: #ECD6FA;
+  --c-purple-50:  #F6EDFD;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. SEMANTIC DESIGN TOKENS
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+
+  /* ── Core Backgrounds ─── */
+  --bg:          var(--c-neutral-75);   /* page canvas — warm sand              */
+  --sur:         var(--c-white);        /* card / panel surface                 */
+  --sur2:        var(--c-neutral-25);   /* subtle inner surface                 */
+  --sur3:        var(--c-neutral-50);   /* depressed / nested surface           */
+
+  /* ── Text ─── */
+  --ink:         var(--c-navy-900);     /* primary text, headings               */
+  --ink2:        var(--c-navy-700);     /* secondary headings                   */
+  --txt2:        #647080;              /* muted body text (neutral cool)       */
+  --txt3:        var(--c-neutral-400);  /* placeholder / tertiary               */
+
+  /* ── Brand Accent ─── */
+  --gold:        var(--c-gold-600);     /* primary brand accent                 */
+  --gold2:       var(--c-gold-500);     /* lighter accent                       */
+  --gpale:       var(--c-gold-100);     /* tinted gold surface                  */
+  --gold-wash:   var(--c-gold-50);      /* very pale gold                       */
+
+  /* ── Borders ─── */
+  --bdr:         #DDD4C8;              /* default border                       */
+  --bdr2:        #EAE4DA;              /* subtle border                        */
+  --bdr-dark:    rgba(10,28,54,.14);   /* dark/navy border                     */
+
+  /* ── Status Colors ─── */
+  --grn:         var(--c-green-600);
+  --gbg:         var(--c-green-50);
+  --gbdr:        var(--c-green-100);
+
+  --blu:         var(--c-blue-600);
+  --bbg:         var(--c-blue-50);
+  --bbdr:        var(--c-blue-100);
+
+  --amb:         var(--c-amber-600);
+  --abg:         var(--c-amber-50);
+  --abdr:        var(--c-amber-100);
+
+  --red:         var(--c-red-600);
+  --rbg:         var(--c-red-50);
+  --rbdr:        var(--c-red-100);
+
+  --pur:         var(--c-purple-600);
+  --pbg:         var(--c-purple-50);
+  --pbdr:        var(--c-purple-100);
+
+  /* ── Aliases (Tailwind compat) ─── */
+  --line:        var(--bdr);
+  --panel:       var(--sur);
+  --muted:       var(--txt2);
+  --accent:      var(--gold);
+  --text:        var(--ink);
+  --background:  var(--bg);
+  --foreground:  var(--ink);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. TYPOGRAPHY SCALE
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Size scale — minor third (1.2×) anchored at 13px */
+  --text-2xs:    9px;
+  --text-xs:     10px;
+  --text-sm:     11px;
+  --text-base:   13px;    /* body default                             */
+  --text-md:     14px;
+  --text-lg:     15px;
+  --text-xl:     17px;
+  --text-2xl:    20px;
+  --text-3xl:    24px;
+  --text-4xl:    30px;
+  --text-5xl:    36px;
+  --text-6xl:    48px;
+
+  /* Line heights */
+  --lh-tight:    1.15;
+  --lh-snug:     1.3;
+  --lh-normal:   1.5;
+  --lh-relaxed:  1.65;
+  --lh-loose:    1.8;
+
+  /* Letter spacing */
+  --ls-tight:    -0.02em;
+  --ls-normal:   0;
+  --ls-wide:     0.04em;
+  --ls-wider:    0.08em;
+  --ls-widest:   0.14em;
+  --ls-caps:     0.12em;   /* for uppercase labels                    */
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. SPACING — 8pt BASE GRID
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --sp-0:    0px;
+  --sp-0h:   2px;
+  --sp-1:    4px;
+  --sp-2:    8px;
+  --sp-3:    12px;
+  --sp-4:    16px;
+  --sp-5:    20px;
+  --sp-6:    24px;
+  --sp-8:    32px;
+  --sp-10:   40px;
+  --sp-12:   48px;
+  --sp-16:   64px;
+  --sp-20:   80px;
+  --sp-24:   96px;
+  --sp-32:   128px;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   6. BORDER RADIUS
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --r-xs:    3px;
+  --r-sm:    6px;    /* --rs alias                                    */
+  --r-md:    10px;   /* --r alias — default card/panel radius         */
+  --r-lg:    14px;   /* modals, larger panels                         */
+  --r-xl:    20px;   /* hero panels                                   */
+  --r-2xl:   28px;   /* full rounded cards                            */
+  --r-full:  9999px; /* pills, badges                                 */
+
+  /* Aliases matching original names */
+  --r:       var(--r-md);
+  --rs:      var(--r-sm);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   7. SHADOWS & ELEVATION
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Elevation system: xs → xl */
+  --sh-xs:   0 1px 2px rgba(10,28,54,.05);
+  --sh-sm:   0 1px 4px rgba(10,28,54,.07), 0 1px 2px rgba(10,28,54,.05);
+  --sh:      0 3px 12px rgba(10,28,54,.09), 0 1px 4px rgba(10,28,54,.06);   /* default */
+  --sh-md:   0 6px 20px rgba(10,28,54,.10), 0 2px 6px rgba(10,28,54,.07);
+  --sh-lg:   0 12px 32px rgba(10,28,54,.11), 0 4px 12px rgba(10,28,54,.08);
+  --sh-xl:   0 24px 56px rgba(10,28,54,.13), 0 8px 20px rgba(10,28,54,.09);
+
+  /* Specialty shadows */
+  --sh-card:     0 1px 3px rgba(10,28,54,.06), 0 2px 8px rgba(10,28,54,.04);
+  --sh-card-hov: 0 4px 16px rgba(10,28,54,.10), 0 1px 4px rgba(10,28,54,.07);
+  --sh-gold:     0 4px 20px rgba(184,135,42,.22), 0 1px 6px rgba(184,135,42,.14);
+  --sh-modal:    0 20px 60px rgba(5,12,28,.22), 0 4px 16px rgba(5,12,28,.12);
+  --sh-sticky:   0 2px 8px rgba(10,28,54,.08);
+
+  /* Inset / focus rings */
+  --ring-gold:   0 0 0 2px rgba(184,135,42,.35);
+  --ring-navy:   0 0 0 2px rgba(10,28,54,.25);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   8. MOTION & TRANSITIONS
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --tr:         .18s ease;          /* default — used for micro-interactions */
+  --tr-fast:    .12s ease;          /* very quick feedback                   */
+  --tr-slow:    .26s ease;          /* richer transitions                    */
+  --tr-spring:  .28s cubic-bezier(.32,.72,0,1);  /* sheet slide, drawers   */
+  --tr-bounce:  .3s cubic-bezier(.34,1.56,.64,1); /* playful pop            */
+  --tr-out:     .22s cubic-bezier(0,0,.2,1);      /* ease-out decelerate    */
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   9. LAYOUT METRICS
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --hh:          64px;    /* header height                              */
+  --sw:          290px;   /* sidebar width                              */
+  --admin-sw:    232px;   /* admin sidebar width                        */
+  --content-max: 1280px;  /* max content width                          */
+  --card-min:    285px;   /* min card width in grid                     */
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   10. Z-INDEX SCALE
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --z-below:   -1;
+  --z-base:     0;
+  --z-raised:   10;
+  --z-sticky:   100;
+  --z-overlay:  900;
+  --z-drawer:   950;
+  --z-header:   1000;
+  --z-modal:    5000;
+  --z-toast:    9000;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   11. STATUS SYSTEM TOKENS
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Risk tiers: r1=low, r2=medium, r3=high */
+  --risk-1-text: var(--grn);  --risk-1-bg: var(--gbg);  --risk-1-bdr: var(--gbdr);
+  --risk-2-text: var(--amb);  --risk-2-bg: var(--abg);  --risk-2-bdr: var(--abdr);
+  --risk-3-text: var(--red);  --risk-3-bg: var(--rbg);  --risk-3-bdr: var(--rbdr);
+
+  /* Completion states */
+  --done-text:  var(--grn);   --done-bg:  var(--gbg);
+  --near-text:  var(--blu);   --near-bg:  var(--bbg);
+  --mid-text:   var(--amb);   --mid-bg:   var(--abg);
+  --far-text:   var(--txt2);  --far-bg:   var(--sur2);
+
+  /* Recommendations */
+  --rec-buy-text:   var(--grn);  --rec-buy-bg:   var(--gbg);
+  --rec-watch-text: var(--amb);  --rec-watch-bg: var(--abg);
+  --rec-avoid-text: var(--red);  --rec-avoid-bg: var(--rbg);
+
+  /* Card segment stripes */
+  --stripe-branded:    linear-gradient(90deg, #B8872A, #D9A94A);
+  --stripe-condo:      linear-gradient(90deg, #1845A0, #3A72CC);
+  --stripe-villa-lux:  linear-gradient(90deg, #8B1515, #C03030);
+  --stripe-villa-mid:  linear-gradient(90deg, #166534, #2A9A5A);
+  --stripe-villa-ent:  linear-gradient(90deg, #5E1A88, #8A40C0);
+  --stripe-complete:   linear-gradient(90deg, #1A6B6B, #30A0A0);
+  --stripe-new:        linear-gradient(90deg, #9E5C00, #D4880A);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   12. BASE STYLES — Reset + global defaults
+   ─────────────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 2;
+}
+
+body {
+  font-family: var(--font-josefin), 'Josefin Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar — refined, non-intrusive */
+::-webkit-scrollbar               { width: 5px; height: 5px; }
+::-webkit-scrollbar-track         { background: transparent; }
+::-webkit-scrollbar-thumb         { background: var(--bdr); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover   { background: var(--c-neutral-300); }
+
+/* Serif utility class */
+.serif {
+  font-family: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
+}
+
+/* Tabular numbers for financial data */
+.tabular-nums, [data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Internationalisation: show/hide by language */
+[data-lang="en"] .i-ru { display: none !important; }
+[data-lang="ru"] .i-en { display: none !important; }
+
+/* Recommendation text colors */
+.rec-BUY   { color: var(--grn); }
+.rec-WATCH { color: var(--amb); }
+.rec-AVOID { color: var(--red); }
+
+/* Focus ring — accessible */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Link defaults */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Button defaults */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   COMPONENT PRIMITIVES
+   (Reusable base patterns shared across catalogue, admin, detail pages)
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Badge base ── */
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* ── Button base ── */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--rs);
+  border: none;
+  font-family: var(--font-josefin), sans-serif;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--ls-wider);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--tr), color var(--tr), box-shadow var(--tr), transform var(--tr-fast);
+  white-space: nowrap;
+}
+.ds-btn:active { transform: scale(.98); }
+
+/* Button variants */
+.ds-btn-primary   { background: var(--ink);  color: var(--gold); }
+.ds-btn-primary:hover  { background: var(--c-navy-800); box-shadow: var(--sh-sm); }
+.ds-btn-gold      { background: var(--gold); color: var(--sur); }
+.ds-btn-gold:hover     { background: var(--gold2); box-shadow: var(--sh-gold); }
+.ds-btn-outline   { background: transparent; color: var(--ink); border: 1.5px solid var(--bdr); }
+.ds-btn-outline:hover  { border-color: var(--ink); }
+.ds-btn-ghost     { background: transparent; color: var(--txt2); }
+.ds-btn-ghost:hover    { color: var(--ink); }
+.ds-btn-danger    { background: var(--rbg); color: var(--red); border: 1px solid var(--rbdr); }
+.ds-btn-danger:hover   { background: var(--red); color: #fff; }
+
+/* ── Input base ── */
+.ds-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--rs);
+  font-family: var(--font-josefin), sans-serif;
+  font-size: var(--text-base);
+  color: var(--ink);
+  background: var(--sur);
+  outline: none;
+  transition: border-color var(--tr), box-shadow var(--tr);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.ds-input:focus    { border-color: var(--gold); box-shadow: var(--ring-gold); }
+.ds-input::placeholder { color: var(--txt3); }
+
+/* ── Card base ── */
+.ds-card {
+  background: var(--sur);
+  border: 1px solid var(--bdr2);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--sh-card);
+}
+
+/* ── Table base ── */
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+.ds-table th,
+.ds-table td {
+  padding: 11px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(10,28,54,.07);
+  vertical-align: top;
+}
+.ds-table th {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--ls-caps);
+  color: var(--txt2);
+  background: var(--sur);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-shadow: 0 1px 0 rgba(10,28,54,.07);
+}
+.ds-table tr:last-child td { border-bottom: none; }
+.ds-table tbody tr:nth-child(even) td { background: rgba(10,28,54,.02); }
+.ds-table tbody tr:hover td { background: rgba(184,135,42,.05); }
+
+/* ── Section heading ── */
+.ds-section-title {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: var(--ls-tight);
+  line-height: var(--lh-tight);
+}
+.ds-section-sub {
+  font-size: var(--text-sm);
+  color: var(--txt2);
+  border-left: 2.5px solid var(--gold);
+  padding-left: var(--sp-2);
+  margin-top: var(--sp-1);
+  line-height: var(--lh-relaxed);
+}
+
+/* ── Stat card ── */
+.ds-stat {
+  background: var(--sur);
+  border: 1px solid rgba(10,28,54,.07);
+  border-radius: var(--r);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  box-shadow: var(--sh-xs);
+}
+.ds-stat-value {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ds-stat-label {
+  font-size: var(--text-xs);
+  color: var(--txt2);
+  margin-top: var(--sp-1);
+  line-height: var(--lh-snug);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DARK SURFACE PATTERN
+   Used in header, hero sections, footer, developer card headers
+   ─────────────────────────────────────────────────────────────────────────── */
+.ds-dark-surface {
+  background: var(--ink);
+  color: var(--c-white);
+}
+.ds-dark-surface--textured::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23B8872A' fill-opacity='.045'%3E%3Cpath d='M0 0h32v32H0zm32 32h32v32H32z'/%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PRINT
+   ─────────────────────────────────────────────────────────────────────────── */
+@media print {
+  :root { --bg: #fff; --sh: none; --sh-card: none; }
+  .sidebar, .hdr, .nav-tabs, .topbar { display: none !important; }
+  .layout { margin-top: 0; }
+  .main { min-height: auto; }
+}

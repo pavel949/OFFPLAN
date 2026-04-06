@@ -1,0 +1,6 @@
+/* Global stylesheet — Tailwind first (preflight), then tokens + overrides, then catalogue.
+   If design-system is imported *before* tailwindcss, Preflight wins and body/background
+   tokens from design-system.css do not apply — looks like the “new” system is missing. */
+@import "tailwindcss";
+@import "./design-system.css";
+@import "./catalogue.css";

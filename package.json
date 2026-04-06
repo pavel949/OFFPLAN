@@ -1,0 +1,40 @@
+{
+  "name": "phuket-offplan",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 3030",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "seed:catalog": "node scripts/seed-catalog.mjs",
+    "bootstrap": "npm run db:push && npm run seed:catalog",
+    "db:push": "dotenv -e .env.local -- npx supabase db push --workdir .",
+    "db:diff": "dotenv -e .env.local -- npx supabase db diff --workdir .",
+    "db:link": "dotenv -e .env.local -- npx supabase link --workdir . --project-ref ktfwmfdlmcgpbdnsggrb"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.0",
+    "@supabase/supabase-js": "^2.101.1",
+    "next": "15.5.14",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "stripe": "^17.7.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.1",
+    "dotenv-cli": "^8.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.14",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.2"
+  }
+}
