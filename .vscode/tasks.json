@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: Next (port 3030)",
+      "type": "npm",
+      "script": "dev",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "new" },
+      "group": { "kind": "build", "isDefault": true }
+    }
+  ]
+}
