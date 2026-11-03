@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 export const COOKIE_NAME = "ie_admin";
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -35,4 +35,11 @@ export function verifyAdminToken(token: string, secret: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** Constant-time string comparison (length-independent: both sides are hashed first). */
+export function safeEqual(a: string, b: string): boolean {
+  const ha = createHash("sha256").update(a, "utf8").digest();
+  const hb = createHash("sha256").update(b, "utf8").digest();
+  return timingSafeEqual(ha, hb);
 }

@@ -53,6 +53,11 @@ export default async function PartnerDashboardPage() {
           </Link>
         </li>
         <li>
+          <Link href="/partner/leads" className="underline font-semibold">
+            Заявки по моим проектам
+          </Link>
+        </li>
+        <li>
           <Link href="/partner/corrections" className="underline font-semibold">
             Запрос правок по карточке IE
           </Link>

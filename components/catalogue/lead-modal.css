@@ -201,3 +201,19 @@
   background: var(--c-navy-800);
   box-shadow: var(--sh-sm);
 }
+
+.lead-modal-consent {
+  display: flex;
+  gap: var(--space-2, 8px);
+  align-items: flex-start;
+  font-size: var(--text-sm, 0.85rem);
+  line-height: 1.4;
+  margin: var(--space-2, 8px) 0;
+}
+.lead-modal-consent input {
+  margin-top: 3px;
+  flex: none;
+}
+.lead-modal-consent a {
+  text-decoration: underline;
+}

@@ -1,7 +1,10 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { COOKIE_NAME, verifyAdminToken } from "@/lib/admin-session";
+import { headers } from "next/headers";
+import { verifyCaptcha } from "@/lib/captcha";
+import { CONSENT_VERSION } from "@/lib/legal";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { leadSubmitSchema } from "@/lib/leads/schema";
 import {
   appendLeadUnified,
@@ -12,12 +15,7 @@ import {
 import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
 
 async function assertAdmin(): Promise<boolean> {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return false;
-  const jar = await cookies();
-  const t = jar.get(COOKIE_NAME)?.value;
-  if (!t) return false;
-  return verifyAdminToken(t, secret);
+  return getAdminSessionOk();
 }
 
 export type SubmitLeadState = { ok: boolean; error?: string };
@@ -46,6 +44,17 @@ export async function submitLead(
   if (String(formData.get("_hp") ?? "").trim() !== "") {
     return { ok: true };
   }
+  const ip = clientIp(await headers());
+  if (!rateLimit(`lead:ip:${ip}`, 5, 10 * 60 * 1000).ok) {
+    return { ok: false, error: "Too many requests. Please try again later." };
+  }
+  const captchaOk = await verifyCaptcha(
+    String(formData.get("cf-turnstile-response") ?? ""),
+    ip,
+  );
+  if (!captchaOk) {
+    return { ok: false, error: "Captcha verification failed. Please retry." };
+  }
   const pidRaw = formData.get("projectId");
   let projectId: number | null = null;
   if (typeof pidRaw === "string" && pidRaw.trim() !== "") {
@@ -61,6 +70,7 @@ export async function submitLead(
     projectId,
     projectName: pn === "" ? null : pn,
     locale: formData.get("locale"),
+    consent: formData.get("consent") === "on" ? true : undefined,
   };
   const parsed = leadSubmitSchema.safeParse(raw);
   if (!parsed.success) {
@@ -70,6 +80,9 @@ export async function submitLead(
       parsed.error.issues[0]?.message ||
       "Проверьте поля";
     return { ok: false, error: first };
+  }
+  if (!rateLimit(`lead:email:${parsed.data.email.toLowerCase()}`, 3, 60 * 60 * 1000).ok) {
+    return { ok: false, error: "Too many requests. Please try again later." };
   }
   const utm = parseUtmJson(String(formData.get("utm_json") ?? ""));
   try {
@@ -82,11 +95,13 @@ export async function submitLead(
       projectName: parsed.data.projectName ?? null,
       locale: parsed.data.locale,
       utm,
+      consentVersion: CONSENT_VERSION,
     });
-  } catch (e) {
+  } catch {
+    // Details are logged server-side; never leak internals to the visitor.
     return {
       ok: false,
-      error: e instanceof Error ? e.message : "Не удалось сохранить заявку",
+      error: "Could not save your request. Please try again or email us directly.",
     };
   }
   return { ok: true };

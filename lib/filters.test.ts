@@ -102,3 +102,14 @@ describe("filters", () => {
     expect(applyFilters(sample, f)).toHaveLength(1);
   });
 });
+
+describe("zone/developer filters use exact match", () => {
+  it("does not match on substrings", () => {
+    const p = { ...sample[0], zone: "Kata", dt: "Banyan" };
+    const q = { ...sample[0], id: 2, zone: "Kata Noi", dt: "BanyanX" };
+    const f = { ...defaultFilterState(), fZone: "Kata" };
+    expect(filterProjects([p, q], f).map((x) => x.id)).toEqual([p.id]);
+    const g = { ...defaultFilterState(), fDev: "Banyan" };
+    expect(filterProjects([p, q], g).map((x) => x.id)).toEqual([p.id]);
+  });
+});

@@ -207,7 +207,7 @@ export function ProjectCard({
   )}`;
 
   return (
-    <article className={`pc${p.rec === "AVOID" ? " avoid" : ""}`}>
+    <article className={`pc${showRec && p.rec === "AVOID" ? " avoid" : ""}`}>
       <div className={`pc-stripe ${SC[p.seg] || "s-offplan-new"}`} />
       <div className="pc-head">
         <div className="pc-rat">{p.rat}</div>

@@ -1,7 +1,15 @@
 import { createServiceRoleClient, hasSupabaseServiceConfig } from "@/lib/supabase/service";
 
 export async function insertCatalogAuditLog(input: {
-  entity_type: "project" | "unit" | "campaign" | "update";
+  entity_type:
+    | "project"
+    | "unit"
+    | "campaign"
+    | "update"
+    | "org"
+    | "moderation"
+    | "correction"
+    | "lead";
   entity_id: string;
   actor_id: string | null;
   action: string;

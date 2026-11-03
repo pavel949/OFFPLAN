@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
 import { catalogProjectSchema } from "@/lib/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -208,6 +209,35 @@ export async function approveModerationSubmission(
       return { ok: false, error: "Заявка уже обработана" };
     }
 
+    // Re-validate: a snapshot must satisfy the strict taxonomy before it can go public.
+    if (sub.entity_type === "project") {
+      const v = catalogProjectSchema.safeParse(sub.snapshot);
+      if (!v.success) {
+        return {
+          ok: false,
+          error: `Снимок не проходит валидацию: ${v.error.issues[0]?.path.join(".")} — ${v.error.issues[0]?.message}`,
+        };
+      }
+    }
+
+    // Optimistic claim: only one reviewer can move pending -> approved.
+    const now = new Date().toISOString();
+    const { data: claimed, error: cErr } = await admin
+      .from("moderation_submissions")
+      .update({ status: "approved", reviewed_at: now })
+      .eq("id", submissionId)
+      .eq("status", "pending")
+      .select("id");
+    if (cErr) return { ok: false, error: cErr.message };
+    if (!claimed?.length) return { ok: false, error: "Заявка уже обработана" };
+
+    const revert = async () => {
+      await admin
+        .from("moderation_submissions")
+        .update({ status: "pending", reviewed_at: null })
+        .eq("id", submissionId);
+    };
+
     if (sub.entity_type === "project") {
       const { data: proj } = await admin
         .from("catalog_projects")
@@ -215,7 +245,10 @@ export async function approveModerationSubmission(
         .eq("id", sub.entity_id)
         .maybeSingle();
 
-      if (!proj) return { ok: false, error: "Проект не найден" };
+      if (!proj) {
+        await revert();
+        return { ok: false, error: "Проект не найден" };
+      }
 
       const { error: pErr } = await admin
         .from("catalog_projects")
@@ -224,11 +257,14 @@ export async function approveModerationSubmission(
           draft_payload: null,
           moderation_status: "published",
           is_published: true,
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         })
         .eq("id", sub.entity_id);
 
-      if (pErr) return { ok: false, error: pErr.message };
+      if (pErr) {
+        await revert();
+        return { ok: false, error: pErr.message };
+      }
     } else if (sub.entity_type === "org") {
       const { error: oErr } = await admin
         .from("orgs")
@@ -236,22 +272,23 @@ export async function approveModerationSubmission(
           profile_published: sub.snapshot,
           profile_draft: null,
           org_moderation_status: "published",
-          updated_at: new Date().toISOString(),
+          updated_at: now,
         })
         .eq("id", sub.entity_id);
 
-      if (oErr) return { ok: false, error: oErr.message };
+      if (oErr) {
+        await revert();
+        return { ok: false, error: oErr.message };
+      }
     }
 
-    const { error: uErr } = await admin
-      .from("moderation_submissions")
-      .update({
-        status: "approved",
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", submissionId);
-
-    if (uErr) return { ok: false, error: uErr.message };
+    await insertCatalogAuditLog({
+      entity_type: "moderation",
+      entity_id: submissionId,
+      actor_id: null, // shared admin login has no user identity yet
+      action: "moderation_approved",
+      diff: { entity_type: sub.entity_type, entity_id: sub.entity_id },
+    });
 
     revalidatePath("/admin/moderation");
     revalidatePath("/");
@@ -309,6 +346,14 @@ export async function rejectModerationSubmission(
       .eq("id", submissionId);
 
     if (uErr) return { ok: false, error: uErr.message };
+
+    await insertCatalogAuditLog({
+      entity_type: "moderation",
+      entity_id: submissionId,
+      actor_id: null,
+      action: "moderation_rejected",
+      diff: { note: reviewerNote.slice(0, 500) },
+    });
 
     revalidatePath("/admin/moderation");
     return { ok: true };
@@ -377,6 +422,14 @@ export async function grantCorrectionRequest(
       .eq("id", requestId);
 
     if (rErr) return { ok: false, error: rErr.message };
+
+    await insertCatalogAuditLog({
+      entity_type: "correction",
+      entity_id: requestId,
+      actor_id: null,
+      action: "correction_granted",
+      diff: { project_id: req.project_id, org_id: req.org_id },
+    });
 
     revalidatePath("/admin/corrections");
     revalidatePath("/partner/corrections");

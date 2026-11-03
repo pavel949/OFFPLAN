@@ -1,10 +1,51 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { submitLead, type SubmitLeadState } from "@/app/actions/leads";
 import "./lead-modal.css";
 
 const initial: SubmitLeadState = { ok: false };
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+type TurnstileApi = {
+  render: (el: HTMLElement, opts: { sitekey: string }) => string;
+  remove: (id: string) => void;
+};
+
+function TurnstileWidget() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !ref.current) return;
+    let widgetId: string | null = null;
+    let cancelled = false;
+    const mount = () => {
+      const api = (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+      if (cancelled || !api || !ref.current) return;
+      widgetId = api.render(ref.current, { sitekey: TURNSTILE_SITE_KEY });
+    };
+    if ((window as unknown as { turnstile?: TurnstileApi }).turnstile) {
+      mount();
+    } else {
+      let script = document.getElementById("cf-turnstile-script") as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "cf-turnstile-script";
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", mount);
+    }
+    return () => {
+      cancelled = true;
+      const api = (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+      if (widgetId && api) api.remove(widgetId);
+    };
+  }, []);
+  if (!TURNSTILE_SITE_KEY) return null;
+  return <div ref={ref} />;
+}
 
 export function LeadModal({
   open,
@@ -141,6 +182,20 @@ export function LeadModal({
               <span>{ru ? "Комментарий" : "Message"}</span>
               <textarea name="message" rows={4} maxLength={4000} />
             </label>
+
+            <label className="lead-modal-consent">
+              <input type="checkbox" name="consent" required />
+              <span>
+                {ru
+                  ? "Я согласен(на) на обработку персональных данных в соответствии с "
+                  : "I consent to the processing of my personal data as described in the "}
+                <Link href="/privacy" target="_blank" rel="noopener">
+                  {ru ? "политикой конфиденциальности" : "privacy policy"}
+                </Link>
+                {" *"}
+              </span>
+            </label>
+            <TurnstileWidget />
 
             {state.error ? (
               <p className="lead-modal-err">{state.error}</p>

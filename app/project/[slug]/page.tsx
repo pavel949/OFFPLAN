@@ -17,6 +17,12 @@ export async function generateMetadata({
   return {
     title: `${project.n} — Ignatev Estate`,
     description: project.desc.slice(0, 160),
+    alternates: { canonical: `/project/${projectSlug(project)}` },
+    openGraph: {
+      title: `${project.n} — Ignatev Estate`,
+      description: project.desc.slice(0, 160),
+      type: "article",
+    },
   };
 }
 

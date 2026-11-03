@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { notifyNewLead } from "@/lib/notify";
 import { dispatchLeadWebhooks } from "@/lib/marketplace/webhooks";
 import { recordAnalyticsEvent } from "@/lib/marketplace/analytics";
 import { createServiceRoleClient, hasSupabaseServiceConfig } from "@/lib/supabase/service";
@@ -51,49 +53,73 @@ export async function appendLeadUnified(
     notes?: string;
     source?: string;
     utm?: Record<string, string> | null;
+    consentVersion?: string;
   },
 ): Promise<LeadRecord> {
-  if (hasSupabaseServiceConfig()) {
-    try {
-      const supabase = createServiceRoleClient();
-      let project_uuid: string | null = null;
-      let org_id: string | null = null;
-      if (input.projectId != null) {
-        const { data } = await supabase
-          .from("catalog_projects")
-          .select("id, org_id")
-          .eq("legacy_id", input.projectId)
-          .maybeSingle();
-        project_uuid = data?.id ?? null;
-        org_id = (data as { org_id?: string | null } | null)?.org_id ?? null;
-      }
-      const { data, error } = await supabase
-        .from("leads")
-        .insert({
-          name: input.name,
-          email: input.email,
-          phone: input.phone ?? "",
-          message: input.message ?? "",
-          project_id: input.projectId,
-          project_name: input.projectName,
-          project_uuid,
-          status: input.status ?? "new",
-          notes: input.notes ?? "",
-          source: input.source ?? "website",
-          locale: input.locale,
-          utm: input.utm && Object.keys(input.utm).length ? input.utm : null,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      const row = data as Parameters<typeof mapDbRow>[0];
-      const created = mapDbRow(row);
-      void recordAnalyticsEvent({
+  if (!hasSupabaseServiceConfig()) {
+    // Local file store is a development convenience only: serverless FS is read-only/ephemeral,
+    // so in production a missing DB must fail loudly instead of silently losing PII.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Lead store is not configured");
+    }
+    return appendLead(input);
+  }
+
+  const supabase = createServiceRoleClient();
+  let project_uuid: string | null = null;
+  let org_id: string | null = null;
+  if (input.projectId != null) {
+    const { data } = await supabase
+      .from("catalog_projects")
+      .select("id, org_id")
+      .eq("legacy_id", input.projectId)
+      .maybeSingle();
+    project_uuid = data?.id ?? null;
+    org_id = (data as { org_id?: string | null } | null)?.org_id ?? null;
+  }
+  const { data, error } = await supabase
+    .from("leads")
+    .insert({
+      name: input.name,
+      email: input.email,
+      phone: input.phone ?? "",
+      message: input.message ?? "",
+      project_id: input.projectId,
+      project_name: input.projectName,
+      project_uuid,
+      status: input.status ?? "new",
+      notes: input.notes ?? "",
+      source: input.source ?? "website",
+      locale: input.locale,
+      utm: input.utm && Object.keys(input.utm).length ? input.utm : null,
+      consent_at: new Date().toISOString(),
+      consent_version: input.consentVersion ?? null,
+    })
+    .select()
+    .single();
+  if (error) {
+    console.error("[leads] insert failed", error.message);
+    throw new Error("Lead insert failed");
+  }
+  const created = mapDbRow(data as Parameters<typeof mapDbRow>[0]);
+
+  // Side effects run after the response is sent but are kept alive by the platform.
+  after(async () => {
+    await Promise.allSettled([
+      recordAnalyticsEvent({
         name: "lead.submitted",
         project_id: project_uuid,
         payload: { lead_id: created.id, utm: input.utm ?? undefined },
-      });
-      void dispatchLeadWebhooks({
+      }),
+      notifyNewLead({
+        id: created.id,
+        name: created.name,
+        email: created.email,
+        phone: created.phone,
+        message: created.message,
+        projectName: created.projectName,
+      }),
+      dispatchLeadWebhooks({
         event: "lead.created",
         lead_id: created.id,
         project_uuid,
@@ -102,13 +128,10 @@ export async function appendLeadUnified(
         email: created.email,
         phone: created.phone,
         created_at: created.createdAt,
-      });
-      return created;
-    } catch {
-      return appendLead(input);
-    }
-  }
-  return appendLead(input);
+      }),
+    ]);
+  });
+  return created;
 }
 
 export async function listLeadsUnified(): Promise<LeadRecord[]> {

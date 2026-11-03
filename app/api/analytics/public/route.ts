@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { recordAnalyticsEvent } from "@/lib/marketplace/analytics";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+
+const MAX_BODY_BYTES = 4096;
 
 const ALLOWED = new Set([
   "project.view",
@@ -24,6 +27,14 @@ export async function POST(req: Request) {
     }
   }
 
+  if (!rateLimit(`analytics:${clientIp(req.headers)}`, 120, 60_000).ok) {
+    return NextResponse.json({ ok: false }, { status: 429 });
+  }
+  const len = Number(req.headers.get("content-length") ?? "0");
+  if (len > MAX_BODY_BYTES) {
+    return NextResponse.json({ ok: false }, { status: 413 });
+  }
+
   let body: {
     name?: string;
     project_id?: string | null;
@@ -31,7 +42,11 @@ export async function POST(req: Request) {
     payload?: Record<string, unknown>;
   };
   try {
-    body = (await req.json()) as typeof body;
+    const text = await req.text();
+    if (text.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ ok: false }, { status: 413 });
+    }
+    body = JSON.parse(text) as typeof body;
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
@@ -51,8 +66,8 @@ export async function POST(req: Request) {
   await recordAnalyticsEvent({
     name: body.name,
     project_id: pid ?? null,
-    path: body.path ?? null,
-    payload: body.payload ?? {},
+    path: typeof body.path === "string" ? body.path.slice(0, 300) : null,
+    payload: body.payload && typeof body.payload === "object" ? body.payload : {},
   });
   return NextResponse.json({ ok: true });
 }

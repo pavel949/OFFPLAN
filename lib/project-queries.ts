@@ -1,4 +1,4 @@
-import { createServiceRoleClient, hasSupabaseServiceConfig } from "@/lib/supabase/service";
+import { createAnonClient, hasSupabasePublicConfig } from "@/lib/supabase/anon";
 import { withTimeout } from "./with-timeout";
 
 const DB_TIMEOUT_MS = 8000;
@@ -52,11 +52,11 @@ export async function getProjectExtrasByLegacyId(legacyId: number): Promise<{
     dataConfirmedAt: null,
   };
 
-  if (!hasSupabaseServiceConfig()) return empty;
+  if (!hasSupabasePublicConfig()) return empty;
 
   return withTimeout(
     (async () => {
-      const supabase = createServiceRoleClient();
+      const supabase = createAnonClient();
       const { data: cp } = await supabase
         .from("catalog_projects")
         .select("id, lat, lng, data_confirmed_at")

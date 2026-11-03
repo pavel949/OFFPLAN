@@ -15,7 +15,16 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
 export const metadata: Metadata = {
+  ...(siteUrl ? { metadataBase: new URL(siteUrl) } : {}),
+  openGraph: {
+    type: "website",
+    siteName: "Ignatev Estate",
+    title: "Ignatev Estate — Phuket Property Q2 2026",
+    description: "Verified off-plan Phuket property catalogue — Ignatev Estate",
+  },
   title: "Ignatev Estate — Phuket Property Q2 2026",
   description:
     "Verified off-plan Phuket property catalogue — Ignatev Estate",
