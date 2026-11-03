@@ -1,3 +1,4 @@
+import { searchHaystack } from "./i18n/localize-project";
 import type { CatalogProject, RecLabel } from "./types";
 
 export type SortKey =
@@ -72,7 +73,7 @@ export function filterProjects(
       if (f.fYear === "2028" && (p.compY || 0) < 2028) return false;
     }
     if (q) {
-      const hay = `${p.n} ${p.dev} ${p.zone} ${(p.tags || []).join(" ")}`.toLowerCase();
+      const hay = searchHaystack(p);
       if (hay.indexOf(q) < 0) return false;
     }
     return true;

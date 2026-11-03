@@ -21,13 +21,15 @@ export const metadata: Metadata = {
   ...(siteUrl ? { metadataBase: new URL(siteUrl) } : {}),
   openGraph: {
     type: "website",
+    locale: "ru_RU",
+    alternateLocale: ["en_US"],
     siteName: "Ignatev Estate",
-    title: "Ignatev Estate — Phuket Property Q2 2026",
-    description: "Verified off-plan Phuket property catalogue — Ignatev Estate",
+    title: "Ignatev Estate — новостройки Пхукета, II кв. 2026",
+    description: "Каталог новостроек Пхукета: проекты, цены, инвентарь и оценка рисков для инвесторов.",
   },
-  title: "Ignatev Estate — Phuket Property Q2 2026",
+  title: "Ignatev Estate — новостройки Пхукета, II кв. 2026",
   description:
-    "Verified off-plan Phuket property catalogue — Ignatev Estate",
+    "Каталог новостроек Пхукета: проекты, цены, инвентарь и оценка рисков для инвесторов.",
 };
 
 export default function RootLayout({
@@ -36,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <body
         className={`${josefin.variable} ${cormorant.variable}`}
         style={{

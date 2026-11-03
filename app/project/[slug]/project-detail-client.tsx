@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
+import { localizeProject } from "@/lib/i18n/localize-project";
+import { zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import type {
   ProjectUnitRow,
@@ -15,7 +18,7 @@ import "./project-detail.css";
 const LANG_KEY = "phuket_lang";
 
 export function ProjectDetailClient({
-  project: p,
+  project,
   extras,
   backHref,
   legacyId,
@@ -33,7 +36,7 @@ export function ProjectDetailClient({
   backHref: string;
   legacyId: number;
 }) {
-  const [lang, setLang] = useState<"en" | "ru">("en");
+  const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
   const [leadOpen, setLeadOpen] = useState(false);
 
   useEffect(() => {
@@ -43,7 +46,10 @@ export function ProjectDetailClient({
 
   useEffect(() => {
     document.documentElement.setAttribute("data-lang", lang);
+    document.documentElement.lang = lang;
   }, [lang]);
+
+  const p = useMemo(() => localizeProject(project, lang), [project, lang]);
 
   useEffect(() => {
     const id = extras.catalogProjectId;
@@ -80,7 +86,11 @@ export function ProjectDetailClient({
           {ru ? "← К каталогу" : "← Back to catalogue"}
         </Link>
         <div className="pd-actions">
-          <button type="button" className="pd-lang" onClick={() => setLang(ru ? "en" : "ru")}>
+          <button type="button" className="pd-lang" onClick={() => {
+              const n = ru ? "en" : "ru";
+              setLang(n);
+              localStorage.setItem(LANG_KEY, n);
+            }}>
             {ru ? "🇬🇧 ENG" : "🇷🇺 РУС"}
           </button>
           <button type="button" className="pd-cta" onClick={() => setLeadOpen(true)}>
@@ -179,7 +189,7 @@ export function ProjectDetailClient({
                 <span className="i-ru">Координаты появятся после подтверждения партнёром.</span>
               </p>
             )}
-            <p className="pd-zone">{p.zone}</p>
+            <p className="pd-zone">{zoneLabel(p.zone, lang)}</p>
           </section>
         </div>
 

@@ -81,6 +81,38 @@ begin;
   select pg_temp.expect_count($$select 1 from catalog_projects where is_published$$, 1, 'anon reads published projects');
 rollback;
 
+
+-- ---- model v2 ----
+insert into catalog_project_translations(project_id, locale, description) values ('00000000-0000-0000-0000-0000000000d1','ru','тест');
+update catalog_projects set is_published=false, moderation_status='draft' where id='00000000-0000-0000-0000-0000000000d1';
+
+begin;
+  select pg_temp.as_user(null,'anon');
+  select pg_temp.expect_count($$select 1 from catalog_project_translations$$, 0, 'anon cannot read translations of unpublished project');
+  select pg_temp.expect_count($$select 1 from jurisdictions$$, 1, 'anon sees only active jurisdictions (TH)');
+  select pg_temp.expect_count($$select 1 from taxonomy_terms$$, 0, 'taxonomy empty until seeded, readable');
+rollback;
+
+update catalog_projects set is_published=true, moderation_status='published' where id='00000000-0000-0000-0000-0000000000d1';
+
+begin;
+  select pg_temp.as_user(null,'anon');
+  select pg_temp.expect_count($$select 1 from catalog_project_translations$$, 1, 'anon reads translations of published project');
+rollback;
+
+begin;
+  select pg_temp.as_user('00000000-0000-0000-0000-0000000000b1','authenticated');
+  select pg_temp.expect_error($$insert into catalog_project_translations(project_id, locale, description) values ('00000000-0000-0000-0000-0000000000d1','en','x')$$, 'partner cannot write translations');
+  insert into project_units(project_id,label,price_thb,source) values ('00000000-0000-0000-0000-0000000000d1','U1',1000000,'operator');
+  select pg_temp.expect_count($$select 1 from project_units where label='U1' and source='developer'$$, 1, 'partner cannot claim operator source');
+  update project_units set price_updated_at = now() + interval '10 years' where label='U1';
+  select pg_temp.expect_count($$select 1 from project_units where label='U1' and price_updated_at < now() + interval '1 day'$$, 1, 'freshness timestamp cannot be forged');
+  update project_units set price_thb = 1200000 where label='U1';
+  select pg_temp.expect_count($$select 1 from unit_price_history h join project_units u on u.id=h.unit_id where u.label='U1'$$, 2, 'price history recorded for insert and price change');
+  update project_units set label='U1b' where label='U1';
+  select pg_temp.expect_count($$select 1 from unit_price_history h join project_units u on u.id=h.unit_id where u.label='U1b'$$, 2, 'non-price edit does not add history');
+rollback;
+
 -- service role / direct connection stays unrestricted (trusted server code)
 update profiles set role='buyer' where id='00000000-0000-0000-0000-0000000000e1';
 select 'RLS OK' as result;

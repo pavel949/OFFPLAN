@@ -1,17 +1,62 @@
 import rawProjects from "@/data/seed/projects.json";
+import ruSeedTexts from "@/data/i18n/projects.ru.json";
 import { countByRec } from "./filters";
 import { parseCatalogRows } from "./schema";
 import { createAnonClient, hasSupabasePublicConfig } from "./supabase/anon";
 import { showRecLabels, toPublicProject } from "./public-catalog";
-import type { CatalogMeta, CatalogProject } from "./types";
+import type { CatalogMeta, CatalogProject, ProjectTexts } from "./types";
 import { withTimeout } from "./with-timeout";
 
 const DB_TIMEOUT_MS = 8000;
 
 function parseSeedProjects(): CatalogProject[] {
-  return parseCatalogRows(rawProjects as unknown[], (i, e) =>
-    console.error("[catalog] invalid seed row", i, e.issues[0]?.message),
+  return attachRu(
+    parseCatalogRows(rawProjects as unknown[], (i, e) =>
+      console.error("[catalog] invalid seed row", i, e.issues[0]?.message),
+    ),
   );
+}
+
+/** Russian texts shipped with the repo (machine drafts, reviewed by editors in the DB). */
+const RU_SEED = ruSeedTexts as unknown as Record<string, ProjectTexts>;
+
+function attachRu(
+  projects: CatalogProject[],
+  db?: Map<number, ProjectTexts>,
+): CatalogProject[] {
+  return projects.map((p) => {
+    const ru = db?.get(p.id) ?? RU_SEED[String(p.id)];
+    return ru ? { ...p, i18n: { ru } } : p;
+  });
+}
+
+/** Best-effort: translations edited in the DB override the seed. Never blocks the catalogue. */
+async function loadDbRuTexts(
+  supabase: ReturnType<typeof createAnonClient>,
+  idMap: Map<string, number>,
+): Promise<Map<number, ProjectTexts> | undefined> {
+  try {
+    const { data, error } = await supabase
+      .from("catalog_project_translations")
+      .select("project_id, description, status_text, completion_text, tags, review_status")
+      .eq("locale", "ru");
+    if (error || !data?.length) return undefined;
+    const out = new Map<number, ProjectTexts>();
+    for (const r of data) {
+      const legacy = idMap.get(r.project_id as string);
+      if (legacy == null) continue;
+      out.set(legacy, {
+        desc: (r.description as string) ?? "",
+        stT: (r.status_text as string) ?? "",
+        compQ: (r.completion_text as string) ?? "",
+        tags: (r.tags as string[]) ?? [],
+        reviewStatus: r.review_status as ProjectTexts["reviewStatus"],
+      });
+    }
+    return out;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getProjects(): Promise<CatalogProject[]> {
@@ -29,7 +74,7 @@ async function loadProjects(): Promise<CatalogProject[]> {
         const supabase = createAnonClient();
         const { data, error } = await supabase
           .from("catalog_projects")
-          .select("payload")
+          .select("id, legacy_id, payload")
           .eq("is_published", true)
           .eq("moderation_status", "published")
           .order("legacy_id", { ascending: true });
@@ -41,10 +86,15 @@ async function loadProjects(): Promise<CatalogProject[]> {
           console.error("[catalog] DB returned no published projects, serving seed fallback");
           return fallback;
         }
-        return parseCatalogRows(
+        const idMap = new Map<string, number>();
+        for (const r of data) {
+          if (r.legacy_id != null) idMap.set(r.id as string, r.legacy_id as number);
+        }
+        const rows = parseCatalogRows(
           data.map((r) => r.payload),
           (i, e) => console.error("[catalog] skipping invalid DB row", i, e.issues[0]?.message),
         );
+        return attachRu(rows, await loadDbRuTexts(supabase, idMap));
       } catch (e) {
         console.error("[catalog] DB read threw, serving seed fallback:", e);
         return fallback;
