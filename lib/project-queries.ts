@@ -58,7 +58,7 @@ export async function getProjectExtrasByLegacyId(legacyId: number): Promise<{
     (async () => {
       const supabase = createAnonClient();
       const { data: cp } = await supabase
-        .from("catalog_projects")
+        .from("public_catalog_projects")
         .select("id, lat, lng, data_confirmed_at")
         .eq("legacy_id", legacyId)
         .maybeSingle();

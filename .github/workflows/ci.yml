@@ -31,11 +31,10 @@ jobs:
         run: npm run test
 
       - name: Build
+        # Deliberately NO Supabase env here: without it the catalogue is built from the bundled seed
+        # (dev/demo mode). With a configured-but-unreachable database the production build fails on purpose
+        # so a deploy can never ship seed data in place of the real catalogue.
         run: npm run build
-        env:
-          # Build may read env at compile time; placeholders for CI only.
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
 
   rls:
     runs-on: ubuntu-latest
