@@ -137,6 +137,41 @@ begin;
   select pg_temp.expect_count($$select 1 from correction_requests where id='00000000-0000-0000-0000-0000000000a9' and status='open'$$, 1, 'refused grant leaves request open');
 rollback;
 
+-- P1a: typed projection + assessments (parsing never guesses: unknown => NULL + warning)
+insert into catalog_projects(id,slug,payload) values
+ ('00000000-0000-0000-0000-0000000000d3','parse-a','{"n":"A","dev":"D","dt":"d","zone":"Layan","type":"condo","seg":"branded","stK":"building","beach":"bf","own":"fh","mgmt":"pro","focus":"lifestyle","pT":"฿17.3M","units":"455 (Park Residences phase)","unitSzM2":"2,452–3,281 sqm","yield":"5–7%","compY":2026,"compQ":"Dec 2026 / Q3 2027","rat":9.1,"risk":2,"rec":"BUY","recText":"x","src":"s"}'),
+ ('00000000-0000-0000-0000-0000000000d4','parse-b','{"n":"B","zone":"Nowhere","pT":"฿315M+","units":"н/д","unitSzM2":"н/д","yield":"6%","compY":2027}'),
+ ('00000000-0000-0000-0000-0000000000d5','parse-c','{"n":"C","zone":"Kata","pT":"฿5M–฿8.5M","units":"~40","unitSzM2":"Studio–3BR","yield":"n/a"}'),
+ ('00000000-0000-0000-0000-0000000000d6','parse-d','{"n":"D","zone":"Kata","pT":"POA"}'),
+ ('00000000-0000-0000-0000-0000000000d7','parse-e','{"n":"E","zone":"Kata","pT":"garbage"}');
+select pg_temp.expect_count($$select 1 from developments where project_id='00000000-0000-0000-0000-0000000000d3' and price_status='quoted' and price_from_thb=17300000 and price_to_thb is null and not price_open_ended and units_total=455 and unit_size_min_sqm=2452 and unit_size_max_sqm=3281 and yield_min_pct=5 and yield_max_pct=7 and completion_year=2026 and area_id is not null and parse_warnings='{}'$$, 1, 'typed projection parses a well-formed payload');
+select pg_temp.expect_count($$select 1 from developments where project_id='00000000-0000-0000-0000-0000000000d4' and price_from_thb=315000000 and price_open_ended and units_total is null and unit_size_min_sqm is null and yield_min_pct=6 and yield_max_pct=6 and area_id is null and parse_warnings='{zone_unmapped}'$$, 1, 'open-ended price, н/д stays NULL without warning, unmapped zone is flagged');
+select pg_temp.expect_count($$select 1 from developments where project_id='00000000-0000-0000-0000-0000000000d5' and price_from_thb=5000000 and price_to_thb=8500000 and units_total=40 and parse_warnings @> '{unit_size_unparsed,yield_unparsed}'$$, 1, 'price range parsed, free text flagged not guessed');
+select pg_temp.expect_count($$select 1 from developments where project_id='00000000-0000-0000-0000-0000000000d6' and price_status='on_request' and price_from_thb is null$$, 1, 'POA => on_request');
+select pg_temp.expect_count($$select 1 from developments where project_id='00000000-0000-0000-0000-0000000000d7' and price_status='unknown' and 'price_unparsed'=any(parse_warnings)$$, 1, 'unparsable price flagged');
+select pg_temp.expect_count($$select 1 from assessments where project_id='00000000-0000-0000-0000-0000000000d3' and is_current and rating=9.1 and risk=2 and label='BUY' and visibility='internal'$$, 1, 'assessment extracted, internal by default');
+update catalog_projects set payload = jsonb_set(payload,'{rec}','"AVOID"') where id='00000000-0000-0000-0000-0000000000d3';
+select pg_temp.expect_count($$select 1 from assessments where project_id='00000000-0000-0000-0000-0000000000d3'$$, 2, 'assessment history is kept');
+select pg_temp.expect_count($$select 1 from assessments where project_id='00000000-0000-0000-0000-0000000000d3' and is_current and label='AVOID'$$, 1, 'exactly one current assessment');
+update catalog_projects set payload = jsonb_set(payload,'{n}','"A renamed"') where id='00000000-0000-0000-0000-0000000000d3';
+select pg_temp.expect_count($$select 1 from assessments where project_id='00000000-0000-0000-0000-0000000000d3'$$, 2, 'unrelated edit does not create a new assessment');
+select pg_temp.expect_error($$update assessments set visibility='public' where project_id='00000000-0000-0000-0000-0000000000d3' and is_current$$, 'cannot publish an assessment without legal sign-off');
+
+begin;
+  select pg_temp.as_user(null,'anon');
+  select pg_temp.expect_count($$select 1 from assessments$$, 0, 'anon cannot read assessments');
+  select pg_temp.expect_count($$select 1 from developments$$, 6, 'anon reads typed facts of published projects only');
+  select pg_temp.expect_count($$select 1 from developments where slug='hidden'$$, 0, 'unpublished project facts are not public');
+rollback;
+begin;
+  select pg_temp.as_user('00000000-0000-0000-0000-0000000000a1','authenticated');
+  select pg_temp.expect_count($$select 1 from assessments$$, 0, 'buyer cannot read assessments');
+rollback;
+begin;
+  select pg_temp.as_user('00000000-0000-0000-0000-0000000000b1','authenticated');
+  select pg_temp.expect_count($$select 1 from assessments$$, 0, 'partner cannot read assessments');
+rollback;
+
 -- service role / direct connection stays unrestricted (trusted server code)
 update profiles set role='buyer' where id='00000000-0000-0000-0000-0000000000e1';
 select 'RLS OK' as result;
