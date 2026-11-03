@@ -4,4 +4,4 @@
 
 2026-11-03 этот импорт уже выполнен в `mfwbdfrrlckarktpwykf`: 122 черновика, 122 developments, 122 внутренних assessments, 1 snapshot. Данные Q2 2026 не подтверждены как актуальные. Наличие строки в assessments не означает независимую проверку.
 
-Новые forward migrations пока не применены: подтверждение Supabase истекло. История production остаётся на `20250414000005`. GitHub Actions не настроен: отсутствуют deployment credentials. Подробности: [статус миграции](../../docs/MIGRATION_STATUS.md).
+Новые forward migrations пока не применены: после нового разрешения владельца подтверждение Supabase вновь истекло; повторная проверка истории подтвердила отсутствие применения. История production остаётся на `20250414000005`. GitHub Actions не настроен: отсутствуют deployment credentials. Подробности: [статус миграции](../../docs/MIGRATION_STATUS.md).
