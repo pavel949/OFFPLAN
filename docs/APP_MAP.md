@@ -88,3 +88,9 @@ The embedded preview often lags behind a normal browser for Next.js (HMR, localh
 4. Enter: **`http://localhost:3030`**
 
 If Simple Browser stays blank, use the external browser for debugging; keep Simple Browser for quick checks. Cursor’s separate **Browser** / MCP tools (if enabled) also accept the same URL.
+
+## Architecture, data model and processes
+
+- [`ARCHITECTURE_REVIEW.md`](./ARCHITECTURE_REVIEW.md) — findings, target architecture, rollout plan (P0–P3).
+- [`DATA_MODEL.md`](./DATA_MODEL.md) — target data model per domain, access matrix, as-is → to-be mapping.
+- [`PROCESS_MAP.md`](./PROCESS_MAP.md) — process map, state machines, user journeys, domain events.
