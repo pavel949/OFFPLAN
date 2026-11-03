@@ -30,7 +30,7 @@ jobs:
       - name: Link project and push migrations
         run: |
           set -euo pipefail
-          PROJECT_REF="${SUPABASE_PROJECT_REF:-ktfwmfdlmcgpbdnsggrb}"
+          PROJECT_REF="${SUPABASE_PROJECT_REF:-mfwbdfrrlckarktpwykf}"
           supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --yes
           supabase db push --yes
 
