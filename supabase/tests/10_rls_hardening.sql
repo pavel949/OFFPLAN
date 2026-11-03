@@ -1,6 +1,8 @@
 -- RLS regression tests. Run after all migrations on a database prepared with 00_supabase_stub.sql.
 -- Any failed expectation raises an exception => non-zero exit with psql -v ON_ERROR_STOP=1.
 grant all on all tables in schema public to anon, authenticated, service_role;
+-- Mirror the real Supabase state after P0 (migration 20250414000000): anon has no privilege on the base table.
+revoke all on public.catalog_projects from anon;
 
 create or replace function pg_temp.as_user(uid uuid, r text) returns void language plpgsql as $$
 begin
@@ -82,7 +84,7 @@ begin;
   select pg_temp.expect_count($$select 1 from leads$$, 0, 'anon cannot read leads');
   select pg_temp.expect_count($$select 1 from platform_settings$$, 2, 'anon reads only the 2 public settings');
   -- public contract: the base table is closed, the view is the only door
-  select pg_temp.expect_count($$select 1 from catalog_projects$$, 0, 'anon cannot read the base catalog_projects table');
+  select pg_temp.expect_error($$select 1 from catalog_projects$$, 'anon has no access to the base catalog_projects table');
   select pg_temp.expect_count($$select 1 from public_catalog_projects$$, 1, 'anon reads published projects via the view');
   select pg_temp.expect_count($$select 1 from public_catalog_projects where slug='hidden'$$, 0, 'view hides unpublished projects');
   select pg_temp.expect_error($$select draft_payload from public_catalog_projects$$, 'view must not expose draft_payload');
@@ -90,6 +92,8 @@ begin;
   select pg_temp.expect_count($$select 1 from public_catalog_projects where payload::text like '%secret%'$$, 0, 'no editorial text leaks through the view');
   -- children of published projects stay public, children of unpublished do not
   select pg_temp.expect_count($$select 1 from project_units$$, 1, 'anon sees units of published projects only');
+  select pg_temp.expect_count($$select 1 from sales_campaigns$$, 0, 'anon can query sales_campaigns without permission errors');
+  select pg_temp.expect_count($$select 1 from moderation_submissions$$, 0, 'anon can query moderation_submissions without permission errors');
   select pg_temp.expect_count($$select 1 from project_updates$$, 1, 'anon sees updates of published projects only');
 rollback;
 
