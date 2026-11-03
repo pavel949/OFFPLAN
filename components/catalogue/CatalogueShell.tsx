@@ -587,6 +587,8 @@ export function CatalogueShell({
                     <span className="i-ru">Проектов</span>
                   </div>
                 </div>
+                {process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true" ? (
+                  <>
                 <div className="hkpi2">
                   <div className="hkpi2-v">{meta.buyCount}</div>
                   <div className="hkpi2-l">
@@ -601,6 +603,8 @@ export function CatalogueShell({
                     <span className="i-ru">предупреждений</span>
                   </div>
                 </div>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>

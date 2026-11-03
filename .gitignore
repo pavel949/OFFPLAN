@@ -49,3 +49,7 @@ supabase/.temp/
 next-env.d.ts
 
 .vercel
+
+# local tooling state (ruflo / claude-flow)
+.claude-flow/
+.swarm/

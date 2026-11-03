@@ -12,15 +12,6 @@ export function AdminImportForm({
   return (
     <form action={formAction} className="flex max-w-xl flex-col gap-3">
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-semibold text-[var(--txt2)]">Секрет</span>
-        <input
-          name="secret"
-          type="password"
-          autoComplete="off"
-          className="admin-inp mb-0"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
         <span className="font-semibold text-[var(--txt2)]">JSON проектов</span>
         <textarea
           name="payload"
@@ -34,7 +25,7 @@ export function AdminImportForm({
       </button>
       {state?.ok === true ? (
         <p className="text-[var(--grn)] text-sm">
-          Сохранено в data/seed/projects.json
+          Импортировано проектов: {state.imported ?? 0}.
         </p>
       ) : null}
       {state?.ok === false && state?.error ? (

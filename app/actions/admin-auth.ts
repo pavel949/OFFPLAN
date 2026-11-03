@@ -1,12 +1,14 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   COOKIE_MAX_AGE,
   COOKIE_NAME,
+  safeEqual,
   signAdminToken,
 } from "@/lib/admin-session";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function loginAdmin(
   _prev: { ok?: boolean; error?: string } | undefined,
@@ -16,8 +18,21 @@ export async function loginAdmin(
   if (!secret) {
     return { ok: false, error: "ADMIN_SECRET не задан в окружении" };
   }
+  if (process.env.NODE_ENV === "production" && secret.length < 16) {
+    return { ok: false, error: "ADMIN_SECRET слишком короткий (минимум 16 символов)" };
+  }
+  // 5 attempts / 15 min per IP (best effort; add a WAF rule for the real limit).
+  const ip = clientIp(await headers());
+  const rl = rateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000);
+  if (!rl.ok) {
+    return {
+      ok: false,
+      error: `Слишком много попыток. Повторите через ${Math.ceil(rl.retryAfterMs / 60000)} мин.`,
+    };
+  }
   const password = String(formData.get("password") ?? "");
-  if (password !== secret) {
+  if (!safeEqual(password, secret)) {
+    await new Promise((r) => setTimeout(r, 800));
     return { ok: false, error: "Неверный пароль" };
   }
   const token = signAdminToken(secret);

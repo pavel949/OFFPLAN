@@ -56,9 +56,9 @@ export function filterProjects(
     if (f.fRec && p.rec !== f.fRec) return false;
     if (f.fSeg && p.seg !== f.fSeg) return false;
     if (f.fType && p.type !== f.fType) return false;
-    if (f.fZone && p.zone.indexOf(f.fZone) < 0) return false;
+    if (f.fZone && p.zone !== f.fZone) return false;
     if (f.fStatus && p.stK !== f.fStatus) return false;
-    if (f.fDev && p.dt.indexOf(f.fDev) < 0) return false;
+    if (f.fDev && p.dt !== f.fDev) return false;
     if (f.fBeach && p.beach !== f.fBeach) return false;
     if (f.fOwn && p.own !== f.fOwn && p.own !== "both") return false;
     if (f.fMgmt && p.mgmt !== f.fMgmt) return false;

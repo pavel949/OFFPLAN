@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 
 /**
  * Internal AI stub: replace with Vercel AI SDK + provider when keys are configured.
  * POST body: { text: string } — e.g. lead message + notes
  */
 export async function POST(req: Request) {
+  if (!(await getAdminSessionOk())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let body: { text?: string };
   try {
     body = await req.json();

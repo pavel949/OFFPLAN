@@ -1,42 +1,54 @@
 import rawProjects from "@/data/seed/projects.json";
 import { countByRec } from "./filters";
-import { catalogProjectsSchema } from "./schema";
-import { hasSupabaseServiceConfig, createServiceRoleClient } from "./supabase/service";
+import { parseCatalogRows } from "./schema";
+import { createAnonClient, hasSupabasePublicConfig } from "./supabase/anon";
+import { showRecLabels, toPublicProject } from "./public-catalog";
 import type { CatalogMeta, CatalogProject } from "./types";
 import { withTimeout } from "./with-timeout";
 
 const DB_TIMEOUT_MS = 8000;
 
 function parseSeedProjects(): CatalogProject[] {
-  try {
-    return catalogProjectsSchema.parse(rawProjects);
-  } catch {
-    return [];
-  }
+  return parseCatalogRows(rawProjects as unknown[], (i, e) =>
+    console.error("[catalog] invalid seed row", i, e.issues[0]?.message),
+  );
 }
 
 export async function getProjects(): Promise<CatalogProject[]> {
+  const rows = await loadProjects();
+  return rows.map((p) => toPublicProject(p));
+}
+
+async function loadProjects(): Promise<CatalogProject[]> {
   const fallback = parseSeedProjects();
-  if (!hasSupabaseServiceConfig()) return fallback;
+  if (!hasSupabasePublicConfig()) return fallback;
 
   return withTimeout(
     (async (): Promise<CatalogProject[]> => {
       try {
-        const supabase = createServiceRoleClient();
+        const supabase = createAnonClient();
         const { data, error } = await supabase
           .from("catalog_projects")
           .select("payload")
           .eq("is_published", true)
           .eq("moderation_status", "published")
           .order("legacy_id", { ascending: true });
-        if (!error && data?.length) {
-          const rows = data.map((r) => r.payload);
-          return catalogProjectsSchema.parse(rows);
+        if (error) {
+          console.error("[catalog] DB read failed, serving seed fallback:", error.message);
+          return fallback;
         }
-      } catch {
-        /* fallback below */
+        if (!data?.length) {
+          console.error("[catalog] DB returned no published projects, serving seed fallback");
+          return fallback;
+        }
+        return parseCatalogRows(
+          data.map((r) => r.payload),
+          (i, e) => console.error("[catalog] skipping invalid DB row", i, e.issues[0]?.message),
+        );
+      } catch (e) {
+        console.error("[catalog] DB read threw, serving seed fallback:", e);
+        return fallback;
       }
-      return fallback;
     })(),
     DB_TIMEOUT_MS,
     fallback,
@@ -57,23 +69,22 @@ export function getCatalogMeta(projects: CatalogProject[]): CatalogMeta {
     /** Market headline — same order of magnitude as legacy catalogue */
     totalValueBnTHB: 71,
     avgYieldPct: Math.round(avgYield * 100) / 100,
-    buyCount: rec.BUY,
-    watchCount: rec.WATCH,
-    avoidCount: rec.AVOID,
+    buyCount: showRecLabels() ? rec.BUY : 0,
+    watchCount: showRecLabels() ? rec.WATCH : projects.length,
+    avoidCount: showRecLabels() ? rec.AVOID : 0,
   };
 }
 
-/** Optional headline from `platform_settings.catalog_headline` (admin). */
 /** Текст методологии из админки (публично на вкладке Analytics). */
 export async function getPublicRatingMethodology(): Promise<{
   ru: string;
   en: string;
 } | null> {
-  if (!hasSupabaseServiceConfig()) return null;
+  if (!hasSupabasePublicConfig()) return null;
   return withTimeout(
     (async (): Promise<{ ru: string; en: string } | null> => {
       try {
-        const supabase = createServiceRoleClient();
+        const supabase = createAnonClient();
         const { data } = await supabase
           .from("platform_settings")
           .select("value")
@@ -98,14 +109,14 @@ export async function getCatalogHeadlineFromDb(): Promise<{
   totalValueBnTHB: number;
   quarterLabel: string;
 } | null> {
-  if (!hasSupabaseServiceConfig()) return null;
+  if (!hasSupabasePublicConfig()) return null;
   return withTimeout(
     (async (): Promise<{
       totalValueBnTHB: number;
       quarterLabel: string;
     } | null> => {
       try {
-        const supabase = createServiceRoleClient();
+        const supabase = createAnonClient();
         const { data } = await supabase
           .from("platform_settings")
           .select("value")
