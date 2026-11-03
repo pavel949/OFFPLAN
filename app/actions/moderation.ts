@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
-import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
 import { catalogProjectSchema } from "@/lib/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -191,6 +190,18 @@ export async function submitProjectForModeration(
   return { ok: true };
 }
 
+/** Maps SQL function errors (RAISE ... USING MESSAGE) to operator-facing text. */
+function rpcErrorMessage(message: string): string {
+  if (message.includes("already_processed")) return "Заявка уже обработана";
+  if (message.includes("submission_not_found")) return "Заявка не найдена";
+  if (message.includes("request_not_found")) return "Запрос не найден";
+  if (message.includes("entity_not_found")) return "Проект не найден";
+  if (message.includes("project_owned_by_other_org")) {
+    return "Проект уже привязан к другой организации";
+  }
+  return message;
+}
+
 export async function approveModerationSubmission(
   submissionId: string,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -198,7 +209,7 @@ export async function approveModerationSubmission(
     const admin = await requireAdmin();
     const { data: sub, error: sErr } = await admin
       .from("moderation_submissions")
-      .select("*")
+      .select("entity_type, snapshot, status")
       .eq("id", submissionId)
       .maybeSingle();
 
@@ -220,75 +231,11 @@ export async function approveModerationSubmission(
       }
     }
 
-    // Optimistic claim: only one reviewer can move pending -> approved.
-    const now = new Date().toISOString();
-    const { data: claimed, error: cErr } = await admin
-      .from("moderation_submissions")
-      .update({ status: "approved", reviewed_at: now })
-      .eq("id", submissionId)
-      .eq("status", "pending")
-      .select("id");
-    if (cErr) return { ok: false, error: cErr.message };
-    if (!claimed?.length) return { ok: false, error: "Заявка уже обработана" };
-
-    const revert = async () => {
-      await admin
-        .from("moderation_submissions")
-        .update({ status: "pending", reviewed_at: null })
-        .eq("id", submissionId);
-    };
-
-    if (sub.entity_type === "project") {
-      const { data: proj } = await admin
-        .from("catalog_projects")
-        .select("id, moderation_status")
-        .eq("id", sub.entity_id)
-        .maybeSingle();
-
-      if (!proj) {
-        await revert();
-        return { ok: false, error: "Проект не найден" };
-      }
-
-      const { error: pErr } = await admin
-        .from("catalog_projects")
-        .update({
-          payload: sub.snapshot,
-          draft_payload: null,
-          moderation_status: "published",
-          is_published: true,
-          updated_at: now,
-        })
-        .eq("id", sub.entity_id);
-
-      if (pErr) {
-        await revert();
-        return { ok: false, error: pErr.message };
-      }
-    } else if (sub.entity_type === "org") {
-      const { error: oErr } = await admin
-        .from("orgs")
-        .update({
-          profile_published: sub.snapshot,
-          profile_draft: null,
-          org_moderation_status: "published",
-          updated_at: now,
-        })
-        .eq("id", sub.entity_id);
-
-      if (oErr) {
-        await revert();
-        return { ok: false, error: oErr.message };
-      }
-    }
-
-    await insertCatalogAuditLog({
-      entity_type: "moderation",
-      entity_id: submissionId,
-      actor_id: null, // shared admin login has no user identity yet
-      action: "moderation_approved",
-      diff: { entity_type: sub.entity_type, entity_id: sub.entity_id },
+    // One transaction in the database: publish + mark approved + audit row, or nothing.
+    const { error } = await admin.rpc("moderation_approve", {
+      p_submission_id: submissionId,
     });
+    if (error) return { ok: false, error: rpcErrorMessage(error.message) };
 
     revalidatePath("/admin/moderation");
     revalidatePath("/");
@@ -307,53 +254,11 @@ export async function rejectModerationSubmission(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const admin = await requireAdmin();
-    const { data: sub } = await admin
-      .from("moderation_submissions")
-      .select("id, entity_type, entity_id, status")
-      .eq("id", submissionId)
-      .maybeSingle();
-
-    if (!sub) return { ok: false, error: "Заявка не найдена" };
-    if (sub.status !== "pending") {
-      return { ok: false, error: "Заявка уже обработана" };
-    }
-
-    if (sub.entity_type === "project") {
-      const { data: proj } = await admin
-        .from("catalog_projects")
-        .select("moderation_status")
-        .eq("id", sub.entity_id)
-        .maybeSingle();
-
-      if (proj?.moderation_status === "pending_review") {
-        await admin
-          .from("catalog_projects")
-          .update({
-            moderation_status: "rejected",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", sub.entity_id);
-      }
-    }
-
-    const { error: uErr } = await admin
-      .from("moderation_submissions")
-      .update({
-        status: "rejected",
-        reviewer_note: reviewerNote.slice(0, 4000),
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", submissionId);
-
-    if (uErr) return { ok: false, error: uErr.message };
-
-    await insertCatalogAuditLog({
-      entity_type: "moderation",
-      entity_id: submissionId,
-      actor_id: null,
-      action: "moderation_rejected",
-      diff: { note: reviewerNote.slice(0, 500) },
+    const { error } = await admin.rpc("moderation_reject", {
+      p_submission_id: submissionId,
+      p_note: reviewerNote.slice(0, 4000),
     });
+    if (error) return { ok: false, error: rpcErrorMessage(error.message) };
 
     revalidatePath("/admin/moderation");
     return { ok: true };
@@ -371,65 +276,11 @@ export async function grantCorrectionRequest(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const admin = await requireAdmin();
-    const { data: req } = await admin
-      .from("correction_requests")
-      .select("id, project_id, org_id, status")
-      .eq("id", requestId)
-      .maybeSingle();
-
-    if (!req) return { ok: false, error: "Запрос не найден" };
-    if (req.status !== "open") {
-      return { ok: false, error: "Запрос уже обработан" };
-    }
-
-    const { data: proj } = await admin
-      .from("catalog_projects")
-      .select("id, org_id, payload, draft_payload")
-      .eq("id", req.project_id)
-      .maybeSingle();
-
-    if (!proj) return { ok: false, error: "Проект не найден" };
-
-    if (proj.org_id && proj.org_id !== req.org_id) {
-      return {
-        ok: false,
-        error: "Проект уже привязан к другой организации",
-      };
-    }
-
-    const patch: Record<string, unknown> = {
-      org_id: req.org_id,
-      updated_at: new Date().toISOString(),
-    };
-    if (proj.draft_payload == null && proj.payload) {
-      patch.draft_payload = proj.payload;
-    }
-
-    const { error: pErr } = await admin
-      .from("catalog_projects")
-      .update(patch)
-      .eq("id", req.project_id);
-
-    if (pErr) return { ok: false, error: pErr.message };
-
-    const { error: rErr } = await admin
-      .from("correction_requests")
-      .update({
-        status: "granted",
-        admin_note: (adminNote ?? "").slice(0, 4000),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", requestId);
-
-    if (rErr) return { ok: false, error: rErr.message };
-
-    await insertCatalogAuditLog({
-      entity_type: "correction",
-      entity_id: requestId,
-      actor_id: null,
-      action: "correction_granted",
-      diff: { project_id: req.project_id, org_id: req.org_id },
+    const { error } = await admin.rpc("correction_grant", {
+      p_request_id: requestId,
+      p_admin_note: (adminNote ?? "").slice(0, 4000),
     });
+    if (error) return { ok: false, error: rpcErrorMessage(error.message) };
 
     revalidatePath("/admin/corrections");
     revalidatePath("/partner/corrections");

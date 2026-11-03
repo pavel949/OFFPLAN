@@ -34,7 +34,10 @@ insert into auth.users(id,email) values
 insert into orgs(id,slug,name_en,name_ru) values ('00000000-0000-0000-0000-0000000000c1','o','O','O');
 update profiles set role='partner', org_id='00000000-0000-0000-0000-0000000000c1', partner_role='owner' where id='00000000-0000-0000-0000-0000000000b1';
 update profiles set role='admin' where id='00000000-0000-0000-0000-0000000000e1';
-insert into catalog_projects(id,slug,org_id,payload) values ('00000000-0000-0000-0000-0000000000d1','p','00000000-0000-0000-0000-0000000000c1','{"n":"orig"}');
+insert into catalog_projects(id,slug,org_id,payload,draft_payload) values ('00000000-0000-0000-0000-0000000000d1','p','00000000-0000-0000-0000-0000000000c1','{"n":"orig","rec":"BUY","recText":"secret opinion"}','{"n":"unreleased draft"}');
+insert into catalog_projects(id,slug,org_id,payload,moderation_status,is_published) values ('00000000-0000-0000-0000-0000000000d2','hidden','00000000-0000-0000-0000-0000000000c1','{"n":"hidden"}','draft',false);
+insert into project_units(project_id,label) values ('00000000-0000-0000-0000-0000000000d1','PUB'),('00000000-0000-0000-0000-0000000000d2','HIDDEN');
+insert into project_updates(project_id,title_en) values ('00000000-0000-0000-0000-0000000000d1','pub upd'),('00000000-0000-0000-0000-0000000000d2','hidden upd');
 insert into leads(name,email,project_uuid) values ('l','l@l','00000000-0000-0000-0000-0000000000d1');
 insert into catalog_snapshots(label,projects) values ('s','[]');
 
@@ -78,7 +81,60 @@ begin;
   select pg_temp.expect_count($$select 1 from catalog_snapshots$$, 0, 'anon cannot read snapshots');
   select pg_temp.expect_count($$select 1 from leads$$, 0, 'anon cannot read leads');
   select pg_temp.expect_count($$select 1 from platform_settings$$, 2, 'anon reads only the 2 public settings');
-  select pg_temp.expect_count($$select 1 from catalog_projects where is_published$$, 1, 'anon reads published projects');
+  -- public contract: the base table is closed, the view is the only door
+  select pg_temp.expect_count($$select 1 from catalog_projects$$, 0, 'anon cannot read the base catalog_projects table');
+  select pg_temp.expect_count($$select 1 from public_catalog_projects$$, 1, 'anon reads published projects via the view');
+  select pg_temp.expect_count($$select 1 from public_catalog_projects where slug='hidden'$$, 0, 'view hides unpublished projects');
+  select pg_temp.expect_error($$select draft_payload from public_catalog_projects$$, 'view must not expose draft_payload');
+  select pg_temp.expect_count($$select 1 from public_catalog_projects where payload->>'rec'='WATCH' and payload->>'recText'='' and payload->>'n'='orig'$$, 1, 'view neutralises editorial rec/recText');
+  select pg_temp.expect_count($$select 1 from public_catalog_projects where payload::text like '%secret%'$$, 0, 'no editorial text leaks through the view');
+  -- children of published projects stay public, children of unpublished do not
+  select pg_temp.expect_count($$select 1 from project_units$$, 1, 'anon sees units of published projects only');
+  select pg_temp.expect_count($$select 1 from project_updates$$, 1, 'anon sees updates of published projects only');
+rollback;
+
+begin;
+  -- a logged-in buyer is not staff: no draft_payload / editorial text of others' projects
+  select pg_temp.as_user('00000000-0000-0000-0000-0000000000a1','authenticated');
+  select pg_temp.expect_count($$select 1 from catalog_projects$$, 0, 'buyer cannot read base catalog_projects');
+  select pg_temp.expect_count($$select 1 from public_catalog_projects$$, 1, 'buyer reads the public view');
+rollback;
+
+-- atomic moderation functions: service role only, one transaction
+insert into moderation_submissions(id,entity_type,entity_id,snapshot,status) values
+  ('00000000-0000-0000-0000-0000000000f1','project','00000000-0000-0000-0000-0000000000d2','{"n":"approved snapshot"}','pending'),
+  ('00000000-0000-0000-0000-0000000000f2','project','00000000-0000-0000-0000-0000000000d2','{"n":"x"}','pending');
+update catalog_projects set moderation_status='pending_review' where id='00000000-0000-0000-0000-0000000000d2';
+
+begin;
+  select pg_temp.as_user('00000000-0000-0000-0000-0000000000e1','authenticated');
+  select pg_temp.expect_error($$select moderation_approve('00000000-0000-0000-0000-0000000000f1')$$, 'even an admin session cannot call moderation_approve directly');
+rollback;
+begin;
+  select pg_temp.as_user(null,'anon');
+  select pg_temp.expect_error($$select moderation_reject('00000000-0000-0000-0000-0000000000f1','x')$$, 'anon cannot call moderation_reject');
+rollback;
+
+begin;
+  set local role service_role;
+  select moderation_approve('00000000-0000-0000-0000-0000000000f1');
+  select pg_temp.expect_count($$select 1 from catalog_projects where id='00000000-0000-0000-0000-0000000000d2' and moderation_status='published' and is_published and payload->>'n'='approved snapshot' and draft_payload is null$$, 1, 'approve publishes snapshot atomically');
+  select pg_temp.expect_count($$select 1 from moderation_submissions where id='00000000-0000-0000-0000-0000000000f1' and status='approved'$$, 1, 'approve marks submission');
+  select pg_temp.expect_count($$select 1 from catalog_audit_log where entity_id='00000000-0000-0000-0000-0000000000f1' and action='moderation_approved'$$, 1, 'approve writes audit row');
+  select pg_temp.expect_error($$select moderation_approve('00000000-0000-0000-0000-0000000000f1')$$, 'double approve is rejected');
+  select pg_temp.expect_error($$select moderation_approve('00000000-0000-0000-0000-0000000000ff')$$, 'unknown submission is rejected');
+  select moderation_reject('00000000-0000-0000-0000-0000000000f2','not good');
+  select pg_temp.expect_count($$select 1 from moderation_submissions where id='00000000-0000-0000-0000-0000000000f2' and status='rejected' and reviewer_note='not good'$$, 1, 'reject records note');
+rollback;
+
+-- correction grant: org conflict aborts without partial writes
+insert into orgs(id,slug,name_en,name_ru) values ('00000000-0000-0000-0000-0000000000c2','o2','O2','O2');
+insert into correction_requests(id,project_id,org_id) values
+  ('00000000-0000-0000-0000-0000000000a9','00000000-0000-0000-0000-0000000000d1','00000000-0000-0000-0000-0000000000c2');
+begin;
+  set local role service_role;
+  select pg_temp.expect_error($$select correction_grant('00000000-0000-0000-0000-0000000000a9','n')$$, 'grant refused when project belongs to another org');
+  select pg_temp.expect_count($$select 1 from correction_requests where id='00000000-0000-0000-0000-0000000000a9' and status='open'$$, 1, 'refused grant leaves request open');
 rollback;
 
 -- service role / direct connection stays unrestricted (trusted server code)

@@ -6,6 +6,9 @@
 - Helpers `is_staff()`, `is_admin()`, `has_pending_submission()` are `SECURITY DEFINER` to avoid RLS recursion.
 - Leads are inserted only by server code (captcha + rate limit + consent), never directly with the anon key.
 - Public pages read through the **anon** client, so RLS is the real boundary for anonymous traffic.
+- RLS cannot hide columns, so the base table `catalog_projects` has **no** public policy. Anonymous (and buyer) reads go through the view `public_catalog_projects`, which never exposes `draft_payload` and neutralises `payload.rec / recText`. Child tables use `is_public_project()`. CI asserts this (`10_rls_hardening.sql`).
+- Moderation approve / reject and correction grant are single-transaction SQL functions (`moderation_approve`, `moderation_reject`, `correction_grant`), callable by `service_role` only.
+- Catalogue source: seed JSON is used only when Supabase is not configured (dev/demo). With a configured DB a failed read serves the last-known-good copy and otherwise fails (production) — the build fails rather than shipping seed data.
 
 Run locally: `PGHOST=… PGUSER=postgres supabase/tests/run.sh` (scratch database, plain Postgres).
 
