@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
 import { localizeProject } from "@/lib/i18n/localize-project";
+import { formatPrice, freshnessOf } from "@/lib/inventory/freshness";
 import { zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import type {
@@ -16,6 +17,12 @@ import { ProjectSubscribeBlock } from "./project-subscribe";
 import "./project-detail.css";
 
 const LANG_KEY = "phuket_lang";
+
+const STATUS_LABEL: Record<string, { ru: string; en: string }> = {
+  available: { ru: "Свободен", en: "Available" },
+  reserved: { ru: "Бронь", en: "Reserved" },
+  sold: { ru: "Продан", en: "Sold" },
+};
 
 export function ProjectDetailClient({
   project,
@@ -204,22 +211,41 @@ export function ProjectDetailClient({
                 <thead>
                   <tr>
                     <th>{ru ? "Лот" : "Unit"}</th>
-                    <th>BR</th>
-                    <th>sqm</th>
-                    <th>฿</th>
+                    <th>{ru ? "Спальни" : "Bedrooms"}</th>
+                    <th>{ru ? "Площадь, м²" : "Area, sqm"}</th>
+                    <th>{ru ? "Цена" : "Price"}</th>
                     <th>{ru ? "Статус" : "Status"}</th>
+                    <th>{ru ? "Обновлено" : "Updated"}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {extras.units.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.label}</td>
-                      <td>{u.bedrooms ?? "—"}</td>
-                      <td>{u.sqm ?? "—"}</td>
-                      <td>{u.price_thb != null ? u.price_thb.toLocaleString() : "—"}</td>
-                      <td>{u.status}</td>
-                    </tr>
-                  ))}
+                  {extras.units.map((u) => {
+                    const f = freshnessOf(u.price_updated_at);
+                    const sold = u.status === "sold";
+                    const hidden = !sold && f === "expired";
+                    return (
+                      <tr key={u.id}>
+                        <td>{u.label}</td>
+                        <td>{u.bedrooms ?? "—"}</td>
+                        <td>{u.sqm ?? "—"}</td>
+                        <td title={f === "stale" && !sold ? (ru ? "Цена давно не обновлялась" : "Price not refreshed recently") : undefined}>
+                          {sold
+                            ? "—"
+                            : hidden
+                              ? ru
+                                ? "уточняйте у застройщика"
+                                : "ask the developer"
+                              : `${formatPrice(u.price_thb, u.currency ?? "THB", lang)}${f === "stale" ? " ⚠" : ""}`}
+                        </td>
+                        <td>{STATUS_LABEL[u.status]?.[lang] ?? u.status}</td>
+                        <td>
+                          {u.price_updated_at
+                            ? new Date(u.price_updated_at).toLocaleDateString(ru ? "ru-RU" : "en-GB")
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

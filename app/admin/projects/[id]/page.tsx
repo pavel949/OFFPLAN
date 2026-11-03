@@ -55,6 +55,12 @@ export default async function AdminProjectEditPage({
         </Link>
       </p>
 
+      <p className="mb-6">
+        <Link href={`/admin/projects/${id}/inventory`} className="admin-btn inline-block py-2 px-3">
+          Прайс-лист и инвентарь →
+        </Link>
+      </p>
+
       <ProjectPayloadForm projectId={id} initialJson={payloadJson} />
       <ProjectDocsSection projectId={id} initialDocs={docs} />
     </div>

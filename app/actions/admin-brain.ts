@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { runUnitImport, type ImportState } from "@/lib/inventory/run";
+import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
 import { parseWhatsAppText } from "@/lib/whatsapp-parse";
 import { catalogProjectSchema } from "@/lib/schema";
 import {
@@ -364,4 +366,57 @@ export async function adminListWhatsAppIngests(limit = 50): Promise<
     created_at: r.created_at,
     preview: (r.raw_text as string).slice(0, 120).replace(/\s+/g, " "),
   }));
+}
+
+/** Operator entry of a developer's price list / inventory (source = operator, shown as such). */
+export async function adminImportProjectUnits(
+  _prev: ImportState,
+  formData: FormData,
+): Promise<ImportState> {
+  try {
+    const db = await requireAdmin();
+    const projectId = String(formData.get("project_id") ?? "").trim();
+    const text = String(formData.get("text") ?? "");
+    const mode = formData.get("mode") === "apply" ? "apply" : "preview";
+    if (!projectId) return { ok: false, error: "Нет project_id" };
+    const res = await runUnitImport({ db, projectId, text, mode, source: "operator", actorId: null });
+    if (res.ok && res.mode === "apply") {
+      await insertCatalogAuditLog({
+        entity_type: "unit",
+        entity_id: projectId,
+        actor_id: null,
+        action: "units_imported_by_operator",
+        diff: { ...res.applied, summary: res.summary },
+      });
+      revalidatePath("/");
+      revalidatePath(`/admin/projects/${projectId}/inventory`);
+    }
+    return res;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка" };
+  }
+}
+
+export type OperatorUnitRow = {
+  id: string;
+  label: string;
+  bedrooms: number | null;
+  floor: number | null;
+  sqm: number | null;
+  price_thb: number | null;
+  currency: string;
+  status: string;
+  source: string;
+  price_updated_at: string | null;
+};
+
+export async function adminListProjectUnits(projectId: string): Promise<OperatorUnitRow[]> {
+  const db = await requireAdmin();
+  const { data, error } = await db
+    .from("project_units")
+    .select("id, label, bedrooms, floor, sqm, price_thb, currency, status, source, price_updated_at")
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as OperatorUnitRow[];
 }

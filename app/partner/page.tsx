@@ -33,12 +33,39 @@ export default async function PartnerDashboardPage() {
     .eq("id", user.id)
     .maybeSingle();
 
+  // Org-level inventory health (view respects RLS; missing before the migration is applied).
+  const { data: inv } = prof?.org_id
+    ? await supabase
+        .from("org_active_units")
+        .select("active_units, expired_units, last_price_update")
+        .eq("org_id", prof.org_id)
+        .maybeSingle()
+    : { data: null };
+
   return (
     <div>
       <h1 className="serif text-2xl mb-2">Кабинет застройщика</h1>
       <p className="text-[var(--muted)] text-sm mb-4">
         {prof?.full_name || user.email}
       </p>
+      {inv ? (
+        <p
+          className="text-sm mb-4 rounded-lg border border-[var(--bdr)] p-3"
+          style={{ borderColor: Number(inv.expired_units) > 0 ? "var(--red)" : undefined }}
+        >
+          Активных лотов: <b>{Number(inv.active_units)}</b>
+          {Number(inv.expired_units) > 0 ? (
+            <>
+              {" "}
+              · <b style={{ color: "var(--red)" }}>{Number(inv.expired_units)}</b> с неподтверждёнными
+              ценами старше 30 дней (в каталоге цены скрыты) — откройте «Прайс-лист и инвентарь» в
+              проекте и подтвердите актуальность.
+            </>
+          ) : (
+            " · все цены актуальны."
+          )}
+        </p>
+      ) : null}
       <ul className="list-disc pl-5 text-sm space-y-2">
         <li>
           Роль: <strong>{prof?.role ?? "—"}</strong>
