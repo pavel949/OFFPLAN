@@ -13,3 +13,4 @@ for f in supabase/migrations/*.sql; do
 done
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/10_rls_hardening.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/20_registry.sql | sed "/^$/d"
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/30_deals.sql | sed "/^$/d"

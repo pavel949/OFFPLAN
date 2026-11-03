@@ -80,6 +80,12 @@ export default async function PartnerDashboardPage() {
           </Link>
         </li>
         <li>
+          <Link href="/partner/deals" className="underline font-semibold">
+            Сделки и комиссии
+          </Link>{" "}
+          (для брокеров — <Link href="/broker" className="underline">кабинет брокера</Link>)
+        </li>
+        <li>
           <Link href="/partner/leads" className="underline font-semibold">
             Заявки по моим проектам
           </Link>
