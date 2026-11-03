@@ -20,6 +20,21 @@ async function assertAdmin(): Promise<boolean> {
 
 export type SubmitLeadState = { ok: boolean; error?: string };
 
+const ERR = {
+  ru: {
+    tooMany: "Слишком много запросов. Пожалуйста, повторите попытку позже.",
+    captcha: "Не удалось пройти проверку на робота. Попробуйте ещё раз.",
+    invalid: "Проверьте заполнение формы и отметьте согласие на обработку данных.",
+    save: "Не удалось сохранить заявку. Повторите попытку или напишите нам напрямую.",
+  },
+  en: {
+    tooMany: "Too many requests. Please try again later.",
+    captcha: "Captcha verification failed. Please retry.",
+    invalid: "Please check the form fields and tick the consent box.",
+    save: "Could not save your request. Please try again or email us directly.",
+  },
+} as const;
+
 function parseUtmJson(raw: string | null): Record<string, string> | null {
   if (!raw || typeof raw !== "string") return null;
   const t = raw.trim();
@@ -44,16 +59,18 @@ export async function submitLead(
   if (String(formData.get("_hp") ?? "").trim() !== "") {
     return { ok: true };
   }
+  const loc = formData.get("locale") === "en" ? "en" : "ru";
+  const E = ERR[loc];
   const ip = clientIp(await headers());
   if (!rateLimit(`lead:ip:${ip}`, 5, 10 * 60 * 1000).ok) {
-    return { ok: false, error: "Too many requests. Please try again later." };
+    return { ok: false, error: E.tooMany };
   }
   const captchaOk = await verifyCaptcha(
     String(formData.get("cf-turnstile-response") ?? ""),
     ip,
   );
   if (!captchaOk) {
-    return { ok: false, error: "Captcha verification failed. Please retry." };
+    return { ok: false, error: E.captcha };
   }
   const pidRaw = formData.get("projectId");
   let projectId: number | null = null;
@@ -76,13 +93,12 @@ export async function submitLead(
   if (!parsed.success) {
     const err = parsed.error.flatten().fieldErrors;
     const first =
-      Object.values(err).flat()[0] ||
-      parsed.error.issues[0]?.message ||
-      "Проверьте поля";
-    return { ok: false, error: first };
+      Object.values(err).flat()[0] || parsed.error.issues[0]?.message;
+    // Field messages are Russian; English visitors get the generic English message.
+    return { ok: false, error: loc === "ru" && first ? first : E.invalid };
   }
   if (!rateLimit(`lead:email:${parsed.data.email.toLowerCase()}`, 3, 60 * 60 * 1000).ok) {
-    return { ok: false, error: "Too many requests. Please try again later." };
+    return { ok: false, error: E.tooMany };
   }
   const utm = parseUtmJson(String(formData.get("utm_json") ?? ""));
   try {
@@ -101,7 +117,7 @@ export async function submitLead(
     // Details are logged server-side; never leak internals to the visitor.
     return {
       ok: false,
-      error: "Could not save your request. Please try again or email us directly.",
+      error: E.save,
     };
   }
   return { ok: true };

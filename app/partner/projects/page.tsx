@@ -37,13 +37,16 @@ export default async function PartnerProjectsPage() {
     return (
       <div>
         <p className="mb-4">
-          <Link href="/partner" className="text-sm text-[var(--muted)] underline">
+          <Link
+            href="/partner"
+            className="text-sm text-[var(--muted)] underline"
+          >
             ← Кабинет
           </Link>
         </p>
         <p className="text-[var(--muted)] text-sm max-w-md">
-          У профиля нет привязки к организации. Обратитесь в IE — после
-          привязки здесь появятся ваши проекты.
+          У профиля нет привязки к организации. Обратитесь в IE — после привязки
+          здесь появятся ваши проекты.
         </p>
       </div>
     );
@@ -63,6 +66,9 @@ export default async function PartnerProjectsPage() {
         </Link>
       </p>
       <h1 className="serif text-2xl mb-2">Мои проекты</h1>
+      <Link className="underline" href="/partner/projects/new">
+        Добавить проект
+      </Link>
       <p className="text-[var(--muted)] text-sm mb-6">
         Редактируйте черновик JSON и отправляйте на модерацию IE. Публичный
         каталог показывает только опубликованную версию.

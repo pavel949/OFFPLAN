@@ -1,11 +1,7 @@
-# Ручные SQL-скрипты для проекта OFFPLAN (Supabase `mfwbdfrrlckarktpwykf`)
+# OFFPLAN: безопасный импорт исходного каталога
 
-Схема живой базы уже приведена к миграциям репозитория (до `20250414000005`), история миграций Supabase совпадает
-с файлами в `supabase/migrations/`, поэтому `supabase db push` / workflow «Supabase migrations» работают штатно.
+`02_seed_catalog.sql` сохраняет исходный JSON в закрытом `catalog_snapshots` и добавляет отсутствующие проекты как **неопубликованные черновики**. Повторный запуск не перезаписывает существующие проекты. Инвентарь и кампании не изменяются.
 
-## Что осталось выполнить вручную
+2026-11-03 этот импорт уже выполнен в `mfwbdfrrlckarktpwykf`: 122 черновика, 122 developments, 122 внутренних assessments, 1 snapshot. Данные Q2 2026 не подтверждены как актуальные. Наличие строки в assessments не означает независимую проверку.
 
-- **`02_seed_catalog.sql`** — посев 122 проектов каталога (аналог `npm run seed:catalog`), SQL Editor → New query → Run.
-  Повторный запуск безопасен (upsert по `legacy_id`). Триггер `sync_catalog_facts` сам заполнит `developments` и
-  `assessments`. Пока он не выполнен, публичный каталог пуст — это ожидаемо: в продакшене seed-JSON намеренно
-  не подставляется вместо БД.
+Новые forward migrations пока не применены: подтверждение Supabase истекло. История production остаётся на `20250414000005`. GitHub Actions не настроен: отсутствуют deployment credentials. Подробности: [статус миграции](../../docs/MIGRATION_STATUS.md).

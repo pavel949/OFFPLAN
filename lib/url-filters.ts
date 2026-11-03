@@ -23,6 +23,7 @@ export function filtersFromSearchParams(
   const d = defaultFilterState();
   d.fSort = parseSort(sp.get("sort"));
   d.q = sp.get("q") ?? "";
+  d.fSales = sp.get("sales") ?? "";
   d.fRisk = sp.get("risk") ?? "";
   d.fSeg = sp.get("seg") ?? "";
   d.fType = sp.get("type") ?? "";
@@ -35,6 +36,9 @@ export function filtersFromSearchParams(
   d.fFocus = sp.get("focus") ?? "";
   d.fDev = sp.get("dev") ?? "";
   d.fRec = sp.get("rec") ?? "";
+  d.fVer = ["1", "2"].includes(sp.get("ver") ?? "")
+    ? (sp.get("ver") as string)
+    : "";
   return d;
 }
 
@@ -44,6 +48,7 @@ export function filtersToSearchParams(
   const o: Record<string, string | undefined> = {};
   if (f.fSort !== "rating") o.sort = f.fSort;
   if (f.q) o.q = f.q;
+  if (f.fSales) o.sales = f.fSales;
   if (f.fRisk) o.risk = f.fRisk;
   if (f.fSeg) o.seg = f.fSeg;
   if (f.fType) o.type = f.fType;
@@ -56,5 +61,6 @@ export function filtersToSearchParams(
   if (f.fFocus) o.focus = f.fFocus;
   if (f.fDev) o.dev = f.fDev;
   if (f.fRec) o.rec = f.fRec;
+  if (f.fVer) o.ver = f.fVer;
   return o;
 }

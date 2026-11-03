@@ -10,6 +10,8 @@ export type ProjectUnitRow = {
   floor: number | null;
   sqm: number | null;
   price_thb: number | null;
+  currency: string;
+  price_updated_at: string | null;
   status: string;
   plan_url: string | null;
 };
@@ -72,7 +74,7 @@ export async function getProjectExtrasByLegacyId(legacyId: number): Promise<{
         supabase
           .from("project_units")
           .select(
-            "id, label, bedrooms, floor, sqm, price_thb, status, plan_url",
+            "id, label, bedrooms, floor, sqm, price_thb, currency, price_updated_at, status, plan_url",
           )
           .eq("project_id", pid)
           .order("sort_order", { ascending: true }),

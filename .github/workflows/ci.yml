@@ -31,9 +31,7 @@ jobs:
         run: npm run test
 
       - name: Build
-        # Deliberately NO Supabase env here: without it the catalogue is built from the bundled seed
-        # (dev/demo mode). With a configured-but-unreachable database the production build fails on purpose
-        # so a deploy can never ship seed data in place of the real catalogue.
+        # Public routes render at request time. Production never substitutes demo seed for the database.
         run: npm run build
 
   rls:

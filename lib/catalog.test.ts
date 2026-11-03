@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import rawProjects from "@/data/seed/projects.json";
 
-type Result = { data: { payload: unknown }[] | null; error: { message: string } | null };
+type Result = {
+  data: { payload: unknown }[] | null;
+  error: { message: string } | null;
+};
 let result: Result | Error;
 const fromSpy = vi.fn();
 
@@ -89,6 +92,13 @@ describe("catalog source selection", () => {
     result = { data: [], error: null };
     const { getProjects } = await load();
     expect(await getProjects()).toEqual([]);
+  });
+
+  it("production without database configuration fails instead of publishing demo data", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const { getProjects, CatalogUnavailableError } = await load();
+    await expect(getProjects()).rejects.toBeInstanceOf(CatalogUnavailableError);
   });
 
   it("development: DB error falls back to the seed for convenience", async () => {

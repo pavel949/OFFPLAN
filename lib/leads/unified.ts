@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { resolveLeadBroker } from "@/lib/commission/service";
 import { notifyNewLead } from "@/lib/notify";
 import { dispatchLeadWebhooks } from "@/lib/marketplace/webhooks";
 import { recordAnalyticsEvent } from "@/lib/marketplace/analytics";
@@ -77,9 +78,12 @@ export async function appendLeadUnified(
     project_uuid = data?.id ?? null;
     org_id = (data as { org_id?: string | null } | null)?.org_id ?? null;
   }
+  // Multi-broker routing: exclusive agreement of the project/developer, else the configured default broker.
+  const broker_org_id = await resolveLeadBroker(supabase, project_uuid, org_id);
   const { data, error } = await supabase
     .from("leads")
     .insert({
+      broker_org_id,
       name: input.name,
       email: input.email,
       phone: input.phone ?? "",

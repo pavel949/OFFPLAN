@@ -113,3 +113,17 @@ describe("zone/developer filters use exact match", () => {
     expect(filterProjects([p, q], g).map((x) => x.id)).toEqual([p.id]);
   });
 });
+
+it("sales filters distinguish unknown stock from declared sales stage", () => {
+  const rows = [
+    { ...sample[0], sales: { stage: "launch", available: 2, recorded: 3 } },
+    { ...sample[1] },
+  ];
+  const f = defaultFilterState();
+  f.fSales = "available";
+  expect(filterProjects(rows, f).map((p) => p.id)).toEqual([1]);
+  f.fSales = "sold_out";
+  expect(filterProjects(rows, f)).toEqual([]);
+  f.fSales = "launch";
+  expect(filterProjects(rows, f).map((p) => p.id)).toEqual([1]);
+});

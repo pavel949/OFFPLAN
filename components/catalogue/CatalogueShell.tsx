@@ -1,15 +1,13 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toggleFavoriteLegacy } from "@/app/actions/favorites";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
+import { localizeProject } from "@/lib/i18n/localize-project";
+import { zoneLabel } from "@/lib/taxonomy";
 import type { CatalogMeta, CatalogProject } from "@/lib/types";
 import {
   activeFilterCount,
@@ -88,7 +86,7 @@ export function CatalogueShell({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [lang, setLang] = useState<"en" | "ru">("en");
+  const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
   const [shortlist, setShortlist] = useState<number[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [leadOpen, setLeadOpen] = useState(false);
@@ -170,6 +168,10 @@ export function CatalogueShell({
     localStorage.setItem(LANG_KEY, n);
   };
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const openLeadModal = (project: CatalogProject | null) => {
     if (project) {
       setLeadProjectId(project.id);
@@ -202,10 +204,12 @@ export function CatalogueShell({
     localStorage.setItem(SL_KEY, "[]");
   };
 
-  const filtered = useMemo(
-    () => applyFilters(projects, filters),
-    [projects, filters],
+  const view = useMemo(
+    () => projects.map((p) => localizeProject(p, lang)),
+    [projects, lang],
   );
+
+  const filtered = useMemo(() => applyFilters(view, filters), [view, filters]);
 
   const badge = activeFilterCount(filters);
 
@@ -221,8 +225,8 @@ export function CatalogueShell({
   };
 
   const shortlistProjects = useMemo(
-    () => projects.filter((p) => shortlist.includes(p.id)),
-    [projects, shortlist],
+    () => view.filter((p) => shortlist.includes(p.id)),
+    [view, shortlist],
   );
 
   const cleanHtml = (html: string) =>
@@ -259,20 +263,6 @@ export function CatalogueShell({
             <div className="hkpi-l">
               <span className="i-en">Projects</span>
               <span className="i-ru">Проектов</span>
-            </div>
-          </div>
-          <div className="hkpi">
-            <div className="hkpi-v">฿{meta.totalValueBnTHB}B</div>
-            <div className="hkpi-l">
-              <span className="i-en">2025 Launches</span>
-              <span className="i-ru">Запусков 2025</span>
-            </div>
-          </div>
-          <div className="hkpi">
-            <div className="hkpi-v">~{meta.avgYieldPct}%</div>
-            <div className="hkpi-l">
-              <span className="i-en">Avg Yield</span>
-              <span className="i-ru">Ср. доход</span>
             </div>
           </div>
         </div>
@@ -328,6 +318,42 @@ export function CatalogueShell({
             </button>
           </div>
           <div className="sb-body">
+            <div className="fg">
+              <label className="fg-lbl" htmlFor="sales-filter">
+                {lang === "ru" ? "Продажи и наличие" : "Sales and availability"}
+              </label>
+              <select
+                id="sales-filter"
+                value={filters.fSales}
+                onChange={(e) => updateFilter("fSales", e.target.value)}
+              >
+                <option value="">
+                  {lang === "ru" ? "Все стадии продаж" : "All sales stages"}
+                </option>
+                <option value="prelaunch">
+                  {lang === "ru" ? "До старта продаж" : "Prelaunch"}
+                </option>
+                <option value="launch">
+                  {lang === "ru" ? "Старт продаж" : "Launch"}
+                </option>
+                <option value="selling">
+                  {lang === "ru" ? "Продажи идут" : "Selling"}
+                </option>
+                <option value="last_units">
+                  {lang === "ru" ? "Последние лоты" : "Last units"}
+                </option>
+                <option value="available">
+                  {lang === "ru"
+                    ? "Есть внесённые свободные лоты"
+                    : "Recorded available units"}
+                </option>
+                <option value="sold_out">
+                  {lang === "ru"
+                    ? "Продано (подтверждено)"
+                    : "Confirmed sold out"}
+                </option>
+              </select>
+            </div>
             <div className="fg fg-sort">
               <div className="fg-lbl">
                 <span className="i-en">Sort by</span>
@@ -339,13 +365,29 @@ export function CatalogueShell({
                   updateFilter("fSort", e.target.value as FilterState["fSort"])
                 }
               >
-                <option value="rating">Rating ↓</option>
-                <option value="comp_asc">Completion — soonest</option>
-                <option value="risk">Risk — safest first</option>
-                <option value="price_asc">Price ↑</option>
-                <option value="price_desc">Price ↓</option>
-                <option value="yield">Yield ↓</option>
-                <option value="beach">Beach proximity</option>
+                <option value="rating">
+                  {lang === "ru" ? "Рейтинг ↓" : "Rating ↓"}
+                </option>
+                <option value="comp_asc">
+                  {lang === "ru"
+                    ? "Срок сдачи — ближайший"
+                    : "Completion — soonest"}
+                </option>
+                <option value="risk">
+                  {lang === "ru"
+                    ? "Риск — сначала низкий"
+                    : "Risk — safest first"}
+                </option>
+                <option value="price_asc">
+                  {lang === "ru" ? "Цена ↑" : "Price ↑"}
+                </option>
+                <option value="price_desc">
+                  {lang === "ru" ? "Цена ↓" : "Price ↓"}
+                </option>
+
+                <option value="beach">
+                  {lang === "ru" ? "Близость к пляжу" : "Beach proximity"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -369,10 +411,18 @@ export function CatalogueShell({
                 value={filters.fRisk}
                 onChange={(e) => updateFilter("fRisk", e.target.value)}
               >
-                <option value="">All levels</option>
-                <option value="1">Tier 1 — Low</option>
-                <option value="2">Tier 2 — Medium</option>
-                <option value="3">Tier 3 — Higher</option>
+                <option value="">
+                  {lang === "ru" ? "Все уровни" : "All levels"}
+                </option>
+                <option value="1">
+                  {lang === "ru" ? "Уровень 1 — низкий" : "Tier 1 — Low"}
+                </option>
+                <option value="2">
+                  {lang === "ru" ? "Уровень 2 — средний" : "Tier 2 — Medium"}
+                </option>
+                <option value="3">
+                  {lang === "ru" ? "Уровень 3 — повышенный" : "Tier 3 — Higher"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -384,14 +434,42 @@ export function CatalogueShell({
                 value={filters.fSeg}
                 onChange={(e) => updateFilter("fSeg", e.target.value)}
               >
-                <option value="">All segments</option>
-                <option value="branded">Ultra-Luxury & Branded</option>
-                <option value="condo">Investment Condo</option>
-                <option value="villa-lux">Villa Luxury ฿30M+</option>
-                <option value="villa-mid">Villa Premium ฿12–30M</option>
-                <option value="villa-entry">Villa Entry ฿6–12M</option>
-                <option value="completed">Completed 2024–25</option>
-                <option value="offplan-new">New Off-Plan 2026–28</option>
+                <option value="">
+                  {lang === "ru" ? "Все сегменты" : "All segments"}
+                </option>
+                <option value="branded">
+                  {lang === "ru"
+                    ? "Брендированные и ультра-люкс"
+                    : "Ultra-Luxury & Branded"}
+                </option>
+                <option value="condo">
+                  {lang === "ru" ? "Инвестиционные кондо" : "Investment Condo"}
+                </option>
+                <option value="villa-lux">
+                  {lang === "ru"
+                    ? "Виллы люкс от ฿30 млн"
+                    : "Villa Luxury ฿30M+"}
+                </option>
+                <option value="villa-mid">
+                  {lang === "ru"
+                    ? "Виллы премиум ฿12–30 млн"
+                    : "Villa Premium ฿12–30M"}
+                </option>
+                <option value="villa-entry">
+                  {lang === "ru"
+                    ? "Виллы входного уровня ฿6–12 млн"
+                    : "Villa Entry ฿6–12M"}
+                </option>
+                <option value="completed">
+                  {lang === "ru"
+                    ? "Сданные в 2024–2025 гг."
+                    : "Completed 2024–25"}
+                </option>
+                <option value="offplan-new">
+                  {lang === "ru"
+                    ? "Новый оффплан 2026–2028"
+                    : "New Off-Plan 2026–28"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -403,10 +481,20 @@ export function CatalogueShell({
                 value={filters.fType}
                 onChange={(e) => updateFilter("fType", e.target.value)}
               >
-                <option value="">All types</option>
-                <option value="condo">Condominium</option>
-                <option value="villa">Villa / Pool Villa</option>
-                <option value="house">House / Townhouse</option>
+                <option value="">
+                  {lang === "ru" ? "Все типы" : "All types"}
+                </option>
+                <option value="condo">
+                  {lang === "ru" ? "Кондоминиум" : "Condominium"}
+                </option>
+                <option value="villa">
+                  {lang === "ru"
+                    ? "Вилла / вилла с бассейном"
+                    : "Villa / Pool Villa"}
+                </option>
+                <option value="house">
+                  {lang === "ru" ? "Дом / таунхаус" : "House / Townhouse"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -418,10 +506,12 @@ export function CatalogueShell({
                 value={filters.fZone}
                 onChange={(e) => updateFilter("fZone", e.target.value)}
               >
-                <option value="">All zones</option>
+                <option value="">
+                  {lang === "ru" ? "Все районы" : "All zones"}
+                </option>
                 {zones.map((z) => (
                   <option key={z} value={z}>
-                    {z}
+                    {zoneLabel(z, lang)}
                   </option>
                 ))}
               </select>
@@ -435,10 +525,20 @@ export function CatalogueShell({
                 value={filters.fStatus}
                 onChange={(e) => updateFilter("fStatus", e.target.value)}
               >
-                <option value="">Any status</option>
-                <option value="ready">Ready / Inventory</option>
-                <option value="building">Under construction</option>
-                <option value="offplan">Off-plan / Pre-sale</option>
+                <option value="">
+                  {lang === "ru" ? "Любой статус" : "Any status"}
+                </option>
+                <option value="ready">
+                  {lang === "ru" ? "Сданные / в наличии" : "Ready / Inventory"}
+                </option>
+                <option value="building">
+                  {lang === "ru" ? "Строятся" : "Under construction"}
+                </option>
+                <option value="offplan">
+                  {lang === "ru"
+                    ? "Оффплан / предпродажа"
+                    : "Off-plan / Pre-sale"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -450,12 +550,24 @@ export function CatalogueShell({
                 value={filters.fYear}
                 onChange={(e) => updateFilter("fYear", e.target.value)}
               >
-                <option value="">Any year</option>
-                <option value="done24">Built 2024</option>
-                <option value="done25">Built 2025</option>
-                <option value="2026">Delivering 2026</option>
-                <option value="2027">Delivering 2027</option>
-                <option value="2028">2028+</option>
+                <option value="">
+                  {lang === "ru" ? "Любой год" : "Any year"}
+                </option>
+                <option value="done24">
+                  {lang === "ru" ? "Сданы в 2024 г." : "Built 2024"}
+                </option>
+                <option value="done25">
+                  {lang === "ru" ? "Сданы в 2025 г." : "Built 2025"}
+                </option>
+                <option value="2026">
+                  {lang === "ru" ? "Сдача в 2026 г." : "Delivering 2026"}
+                </option>
+                <option value="2027">
+                  {lang === "ru" ? "Сдача в 2027 г." : "Delivering 2027"}
+                </option>
+                <option value="2028">
+                  {lang === "ru" ? "2028 г. и позже" : "2028+"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -467,11 +579,19 @@ export function CatalogueShell({
                 value={filters.fBeach}
                 onChange={(e) => updateFilter("fBeach", e.target.value)}
               >
-                <option value="">Any</option>
-                <option value="bf">Beachfront</option>
-                <option value="500">Under 500m</option>
-                <option value="1k">Under 1km</option>
-                <option value="inl">Inland</option>
+                <option value="">{lang === "ru" ? "Любое" : "Any"}</option>
+                <option value="bf">
+                  {lang === "ru" ? "Первая линия" : "Beachfront"}
+                </option>
+                <option value="500">
+                  {lang === "ru" ? "До 500 м" : "Under 500m"}
+                </option>
+                <option value="1k">
+                  {lang === "ru" ? "До 1 км" : "Under 1km"}
+                </option>
+                <option value="inl">
+                  {lang === "ru" ? "Вдали от пляжа" : "Inland"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -483,10 +603,16 @@ export function CatalogueShell({
                 value={filters.fOwn}
                 onChange={(e) => updateFilter("fOwn", e.target.value)}
               >
-                <option value="">Any</option>
-                <option value="fh">Freehold condo</option>
-                <option value="lh">Leasehold</option>
-                <option value="both">Both</option>
+                <option value="">{lang === "ru" ? "Любое" : "Any"}</option>
+                <option value="fh">
+                  {lang === "ru" ? "Фрихолд (кондо)" : "Freehold condo"}
+                </option>
+                <option value="lh">
+                  {lang === "ru" ? "Лизхолд" : "Leasehold"}
+                </option>
+                <option value="both">
+                  {lang === "ru" ? "Оба варианта" : "Both"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -498,10 +624,16 @@ export function CatalogueShell({
                 value={filters.fMgmt}
                 onChange={(e) => updateFilter("fMgmt", e.target.value)}
               >
-                <option value="">Any</option>
-                <option value="hotel">Hotel brand</option>
-                <option value="pro">Professional</option>
-                <option value="self">Self-managed</option>
+                <option value="">{lang === "ru" ? "Любое" : "Any"}</option>
+                <option value="hotel">
+                  {lang === "ru" ? "Гостиничный бренд" : "Hotel brand"}
+                </option>
+                <option value="pro">
+                  {lang === "ru" ? "Управляющая компания" : "Professional"}
+                </option>
+                <option value="self">
+                  {lang === "ru" ? "Самоуправление" : "Self-managed"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -513,11 +645,19 @@ export function CatalogueShell({
                 value={filters.fFocus}
                 onChange={(e) => updateFilter("fFocus", e.target.value)}
               >
-                <option value="">Any</option>
-                <option value="STR">STR</option>
-                <option value="LTR">LTR</option>
-                <option value="growth">Capital growth</option>
-                <option value="lifestyle">Lifestyle</option>
+                <option value="">{lang === "ru" ? "Любое" : "Any"}</option>
+                <option value="STR">
+                  {lang === "ru" ? "Краткосрочная аренда (STR)" : "STR"}
+                </option>
+                <option value="LTR">
+                  {lang === "ru" ? "Долгосрочная аренда (LTR)" : "LTR"}
+                </option>
+                <option value="growth">
+                  {lang === "ru" ? "Рост капитала" : "Capital growth"}
+                </option>
+                <option value="lifestyle">
+                  {lang === "ru" ? "Для проживания" : "Lifestyle"}
+                </option>
               </select>
             </div>
             <div className="fg">
@@ -529,7 +669,7 @@ export function CatalogueShell({
                 value={filters.fDev}
                 onChange={(e) => updateFilter("fDev", e.target.value)}
               >
-                <option value="">All</option>
+                <option value="">{lang === "ru" ? "Все" : "All"}</option>
                 <option value="AssetWise">AssetWise / TITLE</option>
                 <option value="Sansiri">Sansiri</option>
                 <option value="Banyan">Banyan / Laguna</option>
@@ -541,6 +681,28 @@ export function CatalogueShell({
                 <option value="CharnIssara">Charn Issara</option>
                 <option value="MontAzure">MontAzure / Accor</option>
                 <option value="WorldCorp">World Corporation PCL</option>
+              </select>
+            </div>
+            <div className="fg">
+              <div className="fg-lbl">
+                <span className="i-en">Registry verification</span>
+                <span className="i-ru">Верификация реестра</span>
+              </div>
+              <select
+                value={filters.fVer}
+                onChange={(e) => updateFilter("fVer", e.target.value)}
+              >
+                <option value="">{lang === "ru" ? "Любая" : "Any"}</option>
+                <option value="1">
+                  {lang === "ru"
+                    ? "L1 и выше — документы проверены"
+                    : "L1+ — documents verified"}
+                </option>
+                <option value="2">
+                  {lang === "ru"
+                    ? "L2 — независимая проверка"
+                    : "L2 — independent verification"}
+                </option>
               </select>
             </div>
           </div>
@@ -589,20 +751,20 @@ export function CatalogueShell({
                 </div>
                 {process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true" ? (
                   <>
-                <div className="hkpi2">
-                  <div className="hkpi2-v">{meta.buyCount}</div>
-                  <div className="hkpi2-l">
-                    BUY <span className="i-en">rated</span>
-                    <span className="i-ru">рекомендаций</span>
-                  </div>
-                </div>
-                <div className="hkpi2">
-                  <div className="hkpi2-v">{meta.avoidCount}</div>
-                  <div className="hkpi2-l">
-                    AVOID <span className="i-en">flags</span>
-                    <span className="i-ru">предупреждений</span>
-                  </div>
-                </div>
+                    <div className="hkpi2">
+                      <div className="hkpi2-v">{meta.buyCount}</div>
+                      <div className="hkpi2-l">
+                        BUY <span className="i-en">rated</span>
+                        <span className="i-ru">рекомендаций</span>
+                      </div>
+                    </div>
+                    <div className="hkpi2">
+                      <div className="hkpi2-v">{meta.avoidCount}</div>
+                      <div className="hkpi2-l">
+                        AVOID <span className="i-en">flags</span>
+                        <span className="i-ru">предупреждений</span>
+                      </div>
+                    </div>
                   </>
                 ) : null}
               </div>
@@ -628,7 +790,7 @@ export function CatalogueShell({
                 ["analytics", "Market Analytics", "Аналитика рынка"],
                 ["risk", "Risk & Due Diligence", "Риски и Due Diligence"],
                 ["devs", "Developers", "Застройщики"],
-                ["calc", "🧮 Calculator", "🧮 Калькулятор"],
+
                 ["shortlist", "♥ Shortlist", "♥ Шортлист"],
                 ["services", "📞 Services", "📞 Услуги"],
               ] as const
@@ -649,24 +811,34 @@ export function CatalogueShell({
             <div className="tcontent content">
               <div className="disc">
                 <span className="i-en">
-                  ⚠️ Important: Recommendations are based on data current at time
-                  of analysis. Prices, construction stage, developer terms and market
-                  demand change continuously. Every project requires independent
-                  verification and due diligence before any investment decision.
+                  ⚠️ Important: Recommendations are based on data current at
+                  time of analysis. Prices, construction stage, developer terms
+                  and market demand change continuously. Every project requires
+                  independent verification and due diligence before any
+                  investment decision.
                 </span>
                 <span className="i-ru">
-                  ⚠️ Важно: Рекомендации основаны на данных, актуальных на момент
-                  анализа. Ситуация меняется — цены, стадия строительства, условия
-                  застройщика и спрос. Перед инвестиционным решением каждый проект
-                  требует самостоятельной проверки и due diligence.
+                  ⚠️ Важно: Рекомендации основаны на данных, актуальных на
+                  момент анализа. Ситуация меняется — цены, стадия
+                  строительства, условия застройщика и спрос. Перед
+                  инвестиционным решением каждый проект требует самостоятельной
+                  проверки и due diligence.
                 </span>
               </div>
               <div className="cgrid">
                 {filtered.length === 0 ? (
                   <div className="no-res">
-                    <h3>{lang === "ru" ? "Проекты не найдены" : "No projects found"}</h3>
+                    <h3>
+                      {lang === "ru"
+                        ? "Проекты не найдены"
+                        : "No projects found"}
+                    </h3>
                     <p>
-                      <button type="button" className="btn-reset" onClick={resetFilters}>
+                      <button
+                        type="button"
+                        className="btn-reset"
+                        onClick={resetFilters}
+                      >
                         {lang === "ru" ? "Сбросить фильтры" : "Reset filters"}
                       </button>
                     </p>
@@ -703,9 +875,13 @@ export function CatalogueShell({
                   ) : null}
                 </div>
               )}
-              <div
-                dangerouslySetInnerHTML={{ __html: cleanHtml(htmlTabs.analytics) }}
-              />
+              <div>
+                <p>
+                  {lang === "ru"
+                    ? "Рыночная аналитика появится после проверки источников. Прогнозы доходности не публикуются."
+                    : "Market analytics await source verification. Return forecasts are not published."}
+                </p>
+              </div>
             </div>
           )}
           {tab === "risk" && (
@@ -715,17 +891,42 @@ export function CatalogueShell({
             />
           )}
           {tab === "devs" && (
-            <div
-              className="tcontent content"
-              dangerouslySetInnerHTML={{ __html: cleanHtml(htmlTabs.devs) }}
-            />
+            <div className="tcontent content">
+              <div>
+                <h2>
+                  {lang === "ru"
+                    ? "Застройщики опубликованных проектов"
+                    : "Developers with published projects"}
+                </h2>
+                {[...new Set(projects.map((p) => p.dt))].map((code) => (
+                  <p key={code}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFilter("fDev", code);
+                        setTab("catalog");
+                      }}
+                    >
+                      {projects.find((p) => p.dt === code)?.dev} ·{" "}
+                      {projects.filter((p) => p.dt === code).length}
+                    </button>
+                  </p>
+                ))}
+                <p>
+                  {lang === "ru"
+                    ? "История строится из опубликованных проектов. Она не подтверждает финансовую надёжность застройщика."
+                    : "History comes from published projects and does not establish financial reliability."}
+                </p>
+              </div>
+            </div>
           )}
-          {tab === "calc" && (
-            <CalculatorPanel
-              lang={lang}
-              benchmarksHtml={htmlTabs.calcBenchmarks}
-            />
-          )}
+          {tab === "calc" &&
+            process.env.NEXT_PUBLIC_ENABLE_RETURN_SCENARIOS === "true" && (
+              <CalculatorPanel
+                lang={lang}
+                benchmarksHtml={htmlTabs.calcBenchmarks}
+              />
+            )}
           {tab === "shortlist" && (
             <div className="tcontent content">
               <div className="sh">
@@ -734,7 +935,8 @@ export function CatalogueShell({
               </div>
               <p className="ss">
                 <span className="i-en">
-                  Projects saved to your shortlist. Stored locally in your browser.
+                  Projects saved to your shortlist. Stored locally in your
+                  browser.
                 </span>
                 <span className="i-ru">
                   Проекты, добавленные в шортлист. Хранятся в вашем браузере.
@@ -742,11 +944,14 @@ export function CatalogueShell({
               </p>
               <div className="sl-toolbar">
                 <span className="sl-count">
-                  {shortlist.length}{" "}
-                  <span className="i-en">projects</span>
+                  {shortlist.length} <span className="i-en">projects</span>
                   <span className="i-ru">проектов</span>
                 </span>
-                <button type="button" className="sl-clear" onClick={clearShortlist}>
+                <button
+                  type="button"
+                  className="sl-clear"
+                  onClick={clearShortlist}
+                >
                   <span className="i-en">Clear all</span>
                   <span className="i-ru">Очистить всё</span>
                 </button>
@@ -768,10 +973,12 @@ export function CatalogueShell({
                   <h3>♡</h3>
                   <p>
                     <span className="i-en">
-                      No projects saved yet. Click ♡ on any project card to add it here.
+                      No projects saved yet. Click ♡ on any project card to add
+                      it here.
                     </span>
                     <span className="i-ru">
-                      Шортлист пуст. Нажмите ♡ на карточке проекта, чтобы добавить его сюда.
+                      Шортлист пуст. Нажмите ♡ на карточке проекта, чтобы
+                      добавить его сюда.
                     </span>
                   </p>
                 </div>

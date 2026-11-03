@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { projectSlug } from "@/lib/slug";
+import { VerificationBadge } from "./VerificationBadge";
+import { taxLabel, zoneLabel, type TaxonomyKind } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 
 const SC: Record<string, string> = {
@@ -16,97 +18,8 @@ const SC: Record<string, string> = {
 };
 
 const RISK_EMOJI: Record<number, string> = { 1: "🟢", 2: "🟡", 3: "🔴" };
-const RISK_EN: Record<number, string> = {
-  1: "Tier 1 Low",
-  2: "Tier 2 Medium",
-  3: "Tier 3 Higher",
-};
-const RISK_RU: Record<number, string> = {
-  1: "Уровень 1 Низкий",
-  2: "Уровень 2 Средний",
-  3: "Уровень 3 Высокий",
-};
 const RISK_CLS: Record<number, string> = { 1: "r1", 2: "r2", 3: "r3" };
-
-const SEG_EN: Record<string, string> = {
-  branded: "Ultra-Lux & Branded",
-  condo: "Investment Condo",
-  "villa-lux": "Villa Luxury",
-  "villa-mid": "Villa Premium",
-  "villa-entry": "Villa Entry",
-  completed: "Completed 2024–25",
-  "offplan-new": "New Off-Plan",
-};
-const SEG_RU: Record<string, string> = {
-  branded: "Ультра-Люкс",
-  condo: "Инвест. кондо",
-  "villa-lux": "Вилла Люкс",
-  "villa-mid": "Вилла Премиум",
-  "villa-entry": "Вилла Вход",
-  completed: "Завершённые 2024–25",
-  "offplan-new": "Новые оффплан",
-};
-
-const BEACH_EN: Record<string, string> = {
-  bf: "Beachfront",
-  "500": "<500m",
-  "1k": "<1km",
-  inl: "Inland",
-};
-const BEACH_RU: Record<string, string> = {
-  bf: "Первая линия",
-  "500": "<500м",
-  "1k": "<1км",
-  inl: "В глубине",
-};
-
-const OWN_EN: Record<string, string> = {
-  fh: "Freehold",
-  lh: "Leasehold",
-  both: "FH+LH",
-};
-const OWN_RU: Record<string, string> = {
-  fh: "Фрихолд",
-  lh: "Лизхолд",
-  both: "ФХ+ЛХ",
-};
-
-const MGMT_EN: Record<string, string> = {
-  hotel: "🏨 Hotel brand",
-  pro: "👥 Professional",
-  self: "Self-managed",
-};
-const MGMT_RU: Record<string, string> = {
-  hotel: "🏨 Гостинич. бренд",
-  pro: "👥 Профессиональное",
-  self: "Самоуправл.",
-};
-
-const FOCUS_EN: Record<string, string> = {
-  STR: "STR",
-  LTR: "LTR",
-  growth: "Growth",
-  lifestyle: "Lifestyle",
-  mixed: "Mixed",
-};
-const FOCUS_RU: Record<string, string> = {
-  STR: "STR",
-  LTR: "LTR",
-  growth: "Рост",
-  lifestyle: "Lifestyle",
-  mixed: "Смешан.",
-};
-
-const REC_EN: Record<string, string> = {
-  BUY: "✅ BUY",
-  WATCH: "👁 WATCH",
-  AVOID: "⛔ AVOID",
-};
-const REC_RU: Record<string, string> = {
-  BUY: "✅ ПОКУПАТЬ",
-  WATCH: "👁 НАБЛЮДАТЬ",
-  AVOID: "⛔ ИЗБЕГАТЬ",
-};
+const MGMT_EMOJI: Record<string, string> = { hotel: "🏨 ", pro: "👥 " };
 
 const REC_CLS: Record<string, string> = {
   BUY: "rec-buy",
@@ -124,10 +37,15 @@ function compBanner(p: CatalogProject) {
   const q = p.compQ || String(p.compY);
   const s = p.stK;
   const y = p.compY;
-  const lbl =
-    s === "ready" ? "✓ " : s === "building" ? "🔜 " : "📋 ";
+  const lbl = s === "ready" ? "✓ " : s === "building" ? "🔜 " : "📋 ";
   const cls =
-    s === "ready" ? "cdone" : y <= 2026 ? "cnear" : y === 2027 ? "cmid" : "cfar";
+    s === "ready"
+      ? "cdone"
+      : y <= 2026
+        ? "cnear"
+        : y === 2027
+          ? "cmid"
+          : "cfar";
   return (
     <span className={`pc-comp ${cls}`}>
       {lbl}
@@ -142,13 +60,13 @@ function renderBadges(b: string[] | undefined, ru: boolean) {
   if (b.includes("rdy"))
     out.push(
       <span key="rdy" className="bdg brdy">
-        ✓ {ru ? "Готов" : "Ready"}
+        ✓ {ru ? "Сдан" : "Ready"}
       </span>,
     );
   if (b.includes("new"))
     out.push(
       <span key="new" className="bdg bnew">
-        NEW
+        {ru ? "НОВИНКА" : "NEW"}
       </span>,
     );
   if (b.includes("set"))
@@ -166,7 +84,7 @@ function renderBadges(b: string[] | undefined, ru: boolean) {
   if (b.includes("inv"))
     out.push(
       <span key="inv" className="bdg binv">
-        {ru ? "Инвентарь" : "Inventory"}
+        {ru ? "В наличии" : "Inventory"}
       </span>,
     );
   return <div className="pc-bdg">{out}</div>;
@@ -187,13 +105,8 @@ export function ProjectCard({
 }) {
   const ru = lang === "ru";
   const showRec = process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true";
-  const RL = ru ? RISK_RU : RISK_EN;
-  const SL = ru ? SEG_RU : SEG_EN;
-  const RECL = ru ? REC_RU : REC_EN;
-  const BL = ru ? BEACH_RU : BEACH_EN;
-  const OL = ru ? OWN_RU : OWN_EN;
-  const ML = ru ? MGMT_RU : MGMT_EN;
-  const FL = ru ? FOCUS_RU : FOCUS_EN;
+  const tl = (kind: TaxonomyKind, key: string | number) =>
+    taxLabel(kind, key, lang, true);
 
   const stC =
     p.stK === "ready" ? "done" : p.stK === "building" ? "near" : "far";
@@ -202,7 +115,7 @@ export function ProjectCard({
     (ru ? "Здравствуйте! Меня интересует: " : "Hello! I am interested in: ") +
       p.n +
       " (" +
-      p.zone +
+      zoneLabel(p.zone, lang) +
       ")",
   )}`;
 
@@ -218,8 +131,11 @@ export function ProjectCard({
           </Link>
         </div>
         <div className="pc-dev">{p.dev}</div>
+        <div style={{ margin: "2px 0 4px" }}>
+          <VerificationBadge ver={p.ver} lang={lang} />
+        </div>
         <span className={`pc-risk ${RISK_CLS[p.risk] || "r2"}`}>
-          {RISK_EMOJI[p.risk] || "⬜"} {RL[p.risk] || ""}
+          {RISK_EMOJI[p.risk] || "⬜"} {tl("risk", p.risk)}
         </span>
         {compBanner(p)}
         {renderBadges(p.bdg, ru)}
@@ -234,32 +150,36 @@ export function ProjectCard({
           <div className="mc-l">USD</div>
         </div>
         <div className="mc">
-          <div className="mc-v g">{p.yield}</div>
-          <div className="mc-l">{ru ? "Доходность" : "Yield est."}</div>
+          <div className="mc-v">{p.sales?.available ?? "—"}</div>
+          <div className="mc-l">
+            {ru ? "Внесено свободных" : "Recorded available"}
+          </div>
         </div>
       </div>
       <div className="pc-pills">
         {p.beach ? (
-          <span className="pl pb">
-            🏖 {BL[p.beach] || p.beach}
-          </span>
+          <span className="pl pb">🏖 {tl("beach", p.beach)}</span>
         ) : null}
-        {p.own ? (
-          <span className="pl po">
-            📋 {OL[p.own] || p.own}
-          </span>
-        ) : null}
+        {p.own ? <span className="pl po">📋 {tl("own", p.own)}</span> : null}
         {p.mgmt ? (
-          <span className="pl pm">{ML[p.mgmt] || p.mgmt}</span>
+          <span className="pl pm">
+            {MGMT_EMOJI[p.mgmt] ?? ""}
+            {tl("mgmt", p.mgmt)}
+          </span>
         ) : null}
         {p.focus ? (
-          <span className="pl pf">
-            💡 {FL[p.focus] || p.focus}
-          </span>
+          <span className="pl pf">💡 {tl("focus", p.focus)}</span>
         ) : null}
         {p.minBR !== undefined ? (
           <span className="pl pd">
-            🛏 {p.minBR === 0 ? "Studio+" : `${p.minBR}BR+`}
+            🛏{" "}
+            {p.minBR === 0
+              ? ru
+                ? "Студия+"
+                : "Studio+"
+              : ru
+                ? `от ${p.minBR} спал.`
+                : `${p.minBR}BR+`}
           </span>
         ) : null}
       </div>
@@ -267,14 +187,14 @@ export function ProjectCard({
         <div className="pc-rows">
           <div className="pr">
             <span className="pr-l">{ru ? "Зона" : "Zone"}</span>
-            <span className="pr-v">{p.zone}</span>
+            <span className="pr-v">{zoneLabel(p.zone, lang)}</span>
           </div>
           <div className="pr">
             <span className="pr-l">{ru ? "Юнитов" : "Units"}</span>
             <span className="pr-v">{p.units || "—"}</span>
           </div>
           <div className="pr">
-            <span className="pr-l">฿/sqm</span>
+            <span className="pr-l">{ru ? "฿/м²" : "฿/sqm"}</span>
             <span className="pr-v">{p.sqmP || "—"}</span>
           </div>
           <div className="pr">
@@ -285,7 +205,7 @@ export function ProjectCard({
         <div className="pc-desc">{p.desc}</div>
         {showRec ? (
           <div className={`pc-rt ${RT_CLS[p.rec] || "rt-watch"}`}>
-            <strong>{RECL[p.rec] || "WATCH"}:</strong> {p.recText || ""}
+            <strong>{tl("rec", p.rec)}:</strong> {p.recText || ""}
           </div>
         ) : null}
         <div className="pc-src">📌 {p.src}</div>
@@ -298,7 +218,7 @@ export function ProjectCard({
         </div>
       </div>
       <div className="pc-foot">
-        <span className="pc-seg">{SL[p.seg] || p.seg}</span>
+        <span className="pc-seg">{tl("seg", p.seg)}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <button
             type="button"
@@ -355,7 +275,7 @@ export function ProjectCard({
           </a>
           {showRec ? (
             <span className={`pc-rec ${REC_CLS[p.rec] || "rec-watch"}`}>
-              {RECL[p.rec] || "WATCH"}
+              {tl("rec", p.rec)}
             </span>
           ) : null}
         </div>
