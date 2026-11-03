@@ -12,7 +12,7 @@
     "bootstrap": "npm run db:push && npm run seed:catalog",
     "db:push": "dotenv -e .env.local -- npx supabase db push --workdir .",
     "db:diff": "dotenv -e .env.local -- npx supabase db diff --workdir .",
-    "db:link": "dotenv -e .env.local -- npx supabase link --workdir . --project-ref ktfwmfdlmcgpbdnsggrb"
+    "db:link": "dotenv -e .env.local -- npx supabase link --workdir . --project-ref mfwbdfrrlckarktpwykf"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "5.3.0",
