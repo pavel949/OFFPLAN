@@ -8,5 +8,5 @@ export const leadSubmitSchema = z.object({
   projectId: z.number().int().nullable().optional(),
   projectName: z.string().trim().max(300).nullable().optional(),
   locale: z.enum(["en", "ru"]),
-  consent: z.literal(true, { error: "Consent to personal data processing is required" }),
+  consent: z.literal(true, { error: "Необходимо согласие на обработку персональных данных" }),
 });

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed:catalog": "node scripts/seed-catalog.mjs",
+    "seed:reference": "node --experimental-strip-types scripts/seed-reference.mjs",
     "bootstrap": "npm run db:push && npm run seed:catalog",
     "db:push": "dotenv -e .env.local -- npx supabase db push --workdir .",
     "db:diff": "dotenv -e .env.local -- npx supabase db diff --workdir .",

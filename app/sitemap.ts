@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import type { MetadataRoute } from "next";
 import { getProjects } from "@/lib/catalog";
 import { projectSlug } from "@/lib/slug";
@@ -9,6 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const projects = await getProjects();
   return [
     { url: `${base}/`, changeFrequency: "daily", priority: 1 },
+    { url: `${base}/registry`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
     ...projects.map((p) => ({
       url: `${base}/project/${projectSlug(p)}`,

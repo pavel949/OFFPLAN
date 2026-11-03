@@ -1,18 +1,132 @@
 import rawProjects from "@/data/seed/projects.json";
+import ruSeedTexts from "@/data/i18n/projects.ru.json";
 import { countByRec } from "./filters";
 import { parseCatalogRows } from "./schema";
 import { createAnonClient, hasSupabasePublicConfig } from "./supabase/anon";
-import { createServiceRoleClient, hasSupabaseServiceConfig } from "./supabase/service";
+import {
+  createServiceRoleClient,
+  hasSupabaseServiceConfig,
+} from "./supabase/service";
 import { showRecLabels, toPublicProject } from "./public-catalog";
-import type { CatalogMeta, CatalogProject } from "./types";
+import type { CatalogMeta, CatalogProject, ProjectTexts } from "./types";
 import { withTimeout } from "./with-timeout";
 
 const DB_TIMEOUT_MS = 8000;
 
 function parseSeedProjects(): CatalogProject[] {
-  return parseCatalogRows(rawProjects as unknown[], (i, e) =>
-    console.error("[catalog] invalid seed row", i, e.issues[0]?.message),
+  return attachRu(
+    parseCatalogRows(rawProjects as unknown[], (i, e) =>
+      console.error("[catalog] invalid seed row", i, e.issues[0]?.message),
+    ),
   );
+}
+
+/** Russian texts shipped with the repo (machine drafts, reviewed by editors in the DB). */
+const RU_SEED = ruSeedTexts as unknown as Record<string, ProjectTexts>;
+
+function attachRu(
+  projects: CatalogProject[],
+  db?: Map<number, ProjectTexts>,
+): CatalogProject[] {
+  return projects.map((p) => {
+    const ru =
+      db?.get(p.id) ??
+      (process.env.NODE_ENV !== "production"
+        ? RU_SEED[String(p.id)]
+        : undefined);
+    return ru ? { ...p, i18n: { ru } } : p;
+  });
+}
+
+/** Best-effort: registry verification per project. Never blocks the catalogue. */
+async function loadVerification(
+  supabase: ReturnType<typeof createAnonClient>,
+): Promise<Map<number, NonNullable<CatalogProject["ver"]>> | undefined> {
+  try {
+    const { data, error } = await supabase
+      .from("public_catalog_projects")
+      .select(
+        "legacy_id, verification_level, verified_at, verification_expires_at",
+      )
+      .gt("verification_level", 0);
+    if (error || !data) return undefined;
+    const out = new Map<number, NonNullable<CatalogProject["ver"]>>();
+    for (const r of data) {
+      if (r.legacy_id == null) continue;
+      out.set(r.legacy_id as number, {
+        level: r.verification_level as 0 | 1 | 2,
+        verifiedAt: (r.verified_at as string) ?? null,
+        expiresAt: (r.verification_expires_at as string) ?? null,
+      });
+    }
+    return out;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Best-effort: translations edited in the DB override the seed. Never blocks the catalogue. */
+async function loadDbRuTexts(
+  supabase: ReturnType<typeof createAnonClient>,
+  idMap: Map<string, number>,
+): Promise<Map<number, ProjectTexts> | undefined> {
+  try {
+    const { data, error } = await supabase
+      .from("catalog_project_translations")
+      .select(
+        "project_id, description, status_text, completion_text, tags, review_status",
+      )
+      .eq("locale", "ru")
+      .eq("review_status", "reviewed");
+    if (error || !data?.length) return undefined;
+    const out = new Map<number, ProjectTexts>();
+    for (const r of data) {
+      const legacy = idMap.get(r.project_id as string);
+      if (legacy == null) continue;
+      out.set(legacy, {
+        desc: (r.description as string) ?? "",
+        stT: (r.status_text as string) ?? "",
+        compQ: (r.completion_text as string) ?? "",
+        tags: (r.tags as string[]) ?? [],
+        reviewStatus: r.review_status as ProjectTexts["reviewStatus"],
+      });
+    }
+    return out;
+  } catch {
+    return undefined;
+  }
+}
+
+async function loadSales(
+  client: ReturnType<typeof createAnonClient>,
+  idMap: Map<string, number>,
+) {
+  const out = new Map<number, NonNullable<CatalogProject["sales"]>>();
+  try {
+    const [inventory, facts] = await Promise.all([
+      client
+        .from("public_project_inventory")
+        .select("project_id,recorded,available"),
+      client
+        .from("project_evidence")
+        .select("project_id,details")
+        .eq("kind", "sales")
+        .eq("status", "published"),
+    ]);
+    for (const row of inventory.data ?? []) {
+      const id = idMap.get(row.project_id);
+      if (id != null)
+        out.set(id, { available: row.available, recorded: row.recorded });
+    }
+    for (const row of facts.data ?? []) {
+      const id = idMap.get(row.project_id);
+      if (id != null)
+        out.set(id, { ...out.get(id), stage: row.details?.stage });
+    }
+  } catch {
+    /* Missing facts remain unknown; never substitute seed inventory. */
+  }
+  return out;
 }
 
 export async function getProjects(): Promise<CatalogProject[]> {
@@ -23,7 +137,9 @@ export async function getProjects(): Promise<CatalogProject[]> {
 /** Thrown in production when the database is configured but unreachable and nothing safe can be served. */
 export class CatalogUnavailableError extends Error {
   constructor(cause?: unknown) {
-    super("Catalogue database is unavailable and no last-known-good copy exists");
+    super(
+      "Catalogue database is unavailable and no last-known-good copy exists",
+    );
     this.name = "CatalogUnavailableError";
     this.cause = cause;
   }
@@ -45,19 +161,30 @@ export function __resetCatalogCacheForTests() {
  *                                       it would resurrect unpublished / rejected projects and stale prices).
  */
 async function loadProjects(): Promise<CatalogProject[]> {
-  if (!hasSupabasePublicConfig()) return parseSeedProjects();
+  if (!hasSupabasePublicConfig()) {
+    if (process.env.NODE_ENV === "production")
+      throw new CatalogUnavailableError(
+        new Error("Supabase is not configured"),
+      );
+    return parseSeedProjects();
+  }
 
   const dev = process.env.NODE_ENV !== "production";
   try {
     const rows = await withTimeoutOrThrow(readPublishedFromDb(), DB_TIMEOUT_MS);
     if (rows.length > 0) lastKnownGood = rows;
     else if (dev) {
-      console.error("[catalog] DB has no published projects, serving seed (development only)");
+      console.error(
+        "[catalog] DB has no published projects, serving seed (development only)",
+      );
       return parseSeedProjects();
     }
     return rows;
   } catch (e) {
-    console.error("[catalog] DB read failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "[catalog] DB read failed:",
+      e instanceof Error ? e.message : e,
+    );
     if (lastKnownGood) return lastKnownGood;
     if (dev) return parseSeedProjects();
     throw new CatalogUnavailableError(e);
@@ -68,26 +195,47 @@ async function readPublishedFromDb(): Promise<CatalogProject[]> {
   // Editorial labels (rec/recText) are only read when publishing them is explicitly enabled,
   // and then only by trusted server code. Everything else goes through the public view,
   // which has them neutralised and never exposes draft_payload.
-  let data: { payload: unknown }[] | null;
+  let data: { id?: string; legacy_id?: number; payload: unknown }[] | null;
   let error: { message: string } | null;
   if (showRecLabels() && hasSupabaseServiceConfig()) {
     ({ data, error } = await createServiceRoleClient()
       .from("catalog_projects")
-      .select("payload")
+      .select("id, legacy_id, payload")
       .eq("is_published", true)
       .eq("moderation_status", "published")
       .order("legacy_id", { ascending: true }));
   } else {
     ({ data, error } = await createAnonClient()
       .from("public_catalog_projects")
-      .select("payload")
+      .select("id, legacy_id, payload")
       .order("legacy_id", { ascending: true }));
   }
   if (error) throw new Error(error.message);
-  return parseCatalogRows(
+  const rows = parseCatalogRows(
     (data ?? []).map((r) => r.payload),
-    (i, e) => console.error("[catalog] skipping invalid DB row", i, e.issues[0]?.message),
+    (i, e) =>
+      console.error(
+        "[catalog] skipping invalid DB row",
+        i,
+        e.issues[0]?.message,
+      ),
   );
+  const client = createAnonClient();
+  const idMap = new Map(
+    (data ?? [])
+      .filter((r) => r.id && r.legacy_id != null)
+      .map((r) => [r.id!, r.legacy_id!]),
+  );
+  const [texts, ver, sales] = await Promise.all([
+    loadDbRuTexts(client, idMap),
+    loadVerification(client),
+    loadSales(client, idMap),
+  ]);
+  return attachRu(rows, texts).map((p) => ({
+    ...p,
+    ...(ver?.has(p.id) ? { ver: ver.get(p.id) } : {}),
+    ...(sales.has(p.id) ? { sales: sales.get(p.id) } : {}),
+  }));
 }
 
 function withTimeoutOrThrow<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -110,9 +258,7 @@ export function getCatalogMeta(projects: CatalogProject[]): CatalogMeta {
   const rec = countByRec(projects);
   const yields = projects.map((p) => p.yN).filter((y) => typeof y === "number");
   const avgYield =
-    yields.length === 0
-      ? 0
-      : yields.reduce((a, b) => a + b, 0) / yields.length;
+    yields.length === 0 ? 0 : yields.reduce((a, b) => a + b, 0) / yields.length;
 
   return {
     quarterLabel: "Q2 2026",

@@ -2,6 +2,16 @@
 
 export type RecLabel = "BUY" | "WATCH" | "AVOID";
 
+/** Editorial text fields that exist per language (Russian is held outside the canonical payload). */
+export interface ProjectTexts {
+  desc: string;
+  stT: string;
+  compQ: string;
+  tags: string[];
+  /** machine = AI/automatic draft awaiting editor review; reviewed = approved by an editor. */
+  reviewStatus?: "machine" | "reviewed";
+}
+
 export interface CatalogProject {
   id: number;
   n: string;
@@ -35,6 +45,11 @@ export interface CatalogProject {
   rec: RecLabel;
   recText: string;
   src: string;
+  /** Attached at load time from translations; never part of the stored payload. */
+  i18n?: { ru?: ProjectTexts };
+  sales?: {stage?:string; available?:number; recorded?:number};
+  /** Registry verification (attached at load time from catalog_projects; not part of the payload). */
+  ver?: { level: 0 | 1 | 2; verifiedAt: string | null; expiresAt: string | null };
 }
 
 export interface CatalogMeta {

@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+import { createAnonClient, hasSupabasePublicConfig } from "@/lib/supabase/anon";
+import { getPublicProjectFacts } from "@/lib/project-facts-query";
 import { notFound, redirect } from "next/navigation";
 import { ProjectDetailClient } from "./project-detail-client";
 import { getProjectByLegacyId } from "@/lib/catalog";
@@ -45,10 +48,23 @@ export default async function ProjectPage({
 
   const extras = await getProjectExtrasByLegacyId(legacyId);
 
+  const { data: identity } =
+    extras.catalogProjectId && hasSupabasePublicConfig()
+      ? await createAnonClient()
+          .from("public_catalog_projects")
+          .select("developer_id")
+          .eq("id", extras.catalogProjectId)
+          .maybeSingle()
+      : { data: null };
+  const facts = await getPublicProjectFacts(
+    extras.catalogProjectId,
+    identity?.developer_id ?? null,
+  );
   return (
     <ProjectDetailClient
       project={project}
       extras={extras}
+      facts={facts}
       backHref="/"
       legacyId={legacyId}
     />

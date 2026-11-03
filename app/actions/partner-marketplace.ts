@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { runUnitImport, type ImportState } from "@/lib/inventory/run";
 import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -56,6 +57,11 @@ export async function confirmProjectData(
   const r = await getPartnerProjectContext(projectId);
   if (!r.ok) return { ok: false, error: r.error };
   const now = new Date().toISOString();
+  // Refresh "price is current" for all active units (no data change), then stamp the project.
+  const { error: rpcErr } = await r.ctx.supabase.rpc("confirm_project_prices", {
+    p_project_id: projectId,
+  });
+  if (rpcErr) return { ok: false, error: rpcErr.message };
   const { error } = await r.ctx.supabase
     .from("catalog_projects")
     .update({ data_confirmed_at: now, updated_at: now })
@@ -302,4 +308,37 @@ export async function deleteSalesCampaign(
   revalidatePath("/");
   revalidatePath(`/partner/projects/${projectId}/campaigns`);
   return { ok: true };
+}
+
+/** Bulk price list / inventory import (preview → apply). Owner and sales roles may import. */
+export async function importProjectUnits(
+  _prev: ImportState,
+  formData: FormData,
+): Promise<ImportState> {
+  const projectId = String(formData.get("project_id") ?? "").trim();
+  const text = String(formData.get("text") ?? "");
+  const mode = formData.get("mode") === "apply" ? "apply" : "preview";
+  if (!projectId) return { ok: false, error: "Нет project_id" };
+  const r = await getPartnerProjectContext(projectId);
+  if (!r.ok) return { ok: false, error: r.error };
+  const res = await runUnitImport({
+    db: r.ctx.supabase,
+    projectId,
+    text,
+    mode,
+    source: "import",
+    actorId: r.ctx.user.id,
+  });
+  if (res.ok && res.mode === "apply") {
+    void insertCatalogAuditLog({
+      entity_type: "unit",
+      entity_id: projectId,
+      actor_id: r.ctx.user.id,
+      action: "units_imported",
+      diff: { ...res.applied, summary: res.summary },
+    });
+    revalidatePath("/");
+    revalidatePath(`/partner/projects/${projectId}/inventory`);
+  }
+  return res;
 }

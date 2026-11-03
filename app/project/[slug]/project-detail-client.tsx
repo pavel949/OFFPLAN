@@ -1,8 +1,16 @@
 "use client";
 
+import { ProjectFacts } from "@/components/catalogue/ProjectFacts";
+import type { PublicProjectFacts } from "@/lib/project-facts-query";
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
+import { VerificationBadge } from "@/components/catalogue/VerificationBadge";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
+import { localizeProject } from "@/lib/i18n/localize-project";
+import { formatPrice, freshnessOf } from "@/lib/inventory/freshness";
+import { zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import type {
   ProjectUnitRow,
@@ -14,13 +22,21 @@ import "./project-detail.css";
 
 const LANG_KEY = "phuket_lang";
 
+const STATUS_LABEL: Record<string, { ru: string; en: string }> = {
+  available: { ru: "Свободен", en: "Available" },
+  reserved: { ru: "Бронь", en: "Reserved" },
+  sold: { ru: "Продан", en: "Sold" },
+};
+
 export function ProjectDetailClient({
-  project: p,
+  project,
+  facts,
   extras,
   backHref,
   legacyId,
 }: {
   project: CatalogProject;
+  facts: PublicProjectFacts;
   extras: {
     catalogProjectId: string | null;
     units: ProjectUnitRow[];
@@ -33,7 +49,7 @@ export function ProjectDetailClient({
   backHref: string;
   legacyId: number;
 }) {
-  const [lang, setLang] = useState<"en" | "ru">("en");
+  const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
   const [leadOpen, setLeadOpen] = useState(false);
 
   useEffect(() => {
@@ -43,7 +59,10 @@ export function ProjectDetailClient({
 
   useEffect(() => {
     document.documentElement.setAttribute("data-lang", lang);
+    document.documentElement.lang = lang;
   }, [lang]);
+
+  const p = useMemo(() => localizeProject(project, lang), [project, lang]);
 
   useEffect(() => {
     const id = extras.catalogProjectId;
@@ -80,10 +99,22 @@ export function ProjectDetailClient({
           {ru ? "← К каталогу" : "← Back to catalogue"}
         </Link>
         <div className="pd-actions">
-          <button type="button" className="pd-lang" onClick={() => setLang(ru ? "en" : "ru")}>
+          <button
+            type="button"
+            className="pd-lang"
+            onClick={() => {
+              const n = ru ? "en" : "ru";
+              setLang(n);
+              localStorage.setItem(LANG_KEY, n);
+            }}
+          >
             {ru ? "🇬🇧 ENG" : "🇷🇺 РУС"}
           </button>
-          <button type="button" className="pd-cta" onClick={() => setLeadOpen(true)}>
+          <button
+            type="button"
+            className="pd-cta"
+            onClick={() => setLeadOpen(true)}
+          >
             <span className="i-en">✉ Inquiry</span>
             <span className="i-ru">✉ Заявка</span>
           </button>
@@ -91,20 +122,56 @@ export function ProjectDetailClient({
       </header>
 
       <div className="pd-hero">
-        <div className="pd-gallery">
-          <div className="pd-ph" aria-hidden />
-          <div className="pd-ph" aria-hidden />
-          <div className="pd-ph" aria-hidden />
-        </div>
-        <p className="pd-gallery-note">
-          <span className="i-en">Gallery: partner uploads after moderation.</span>
-          <span className="i-ru">Галерея: загрузки партнёра после модерации.</span>
-        </p>
+        {facts.facts.some((f) => f.kind === "photo") ? (
+          <div className="pd-gallery">
+            {facts.facts
+              .filter((f) => f.kind === "photo")
+              .map((f) => (
+                <figure key={f.id}>
+                  <Image
+                    src={String(f.details.url)}
+                    alt={String(f.details.caption)}
+                    width={900}
+                    height={600}
+                    unoptimized
+                    referrerPolicy="no-referrer"
+                    style={{ width: "100%", height: "auto" }}
+                  />
+                  <figcaption>
+                    {f.title} · {f.observed_at}
+                    {f.details.render
+                      ? ru
+                        ? " · визуализация"
+                        : " · rendering"
+                      : ""}{" "}
+                    ·{" "}
+                    <a
+                      href={f.source_url}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {ru ? "Источник" : "Source"}
+                    </a>
+                  </figcaption>
+                </figure>
+              ))}
+          </div>
+        ) : (
+          <p className="pd-gallery-note">
+            {ru
+              ? "Проверенные фотографии пока не предоставлены."
+              : "Reviewed photographs have not been supplied."}
+          </p>
+        )}
       </div>
 
       <div className="pd-main">
         <h1 className="pd-title">{p.n}</h1>
+        <p style={{ margin: "4px 0 8px" }}>
+          <VerificationBadge ver={p.ver} lang={lang} />
+        </p>
         <p className="pd-dev">{p.dev}</p>
+        <ProjectFacts data={facts} lang={lang} />
 
         {extras.campaigns.length > 0 ? (
           <div className="pd-campaigns">
@@ -170,16 +237,25 @@ export function ProjectDetailClient({
               <span className="i-ru">Локация</span>
             </h2>
             {mapHref ? (
-              <a href={mapHref} target="_blank" rel="noopener noreferrer" className="pd-maplink">
+              <a
+                href={mapHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pd-maplink"
+              >
                 {ru ? "Открыть на карте" : "Open in Google Maps"} →
               </a>
             ) : (
               <p className="pd-muted">
-                <span className="i-en">Coordinates will appear after partner confirms.</span>
-                <span className="i-ru">Координаты появятся после подтверждения партнёром.</span>
+                <span className="i-en">
+                  Coordinates will appear after partner confirms.
+                </span>
+                <span className="i-ru">
+                  Координаты появятся после подтверждения партнёром.
+                </span>
               </p>
             )}
-            <p className="pd-zone">{p.zone}</p>
+            <p className="pd-zone">{zoneLabel(p.zone, lang)}</p>
           </section>
         </div>
 
@@ -194,22 +270,51 @@ export function ProjectDetailClient({
                 <thead>
                   <tr>
                     <th>{ru ? "Лот" : "Unit"}</th>
-                    <th>BR</th>
-                    <th>sqm</th>
-                    <th>฿</th>
+                    <th>{ru ? "Спальни" : "Bedrooms"}</th>
+                    <th>{ru ? "Площадь, м²" : "Area, sqm"}</th>
+                    <th>{ru ? "Цена" : "Price"}</th>
                     <th>{ru ? "Статус" : "Status"}</th>
+                    <th>{ru ? "Обновлено" : "Updated"}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {extras.units.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.label}</td>
-                      <td>{u.bedrooms ?? "—"}</td>
-                      <td>{u.sqm ?? "—"}</td>
-                      <td>{u.price_thb != null ? u.price_thb.toLocaleString() : "—"}</td>
-                      <td>{u.status}</td>
-                    </tr>
-                  ))}
+                  {extras.units.map((u) => {
+                    const f = freshnessOf(u.price_updated_at);
+                    const sold = u.status === "sold";
+                    const hidden = !sold && f === "expired";
+                    return (
+                      <tr key={u.id}>
+                        <td>{u.label}</td>
+                        <td>{u.bedrooms ?? "—"}</td>
+                        <td>{u.sqm ?? "—"}</td>
+                        <td
+                          title={
+                            f === "stale" && !sold
+                              ? ru
+                                ? "Цена давно не обновлялась"
+                                : "Price not refreshed recently"
+                              : undefined
+                          }
+                        >
+                          {sold
+                            ? "—"
+                            : hidden
+                              ? ru
+                                ? "уточняйте у застройщика"
+                                : "ask the developer"
+                              : `${formatPrice(u.price_thb, u.currency ?? "THB", lang)}${f === "stale" ? " ⚠" : ""}`}
+                        </td>
+                        <td>{STATUS_LABEL[u.status]?.[lang] ?? u.status}</td>
+                        <td>
+                          {u.price_updated_at
+                            ? new Date(u.price_updated_at).toLocaleDateString(
+                                ru ? "ru-RU" : "en-GB",
+                              )
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -232,11 +337,19 @@ export function ProjectDetailClient({
               {extras.updates.map((u) => (
                 <li key={u.id} className="border-b border-[var(--bdr)] pb-3">
                   <p className="text-xs text-[var(--muted)]">
-                    {new Date(u.published_at).toLocaleDateString(ru ? "ru-RU" : "en-GB")} · {u.kind}
+                    {new Date(u.published_at).toLocaleDateString(
+                      ru ? "ru-RU" : "en-GB",
+                    )}{" "}
+                    · {u.kind}
                   </p>
-                  <p className="font-medium">{ru ? u.title_ru || u.title_en : u.title_en || u.title_ru}</p>
-                  {(ru ? u.body_ru : u.body_en) || (ru ? u.body_en : u.body_ru) ? (
-                    <p className="text-sm mt-1 whitespace-pre-wrap">{ru ? u.body_ru || u.body_en : u.body_en || u.body_ru}</p>
+                  <p className="font-medium">
+                    {ru ? u.title_ru || u.title_en : u.title_en || u.title_ru}
+                  </p>
+                  {(ru ? u.body_ru : u.body_en) ||
+                  (ru ? u.body_en : u.body_ru) ? (
+                    <p className="text-sm mt-1 whitespace-pre-wrap">
+                      {ru ? u.body_ru || u.body_en : u.body_en || u.body_ru}
+                    </p>
                   ) : null}
                 </li>
               ))}

@@ -32,6 +32,11 @@ if (!url || !key) {
   process.exit(1);
 }
 
+if (new URL(url).hostname !== "mfwbdfrrlckarktpwykf.supabase.co") {
+  throw new Error(
+    "Refusing source import outside the OFFPLAN production project",
+  );
+}
 const supabase = createClient(url, key, {
   auth: { persistSession: false },
 });
@@ -39,6 +44,20 @@ const supabase = createClient(url, key, {
 const raw = JSON.parse(
   fs.readFileSync(path.join(root, "data", "seed", "projects.json"), "utf8"),
 );
+
+const label = "OFFPLAN Q2 2026 source import 2026-11-03";
+const { data: snapshot, error: readError } = await supabase
+  .from("catalog_snapshots")
+  .select("id")
+  .eq("label", label)
+  .maybeSingle();
+if (readError) throw new Error(readError.message);
+if (!snapshot) {
+  const { error } = await supabase
+    .from("catalog_snapshots")
+    .insert({ label, quarter_label: "Q2 2026", projects: raw });
+  if (error) throw new Error(error.message);
+}
 
 let ok = 0;
 for (const p of raw) {
@@ -48,11 +67,11 @@ for (const p of raw) {
       legacy_id: p.id,
       slug,
       payload: p,
-      is_published: true,
-      moderation_status: "published",
+      is_published: false,
+      moderation_status: "draft",
       org_id: null,
     },
-    { onConflict: "legacy_id" },
+    { onConflict: "legacy_id", ignoreDuplicates: true },
   );
   if (error) {
     console.error("Row", p.id, error.message);
@@ -61,49 +80,10 @@ for (const p of raw) {
   }
 }
 
-console.log("Upserted catalog_projects:", ok, "/", raw.length);
-
-/* Optional: attach sample units to first project */
-const { data: first } = await supabase
-  .from("catalog_projects")
-  .select("id")
-  .eq("legacy_id", raw[0]?.id)
-  .maybeSingle();
-
-if (first?.id) {
-  await supabase.from("project_units").delete().eq("project_id", first.id);
-  const sample = [
-    {
-      project_id: first.id,
-      label: "A-1201",
-      bedrooms: 1,
-      floor: 12,
-      sqm: 45,
-      price_thb: 9_500_000,
-      status: "available",
-      sort_order: 0,
-    },
-    {
-      project_id: first.id,
-      label: "B-0803",
-      bedrooms: 2,
-      floor: 8,
-      sqm: 72,
-      price_thb: 15_200_000,
-      status: "reserved",
-      sort_order: 1,
-    },
-  ];
-  const { error: uerr } = await supabase.from("project_units").insert(sample);
-  if (uerr) console.warn("Sample units:", uerr.message);
-  else console.log("Inserted sample units for legacy_id", raw[0].id);
-
-  await supabase.from("sales_campaigns").delete().eq("project_id", first.id);
-  await supabase.from("sales_campaigns").insert({
-    project_id: first.id,
-    kind: "launch",
-    label_en: "Sales launch Q2 2026",
-    label_ru: "Старт продаж Q2 2026",
-  });
-  console.log("Inserted sample sales_campaign");
-}
+console.log(
+  "Processed catalog drafts (existing rows preserved):",
+  ok,
+  "/",
+  raw.length,
+);
+if (ok !== raw.length) process.exitCode = 1;

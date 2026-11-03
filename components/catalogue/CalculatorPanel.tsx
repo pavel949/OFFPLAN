@@ -181,13 +181,13 @@ export function CalculatorPanel({
               <div className="cr-v">{fmtTHB(r.tax)}</div>
               <div className="cr-l">
                 <span className="i-en">Rental Tax 12.5%</span>
-                <span className="i-ru">Налог 12.5%</span>
+                <span className="i-ru">Налог 12,5%</span>
               </div>
             </div>
             <div className="cr">
               <div className="cr-v">
                 {r.paybackYears != null && r.paybackYears < 100
-                  ? r.paybackYears.toFixed(1) + (ru ? " лет" : " yrs")
+                  ? (ru ? r.paybackYears.toFixed(1).replace(".", ",") : r.paybackYears.toFixed(1)) + (ru ? " года" : " yrs")
                   : "—"}
               </div>
               <div className="cr-l">
@@ -199,7 +199,7 @@ export function CalculatorPanel({
               <div className="cr-v">{fmtTHB(r.exit5)}</div>
               <div className="cr-l">
                 <span className="i-en">Exit Value (5yr)</span>
-                <span className="i-ru">Стоимость выхода (5 лет)</span>
+                <span className="i-ru">Стоимость продажи через 5 лет</span>
               </div>
             </div>
           </div>
@@ -293,9 +293,10 @@ export function CalculatorPanel({
               last 18mo (Siam Expat 2026).
             </span>
             <span className="i-ru">
-              Чистая доходность = Валовой доход × (1 − Комиссия%) − CAM − Налог
-              12.5%. Заполняемость: 55–80% в зависимости от зоны. Прирост:
-              Cherngtalay/Bang Tao +8–12% за 18 мес (Siam Expat 2026).
+              Чистая доходность = валовой доход × (1 − комиссия управляющей
+              компании, %) − CAM (эксплуатационные взносы) − налог 12,5%.
+              Заполняемость: 55–80% в зависимости от района. Рост цен:
+              Чернгталай / Банг-Тао +8–12% за 18 месяцев (Siam Expat, 2026).
             </span>
           </div>
 

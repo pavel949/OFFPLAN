@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { logoutAdmin } from "@/app/actions/admin-auth";
 
 const items = [
+  { href:"/admin/evidence", label:"Проверка сведений" },
   { href: "/admin", label: "Обзор" },
   { href: "/admin/projects", label: "Проекты" },
   { href: "/admin/settings", label: "Настройки" },
@@ -12,6 +13,7 @@ const items = [
   { href: "/admin/moderation", label: "Модерация" },
   { href: "/admin/corrections", label: "Правки" },
   { href: "/admin/deals", label: "Сделки" },
+  { href: "/admin/commissions", label: "Комиссии" },
   { href: "/admin/ingest/whatsapp", label: "WhatsApp" },
   { href: "/admin/catalog", label: "Каталог JSON" },
 ];
