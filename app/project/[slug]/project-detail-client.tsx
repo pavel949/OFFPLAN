@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
+import { VerificationBadge } from "@/components/catalogue/VerificationBadge";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
 import { localizeProject } from "@/lib/i18n/localize-project";
 import { formatPrice, freshnessOf } from "@/lib/inventory/freshness";
@@ -121,6 +122,9 @@ export function ProjectDetailClient({
 
       <div className="pd-main">
         <h1 className="pd-title">{p.n}</h1>
+        <p style={{ margin: "4px 0 8px" }}>
+          <VerificationBadge ver={p.ver} lang={lang} />
+        </p>
         <p className="pd-dev">{p.dev}</p>
 
         {extras.campaigns.length > 0 ? (

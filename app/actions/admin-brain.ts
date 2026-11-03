@@ -420,3 +420,57 @@ export async function adminListProjectUnits(projectId: string): Promise<Operator
   if (error) throw new Error(error.message);
   return (data ?? []) as OperatorUnitRow[];
 }
+
+// ---------------- registry: declared commercial interests (drive reviewer recusal) ----------------
+export type InterestRow = { org_id: string; kind: string; note: string; org_name: string };
+
+export async function adminListInterests(projectId: string): Promise<{ interests: InterestRow[]; brokers: { id: string; name: string }[] }> {
+  const db = await requireAdmin();
+  const [i, o] = await Promise.all([
+    db.from("project_commercial_interests").select("org_id, kind, note, orgs(name_ru)").eq("project_id", projectId),
+    db.from("orgs").select("id, name_ru").eq("kind", "broker").order("name_ru"),
+  ]);
+  return {
+    interests: ((i.data ?? []) as unknown as { org_id: string; kind: string; note: string; orgs: { name_ru: string } | null }[]).map((r) => ({
+      org_id: r.org_id,
+      kind: r.kind,
+      note: r.note,
+      org_name: r.orgs?.name_ru ?? r.org_id,
+    })),
+    brokers: ((o.data ?? []) as { id: string; name_ru: string }[]).map((b) => ({ id: b.id, name: b.name_ru })),
+  };
+}
+
+export async function adminAddInterest(
+  _prev: { ok: boolean; error?: string },
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const db = await requireAdmin();
+    const projectId = String(formData.get("project_id") ?? "");
+    const orgId = String(formData.get("org_id") ?? "");
+    const kind = String(formData.get("kind") ?? "broker_agreement");
+    if (!projectId || !orgId) return { ok: false, error: "Выберите организацию" };
+    if (!["broker_agreement", "deal", "other"].includes(kind)) return { ok: false, error: "Некорректный тип" };
+    const { error } = await db
+      .from("project_commercial_interests")
+      .upsert({ project_id: projectId, org_id: orgId, kind, note: String(formData.get("note") ?? "").slice(0, 500) }, { onConflict: "project_id,org_id,kind" });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/admin/projects/${projectId}`);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка" };
+  }
+}
+
+export async function adminRemoveInterest(projectId: string, orgId: string, kind: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const db = await requireAdmin();
+    const { error } = await db.from("project_commercial_interests").delete().eq("project_id", projectId).eq("org_id", orgId).eq("kind", kind);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/admin/projects/${projectId}`);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Ошибка" };
+  }
+}

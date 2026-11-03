@@ -30,6 +30,33 @@ function attachRu(
   });
 }
 
+/** Best-effort: registry verification per project. Never blocks the catalogue. */
+async function loadVerification(
+  supabase: ReturnType<typeof createAnonClient>,
+): Promise<Map<number, NonNullable<CatalogProject["ver"]>> | undefined> {
+  try {
+    const { data, error } = await supabase
+      .from("catalog_projects")
+      .select("legacy_id, verification_level, verified_at, verification_expires_at")
+      .eq("is_published", true)
+      .eq("moderation_status", "published")
+      .gt("verification_level", 0);
+    if (error || !data) return undefined;
+    const out = new Map<number, NonNullable<CatalogProject["ver"]>>();
+    for (const r of data) {
+      if (r.legacy_id == null) continue;
+      out.set(r.legacy_id as number, {
+        level: r.verification_level as 0 | 1 | 2,
+        verifiedAt: (r.verified_at as string) ?? null,
+        expiresAt: (r.verification_expires_at as string) ?? null,
+      });
+    }
+    return out;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Best-effort: translations edited in the DB override the seed. Never blocks the catalogue. */
 async function loadDbRuTexts(
   supabase: ReturnType<typeof createAnonClient>,
@@ -94,7 +121,10 @@ async function loadProjects(): Promise<CatalogProject[]> {
           data.map((r) => r.payload),
           (i, e) => console.error("[catalog] skipping invalid DB row", i, e.issues[0]?.message),
         );
-        return attachRu(rows, await loadDbRuTexts(supabase, idMap));
+        const ver = await loadVerification(supabase);
+        return attachRu(rows, await loadDbRuTexts(supabase, idMap)).map((p) =>
+          ver?.has(p.id) ? { ...p, ver: ver.get(p.id) } : p,
+        );
       } catch (e) {
         console.error("[catalog] DB read threw, serving seed fallback:", e);
         return fallback;

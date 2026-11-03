@@ -47,6 +47,8 @@ export interface CatalogProject {
   src: string;
   /** Attached at load time from translations; never part of the stored payload. */
   i18n?: { ru?: ProjectTexts };
+  /** Registry verification (attached at load time from catalog_projects; not part of the payload). */
+  ver?: { level: 0 | 1 | 2; verifiedAt: string | null; expiresAt: string | null };
 }
 
 export interface CatalogMeta {

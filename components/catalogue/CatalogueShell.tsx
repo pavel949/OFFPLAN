@@ -555,6 +555,20 @@ export function CatalogueShell({
                 <option value="WorldCorp">World Corporation PCL</option>
               </select>
             </div>
+            <div className="fg">
+              <div className="fg-lbl">
+                <span className="i-en">Registry verification</span>
+                <span className="i-ru">Верификация реестра</span>
+              </div>
+              <select
+                value={filters.fVer}
+                onChange={(e) => updateFilter("fVer", e.target.value)}
+              >
+                <option value="">{lang === "ru" ? "Любая" : "Any"}</option>
+                <option value="1">{lang === "ru" ? "L1 и выше — документы проверены" : "L1+ — documents verified"}</option>
+                <option value="2">{lang === "ru" ? "L2 — независимая проверка" : "L2 — independent verification"}</option>
+              </select>
+            </div>
           </div>
           <div className="sb-foot">
             <button

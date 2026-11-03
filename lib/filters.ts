@@ -1,3 +1,4 @@
+import { effectiveLevel } from "./registry/levels";
 import { searchHaystack } from "./i18n/localize-project";
 import type { CatalogProject, RecLabel } from "./types";
 
@@ -27,6 +28,8 @@ export interface FilterState {
   fDev: string;
   /** BUY | WATCH | AVOID — empty = all */
   fRec: string;
+  /** Minimum registry verification level: "" | "1" | "2" */
+  fVer: string;
 }
 
 export const defaultFilterState = (): FilterState => ({
@@ -44,6 +47,7 @@ export const defaultFilterState = (): FilterState => ({
   fFocus: "",
   fDev: "",
   fRec: "",
+  fVer: "",
 });
 
 const beachOrd: Record<string, number> = { bf: 0, "500": 1, "1k": 2, inl: 3 };
@@ -55,6 +59,7 @@ export function filterProjects(
   const q = f.q.toLowerCase().trim();
   return projects.filter((p) => {
     if (f.fRec && p.rec !== f.fRec) return false;
+    if (f.fVer && effectiveLevel(p.ver) < Number(f.fVer)) return false;
     if (f.fSeg && p.seg !== f.fSeg) return false;
     if (f.fType && p.type !== f.fType) return false;
     if (f.fZone && p.zone !== f.fZone) return false;
@@ -120,6 +125,7 @@ export function countByRec(
 export function activeFilterCount(f: FilterState): number {
   let n = 0;
   if (f.fRec) n += 1;
+  if (f.fVer) n += 1;
   if (f.q) n += 1;
   if (f.fRisk) n += 1;
   if (f.fSeg) n += 1;

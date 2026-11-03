@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { projectSlug } from "@/lib/slug";
+import { VerificationBadge } from "./VerificationBadge";
 import { taxLabel, zoneLabel, type TaxonomyKind } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 
@@ -131,6 +132,9 @@ export function ProjectCard({
           </Link>
         </div>
         <div className="pc-dev">{p.dev}</div>
+        <div style={{ margin: "2px 0 4px" }}>
+          <VerificationBadge ver={p.ver} lang={lang} />
+        </div>
         <span className={`pc-risk ${RISK_CLS[p.risk] || "r2"}`}>
           {RISK_EMOJI[p.risk] || "⬜"} {tl("risk", p.risk)}
         </span>

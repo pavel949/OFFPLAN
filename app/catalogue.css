@@ -1667,3 +1667,19 @@ input[type=range].calc-slider {
   .overlay  { display: none !important; }
   .sidebar  { transform: none !important; }
 }
+
+/* Registry verification badge */
+.ver-badge {
+  display: inline-block;
+  padding: var(--space-1, 2px) var(--space-2, 8px);
+  border-radius: 999px;
+  font-size: var(--text-xs, 10px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid currentColor;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.ver-l0 { color: var(--muted, #8a8a8a); font-weight: 500; }
+.ver-l1 { color: var(--amb, #b7791f); }
+.ver-l2 { color: var(--grn, #1a6b42); }

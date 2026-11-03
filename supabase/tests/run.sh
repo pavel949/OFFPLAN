@@ -12,3 +12,4 @@ for f in supabase/migrations/*.sql; do
   psql -q -v ON_ERROR_STOP=1 -f "$f" || { echo "migration failed: $f"; exit 1; }
 done
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/10_rls_hardening.sql | sed "/^$/d"
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/20_registry.sql | sed "/^$/d"

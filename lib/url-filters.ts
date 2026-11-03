@@ -35,6 +35,7 @@ export function filtersFromSearchParams(
   d.fFocus = sp.get("focus") ?? "";
   d.fDev = sp.get("dev") ?? "";
   d.fRec = sp.get("rec") ?? "";
+  d.fVer = ["1", "2"].includes(sp.get("ver") ?? "") ? (sp.get("ver") as string) : "";
   return d;
 }
 
@@ -56,5 +57,6 @@ export function filtersToSearchParams(
   if (f.fFocus) o.focus = f.fFocus;
   if (f.fDev) o.dev = f.fDev;
   if (f.fRec) o.rec = f.fRec;
+  if (f.fVer) o.ver = f.fVer;
   return o;
 }

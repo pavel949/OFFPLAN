@@ -74,6 +74,9 @@ export default async function PartnerProjectEditPage({
         <Link className="underline font-semibold" href={`/partner/projects/${projectId}/inventory`}>
           Инвентарь и цены
         </Link>
+        <Link className="underline font-semibold" href={`/partner/projects/${projectId}/verification`}>
+          Верификация
+        </Link>
         <Link className="underline font-semibold" href={`/partner/projects/${projectId}/updates`}>
           Новости / стройка
         </Link>
