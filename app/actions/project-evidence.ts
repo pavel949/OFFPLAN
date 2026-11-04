@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
-import { evidenceSchema } from "@/lib/project-evidence";
+import { evidenceSchema, PHOTO_PATH_RE, projectPhotoUrl } from "@/lib/project-evidence";
 import { catalogProjectSchema } from "@/lib/schema";
 import { parseWizardForm } from "@/lib/project-wizard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -47,6 +47,47 @@ export async function submitProjectEvidence(
     };
   }
 }
+/** Files were already uploaded by the browser to the `project-photos` bucket; register them as pending photo evidence. */
+export async function submitUploadedPhotos(input: {
+  projectId: string;
+  observedAt: string;
+  items: { path: string; caption: string }[];
+}): Promise<State & { saved?: number }> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return { ok: false, error: "Нет подключения к базе" };
+  const db = await createSupabaseServerClient();
+  if (!db) return { ok: false, error: "Нет подключения к базе" };
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) return { ok: false, error: "Войдите" };
+  if (!input.items.length || input.items.length > 40)
+    return { ok: false, error: "Загрузите от 1 до 40 фотографий за раз" };
+  const rows = [];
+  for (const it of input.items) {
+    if (!PHOTO_PATH_RE.test(it.path) || !it.path.startsWith(`${input.projectId}/`))
+      return { ok: false, error: "Некорректный путь файла" };
+    const parsed = evidenceSchema.safeParse({
+      project_id: input.projectId,
+      kind: "photo",
+      fact_key: `photo-${it.path.split("/")[1]}`.slice(0, 100),
+      title: it.caption.trim().slice(0, 300) || "Фото проекта",
+      source_url: projectPhotoUrl(url, it.path),
+      observed_at: input.observedAt,
+      details: {
+        url: projectPhotoUrl(url, it.path),
+        caption: it.caption.trim().slice(0, 300) || "Фото проекта",
+      },
+    });
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    rows.push({ ...parsed.data, submitted_by: user.id, status: "pending" });
+  }
+  const { error } = await db.from("project_evidence").insert(rows);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/partner/projects/${input.projectId}/facts`);
+  return { ok: true, saved: rows.length };
+}
+
 export async function reviewProjectEvidence(f: FormData) {
   if (!(await getAdminSessionOk())) throw Error("Нужен вход администратора");
   if (!hasSupabaseServiceConfig())

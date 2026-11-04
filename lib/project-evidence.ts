@@ -108,3 +108,10 @@ export function operatingCostTotals(
   }
   return [...totals].map(([currency, v]) => ({ currency, ...v }));
 }
+
+/** Public URL of a file in the `project-photos` bucket (path = "<project_id>/<file>"). */
+export function projectPhotoUrl(supabaseUrl: string, path: string): string {
+  return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/project-photos/${path}`;
+}
+
+export const PHOTO_PATH_RE = /^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,120}$/;

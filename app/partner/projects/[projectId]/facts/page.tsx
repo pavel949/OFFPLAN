@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EvidenceForm } from "@/components/portal/EvidenceForm";
+import { PhotoUploader } from "@/components/portal/PhotoUploader";
 export default async function FactsPage({
   params,
 }: {
@@ -32,7 +33,13 @@ export default async function FactsPage({
       {error ? (
         <p role="alert">Не удалось загрузить сведения: {error.message}</p>
       ) : null}
-      <EvidenceForm projectId={projectId} />
+      <PhotoUploader projectId={projectId} />
+      <details className="rounded-lg border border-[var(--bdr)] p-4">
+        <summary className="cursor-pointer text-sm font-bold">Другие сведения: инфраструктура, расходы, стадия продаж, фото по ссылке</summary>
+        <div className="mt-3">
+          <EvidenceForm projectId={projectId} />
+        </div>
+      </details>
       <ul>
         {data?.map((x) => (
           <li key={x.id}>
