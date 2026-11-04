@@ -504,3 +504,15 @@
   .ie-toolbar-right { display: flex; justify-content: flex-end; }
   .ie-search-go { padding: 12px; }
 }
+
+/* Ombudsman affiliation logo: dark artwork on a white plate */
+.ie-oplate { display: inline-flex; align-items: center; background: #fff; border-radius: 10px; padding: 6px 12px; box-shadow: 0 1px 0 rgba(11,27,52,.08); line-height: 0; flex: none; }
+.ie-oplate img { display: block; }
+.ie-oplate--block { margin-bottom: 14px; box-shadow: 0 0 0 1px rgba(11,27,52,.1); }
+.ie-strip-cred { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+.ie-strip-cred em { font-style: normal; font-size: 13px; color: rgba(255,255,255,.8); }
+.ie-strip .ie-strip-cred { color: inherit !important; font-weight: 600; }
+.ie-strip .ie-strip-cred:hover { text-decoration: none; }
+.ie-status .ie-oplate { box-shadow: 0 0 0 1px rgba(11,27,52,.12); }
+@media (max-width: 760px) { .ie-strip-cred em { display: none; } .ie-strip-cred .ie-oplate { padding: 4px 8px; } }
+.ie-strip .ie-wrap > span { display: none; }

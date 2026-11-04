@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OmbudsmanLogo } from "./OmbudsmanLogo";
 
 export function SiteFooter() {
   return (
@@ -45,6 +46,9 @@ export function SiteFooter() {
             <Link href="/protection/how-it-works">Как это работает</Link>
             <Link href="/protection/contact">Обратиться за помощью</Link>
             <Link href="/protection/representative">Уполномоченный представитель</Link>
+            <Link href="/protection/representative" style={{ marginTop: 10 }}>
+              <OmbudsmanLogo height={40} />
+            </Link>
           </div>
           <div>
             <h4>Платформа</h4>

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { APPOINTMENT as A } from "@/lib/protection-content";
+import { OmbudsmanLogo } from "./OmbudsmanLogo";
 
-/** Compact link to the official-status page. Text follows the order; no official emblems are used. */
+/** Compact link to the official-status page. Text follows the order; the logo marks the representative's affiliation only. */
 export function StatusCard() {
   return (
     <Link href="/protection/representative" className="ie-status">
-      <span className="ie-status-mark" aria-hidden="true">ПИ</span>
+      <OmbudsmanLogo height={52} />
       <div>
         <b>Павел Игнатьев · {A.title}</b>
         <small>
