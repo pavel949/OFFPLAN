@@ -20,3 +20,6 @@ export function parseLegacyIdFromSlug(slug: string): number | null {
   const n = parseInt(m[1], 10);
   return Number.isFinite(n) ? n : null;
 }
+
+/** URL key of a location: slugified location name as stored in projects (`zone`). */
+export const locationSlug = (zone: string) => slugify(zone);

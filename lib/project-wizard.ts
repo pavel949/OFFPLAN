@@ -8,7 +8,6 @@ import {
   PROPERTY_TYPES,
   SEGMENTS,
   STATUS_KEYS,
-  ZONES,
   taxLabel,
 } from "./taxonomy";
 
@@ -23,7 +22,7 @@ const num = (min: number, max: number) =>
 export const wizardSchema = z.object({
   n: z.string().trim().min(2, "Укажите название проекта").max(200),
   dev: z.string().trim().min(1).max(200),
-  zone: z.enum(ZONES),
+  zone: z.string().trim().min(1, "Укажите локацию").max(80),
   seg: z.enum(SEGMENTS),
   type: z.enum(PROPERTY_TYPES),
   /** Starting price in millions of THB (e.g. 7.5). */
@@ -103,6 +102,7 @@ export function parseWizardForm(f: FormData):
   | { ok: false; error: string } {
   const raw: Record<string, unknown> = {};
   for (const k of Object.keys(wizardSchema.shape)) raw[k] = f.get(k) ?? "";
+  if (raw.zone === "__other") raw.zone = String(f.get("zoneOther") ?? "").trim();
   const r = wizardSchema.safeParse(raw);
   if (!r.success) {
     const i = r.error.issues[0];

@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PROTECTION_NAV } from "@/lib/protection-content";
 
-const NAV = [
+type Item = { href: string; label: string; children?: readonly { href: string; label: string }[] };
+
+const NAV: Item[] = [
   { href: "/", label: "Каталог" },
+  { href: "/locations", label: "Локации" },
   { href: "/developers", label: "Застройщики" },
-  { href: "/market?tab=analytics", label: "Аналитика рынка" },
+  { href: "/analytics", label: "Аналитика" },
   { href: "/market?tab=calc", label: "Калькулятор" },
   { href: "/guide", label: "Знания" },
+  { href: "/protection", label: "Защита прав", children: PROTECTION_NAV },
   { href: "/registry", label: "Реестр проверки" },
 ];
 
@@ -27,6 +32,8 @@ export function SiteHeader() {
   }, []);
   useEffect(() => setOpen(false), [path]);
 
+  const current = (href: string) => href.split("?")[0] === path;
+
   return (
     <header className={`ie-hdr${solid || open ? " is-solid" : ""}`}>
       <div className="ie-hdr-in">
@@ -38,15 +45,26 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav className={`ie-nav${open ? " is-open" : ""}`} aria-label="Основная навигация">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              aria-current={n.href.split("?")[0] === path ? "page" : undefined}
-            >
-              {n.label}
-            </Link>
-          ))}
+          {NAV.map((n) =>
+            n.children ? (
+              <div key={n.href} className="ie-nav-group">
+                <Link href={n.href} aria-haspopup="true" aria-current={path.startsWith("/protection") ? "page" : undefined}>
+                  {n.label} <span aria-hidden="true" className="ie-caret">▾</span>
+                </Link>
+                <div className="ie-nav-sub" role="menu">
+                  {n.children.map((c) => (
+                    <Link key={c.href} href={c.href} role="menuitem" aria-current={current(c.href) ? "page" : undefined}>
+                      {c.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Link key={n.href} href={n.href} aria-current={current(n.href) ? "page" : undefined}>
+                {n.label}
+              </Link>
+            ),
+          )}
         </nav>
         <div className="ie-hdr-act">
           <Link href="/login" className="ie-btn ie-btn--ghost">

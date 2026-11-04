@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createPartnerProjectFromWizard } from "@/app/actions/project-evidence";
+import { getRegionMeta } from "@/lib/locations";
 import { ProjectWizardForm } from "@/components/portal/ProjectWizardForm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -19,6 +20,8 @@ export default async function NewProject() {
     ? await db.from("orgs").select("name_ru, name_en").eq("id", prof.org_id).maybeSingle()
     : { data: null };
 
+  const regions = await getRegionMeta();
+  const zones = Object.values(regions).filter((r) => r.level === "district").map((r) => r.zone).sort();
   return (
     <div>
       <h1 className="serif text-2xl mb-1">Новый проект</h1>
@@ -28,6 +31,7 @@ export default async function NewProject() {
       </p>
       <ProjectWizardForm
         action={createPartnerProjectFromWizard}
+        zones={zones.length ? zones : undefined}
         developerName={org?.name_ru || org?.name_en || ""}
       />
     </div>

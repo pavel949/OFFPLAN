@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminCreateProjectFromWizard } from "@/app/actions/project-evidence";
+import { getRegionMeta } from "@/lib/locations";
 import { ProjectWizardForm } from "@/components/portal/ProjectWizardForm";
 import { hasSupabaseServiceConfig, createServiceRoleClient } from "@/lib/supabase/service";
 
@@ -12,6 +13,8 @@ export default async function AdminNewProjectPage() {
     .select("id, name_ru")
     .eq("kind", "developer")
     .order("name_ru");
+  const regions = await getRegionMeta();
+  const zones = Object.values(regions).filter((r) => r.level === "district").map((r) => r.zone).sort();
   const orgs = (data ?? []).map((o) => ({ id: o.id as string, name: o.name_ru as string }));
   return (
     <div>
@@ -22,7 +25,7 @@ export default async function AdminNewProjectPage() {
       <p className="text-sm text-[var(--txt2)] mb-6 max-w-2xl">
         Форма для оператора. Рейтинг, риск и рекомендации после создания правятся в карточке проекта.
       </p>
-      <ProjectWizardForm action={adminCreateProjectFromWizard} orgs={orgs} adminMode />
+      <ProjectWizardForm action={adminCreateProjectFromWizard} orgs={orgs} zones={zones.length ? zones : undefined} adminMode />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import { operatingCostTotals } from "@/lib/project-evidence";
 import type { PublicProjectFacts } from "@/lib/project-facts-query";
 import type { ProjectUnitRow, ProjectUpdateRow, SalesCampaignRow } from "@/lib/project-queries";
 import { effectiveLevel, LEVEL_TEXT } from "@/lib/registry/levels";
-import { projectSlug } from "@/lib/slug";
+import { locationSlug, projectSlug } from "@/lib/slug";
 import {
   SOURCE_KIND_LABEL_EN,
   SOURCE_KIND_LABEL_RU,
@@ -158,7 +158,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
           </div>
           <h1 className="ie-ptitle">{p.n}</h1>
           <p className="ie-psub">
-            {t("Застройщик", "Developer")}: <Link href={`/developers/${developer.slug}`}>{p.dev}</Link> · {zoneLabel(p.zone, lang)} · {taxLabel("type", p.type, lang)}
+            {t("Застройщик", "Developer")}: <Link href={`/developers/${developer.slug}`}>{p.dev}</Link> · <Link href={`/locations/${locationSlug(p.zone)}`}>{zoneLabel(p.zone, lang)}</Link> · {taxLabel("type", p.type, lang)}
           </p>
           <div className="ie-phero-row">
             <div className="ie-pprice">
@@ -434,6 +434,12 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
                 {t("Получить прайс и условия", "Get price list & terms")}
               </button>
               {mapHref ? <a className="ie-btn ie-btn--line" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} href={mapHref} target="_blank" rel="noopener noreferrer">{t("Показать на карте", "Open map")} ↗</a> : null}
+            </div>
+            <div className="ie-help">
+              {t("Вопрос по сделке или конфликт с застройщиком (просрочка, возврат денег)?", "A question about the deal or a dispute with the developer?")}{" "}
+              <Link href="/protection/contact">{t("Обратитесь к нам", "Contact us")}</Link>
+              {" · "}
+              <Link href="/protection">{t("Защита прав инвесторов", "Investor protection")}</Link>
             </div>
             {extras.catalogProjectId ? (
               <div className="ie-card ie-pbox">
