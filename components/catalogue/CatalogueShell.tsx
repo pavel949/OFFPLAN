@@ -1008,10 +1008,6 @@ export function CatalogueShell({
               </div>
             </div>
             <div className="ftr-portal">
-              <Link href="/admin">
-                <span className="i-en">IE dashboard</span>
-                <span className="i-ru">Панель IE · CRM</span>
-              </Link>
               <Link href="/partner">
                 <span className="i-en">Developer portal</span>
                 <span className="i-ru">Кабинет застройщика</span>
