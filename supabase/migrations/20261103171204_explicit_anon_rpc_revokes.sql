@@ -1,0 +1,17 @@
+revoke execute on function public.confirm_project_prices(uuid) from public, anon;
+revoke execute on function public.reviewer_conflicted(uuid,uuid) from public, anon;
+revoke execute on function public.start_verification_case(uuid,smallint) from public, anon;
+revoke execute on function public.attach_verification_evidence(uuid,text,text,text,integer) from public, anon;
+revoke execute on function public.submit_verification_case(uuid) from public, anon;
+revoke execute on function public.claim_verification_case(uuid) from public, anon;
+revoke execute on function public.recuse_from_case(uuid,text) from public, anon;
+revoke execute on function public.review_verification_item(uuid,text,text,text) from public, anon;
+revoke execute on function public.request_verification_changes(uuid,text) from public, anon;
+revoke execute on function public.decide_verification(uuid,text,text) from public, anon;
+revoke execute on function public.revoke_verification(uuid,text) from public, anon;
+revoke execute on function public.post_verification_message(uuid,text) from public, anon;
+revoke execute on function public.finance_actor() from public, anon;
+revoke execute on function public.set_deal_plan(uuid,jsonb) from public, anon;
+revoke execute on function public.advance_deal(uuid,text,text) from public, anon;
+revoke execute on function public.record_ledger_payment(uuid,numeric,text,timestamptz) from public, anon;
+revoke execute on function public.add_ledger_adjustment(uuid,text,uuid,uuid,numeric,text,text) from public, anon;

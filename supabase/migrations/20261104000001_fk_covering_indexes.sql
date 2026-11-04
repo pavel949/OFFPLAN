@@ -1,0 +1,36 @@
+-- Covering indexes for foreign keys flagged by the Supabase performance advisor (unindexed_foreign_keys).
+-- Additive and idempotent.
+create index if not exists broker_terms_developer_org_id_idx on public.broker_terms (developer_org_id);
+create index if not exists catalog_project_translations_reviewed_by_idx on public.catalog_project_translations (reviewed_by);
+create index if not exists catalog_projects_developer_id_idx on public.catalog_projects (developer_id);
+create index if not exists catalog_projects_region_id_idx on public.catalog_projects (region_id);
+create index if not exists commission_agreements_broker_org_id_idx on public.commission_agreements (broker_org_id);
+create index if not exists commission_agreements_project_id_idx on public.commission_agreements (project_id);
+create index if not exists deal_events_actor_idx on public.deal_events (actor);
+create index if not exists deals_agreement_id_idx on public.deals (agreement_id);
+create index if not exists deals_broker_terms_id_idx on public.deals (broker_terms_id);
+create index if not exists deals_referrer_org_id_idx on public.deals (referrer_org_id);
+create index if not exists developers_jurisdiction_code_idx on public.developers (jurisdiction_code);
+create index if not exists developers_org_id_idx on public.developers (org_id);
+create index if not exists leads_broker_org_id_idx on public.leads (broker_org_id);
+create index if not exists ledger_payments_entry_id_idx on public.ledger_payments (entry_id);
+create index if not exists ledger_payments_recorded_by_idx on public.ledger_payments (recorded_by);
+create index if not exists moderation_submissions_reviewed_by_idx on public.moderation_submissions (reviewed_by);
+create index if not exists orgs_jurisdiction_code_idx on public.orgs (jurisdiction_code);
+create index if not exists project_commercial_interests_org_id_idx on public.project_commercial_interests (org_id);
+create index if not exists project_evidence_reviewed_by_idx on public.project_evidence (reviewed_by);
+create index if not exists project_evidence_submitted_by_idx on public.project_evidence (submitted_by);
+create index if not exists project_units_entered_by_idx on public.project_units (entered_by);
+create index if not exists taxonomy_terms_jurisdiction_code_idx on public.taxonomy_terms (jurisdiction_code);
+create index if not exists unit_price_history_changed_by_idx on public.unit_price_history (changed_by);
+create index if not exists unit_price_history_project_id_idx on public.unit_price_history (project_id);
+create index if not exists verification_cases_assigned_reviewer_idx on public.verification_cases (assigned_reviewer);
+create index if not exists verification_cases_created_by_idx on public.verification_cases (created_by);
+create index if not exists verification_cases_decided_by_idx on public.verification_cases (decided_by);
+create index if not exists verification_cases_org_id_idx on public.verification_cases (org_id);
+create index if not exists verification_cases_template_id_idx on public.verification_cases (template_id);
+create index if not exists verification_events_case_id_idx on public.verification_events (case_id);
+create index if not exists verification_items_verified_by_idx on public.verification_items (verified_by);
+create index if not exists verification_messages_author_id_idx on public.verification_messages (author_id);
+create index if not exists verification_messages_case_id_idx on public.verification_messages (case_id);
+create index if not exists verification_recusals_reviewer_id_idx on public.verification_recusals (reviewer_id);
