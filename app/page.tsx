@@ -35,6 +35,30 @@ export default async function Home() {
         />
       </Suspense>
 
+      <section className="ie-section" style={{ paddingTop: 0 }}>
+        <div className="ie-wrap">
+          <div className="ie-banner">
+            <div>
+              <div className="ie-eyebrow">Защита прав российских инвесторов</div>
+              <h2>Смотрите и выбирайте здесь. Если что-то пошло не так, обращайтесь к нам.</h2>
+            </div>
+            <p>
+              Проверенные данные о проектах и застройщиках собраны в одном месте. Нужно уточнить детали, проверить договор или
+              решить спор с застройщиком (просрочка, возврат денег, несоответствие объекта) — мы рядом, на Пхукете.
+            </p>
+            <div className="ie-pillars">
+              <div><b>Смотрите здесь</b><span>Свежие цены, этапы стройки, фотоотчёты и наличие лотов.</span></div>
+              <div><b>Выбирайте с проверкой</b><span>Уровни проверки реестра и досье каждого застройщика.</span></div>
+              <div><b>Связывайтесь с нами</b><span>Вопросы до сделки и помощь при конфликтах и просрочках.</span></div>
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link href="/protection" className="ie-btn ie-btn--gold">Как мы защищаем инвесторов</Link>
+              <Link href="/protection/contact" className="ie-btn ie-btn--ghost">Обратиться за помощью</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {news.length ? (
         <section className="ie-section ie-section--dark">
           <div className="ie-wrap">

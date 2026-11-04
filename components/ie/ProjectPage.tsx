@@ -435,6 +435,12 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
               </button>
               {mapHref ? <a className="ie-btn ie-btn--line" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} href={mapHref} target="_blank" rel="noopener noreferrer">{t("Показать на карте", "Open map")} ↗</a> : null}
             </div>
+            <div className="ie-help">
+              {t("Вопрос по сделке или конфликт с застройщиком (просрочка, возврат денег)?", "A question about the deal or a dispute with the developer?")}{" "}
+              <Link href="/protection/contact">{t("Обратитесь к нам", "Contact us")}</Link>
+              {" · "}
+              <Link href="/protection">{t("Защита прав инвесторов", "Investor protection")}</Link>
+            </div>
             {extras.catalogProjectId ? (
               <div className="ie-card ie-pbox">
                 <h3 className="ie-h3">{t("Следить за проектом", "Follow this project")}</h3>

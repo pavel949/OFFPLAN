@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BUDGET_STEPS,
   EMPTY_FILTERS,
@@ -63,6 +63,9 @@ export function HomeExperience({
   const sp = useSearchParams();
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(sp.toString())), [sp]);
   const [draft, setDraft] = useState(filters.q);
+  const [limit, setLimit] = useState(24);
+  const filterKey = sp.toString();
+  useEffect(() => setLimit(24), [filterKey]);
 
   const apply = useCallback(
     (next: HomeFilters) => {
@@ -216,6 +219,14 @@ export function HomeExperience({
         </div>
       </section>
 
+      <div className="ie-strip">
+        <div className="ie-wrap">
+          <span>Смотрите и выбирайте проекты здесь. Если нужно уточнить детали или возник конфликт с застройщиком:</span>
+          <Link href="/protection">Защита прав инвесторов →</Link>
+          <Link href="/protection/contact">Обратиться за помощью</Link>
+        </div>
+      </div>
+
       <section className="ie-section" id="ie-results" aria-live="polite">
         <div className="ie-wrap">
           <div className="ie-resultbar">
@@ -240,11 +251,19 @@ export function HomeExperience({
           </div>
           {list.length ? (
             <div className="ie-grid">
-              {list.map((p) => (
+              {list.slice(0, limit).map((p) => (
                 <ProjectTile key={p.id} p={p} feed={feed} />
               ))}
             </div>
-          ) : (
+          ) : null}
+          {list.length > limit ? (
+            <div style={{ textAlign: "center", marginTop: 28 }}>
+              <button type="button" className="ie-btn ie-btn--ink" onClick={() => setLimit((n) => n + 24)}>
+                Показать ещё ({list.length - limit})
+              </button>
+            </div>
+          ) : null}
+          {list.length === 0 ? (
             <div className="ie-empty">
               <h3>Ничего не нашлось</h3>
               <p>Попробуйте убрать часть условий или расширить бюджет.</p>
@@ -265,7 +284,7 @@ export function HomeExperience({
                 </Link>
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </>

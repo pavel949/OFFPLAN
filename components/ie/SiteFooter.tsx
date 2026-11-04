@@ -36,6 +36,14 @@ export function SiteFooter() {
             <Link href="/guide/riski-i-proverka-zastrojshchika">Риски и проверка</Link>
           </div>
           <div>
+            <h4>Защита прав</h4>
+            <Link href="/protection">О защите прав инвесторов</Link>
+            <Link href="/protection/problems">Острые проблемы</Link>
+            <Link href="/protection/how-it-works">Как это работает</Link>
+            <Link href="/protection/contact">Обратиться за помощью</Link>
+            <Link href="/protection/representative">Уполномоченный представитель</Link>
+          </div>
+          <div>
             <h4>Платформа</h4>
             <Link href="/registry">Реестр проверки</Link>
             <Link href="/partner">Кабинет застройщика</Link>

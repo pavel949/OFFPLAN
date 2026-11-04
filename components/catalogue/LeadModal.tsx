@@ -13,7 +13,7 @@ type TurnstileApi = {
   remove: (id: string) => void;
 };
 
-function TurnstileWidget() {
+export function TurnstileWidget() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY || !ref.current) return;
