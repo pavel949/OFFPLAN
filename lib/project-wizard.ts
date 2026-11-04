@@ -47,12 +47,12 @@ export const wizardSchema = z.object({
 });
 export type WizardInput = z.infer<typeof wizardSchema>;
 
-function devCode(dev: string): string {
+export function devCode(dev: string): string {
   const first = dev.replace(/\b(co\.?|ltd\.?|pcl|plc|group|holdings?|company)\b/gi, "").trim().split(/\s+/)[0];
   return (first || dev).slice(0, 60);
 }
 
-function priceLabel(m: number): string {
+export function priceLabel(m: number): string {
   const v = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, "");
   return `฿${v}M+`;
 }
