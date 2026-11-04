@@ -24,7 +24,12 @@ export default async function AdminProjectsPage() {
 
   return (
     <div>
-      <h1 className="serif text-2xl mb-1">Проекты каталога</h1>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <h1 className="serif text-2xl">Проекты каталога</h1>
+        <Link href="/admin/projects/new" className="admin-btn inline-block py-2 px-3">
+          + Новый проект
+        </Link>
+      </div>
       <p className="text-[var(--txt2)] text-sm mb-6 max-w-2xl">
         Редактирование JSON-карточки (все поля: рейтинг <code>rat</code>, риск{" "}
         <code>risk</code>, рекомендация <code>rec</code>, описание и т.д.), загрузка

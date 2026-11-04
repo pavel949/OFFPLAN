@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { evidenceSchema } from "@/lib/project-evidence";
 import { catalogProjectSchema } from "@/lib/schema";
+import { parseWizardForm } from "@/lib/project-wizard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import {
@@ -106,4 +107,94 @@ export async function createPartnerProject(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/partner/projects");
   redirect(`/partner/projects/${data.id}`);
+}
+
+/** Wizard variant of `createPartnerProject`: plain fields instead of a JSON blob. */
+export async function createPartnerProjectFromWizard(
+  _: State,
+  f: FormData,
+): Promise<State> {
+  const db = await createSupabaseServerClient();
+  if (!db) return { ok: false, error: "Нет подключения к базе" };
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) return { ok: false, error: "Войдите" };
+  const { data: profile } = await db
+    .from("profiles")
+    .select("org_id,role,partner_role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (
+    profile?.role !== "partner" ||
+    !profile.org_id ||
+    profile.partner_role === "sales"
+  )
+    return { ok: false, error: "Проекты добавляет владелец организации" };
+  const parsed = parseWizardForm(f);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+  const { data, error } = await db
+    .from("catalog_projects")
+    .insert({
+      slug: `draft-${randomUUID()}`,
+      org_id: profile.org_id,
+      payload: parsed.payload,
+      draft_payload: parsed.payload,
+      is_published: false,
+      moderation_status: "draft",
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/partner/projects");
+  redirect(`/partner/projects/${data.id}/materials`);
+}
+
+/** Operator (IE admin) creates a project, optionally for a developer organisation, optionally publishing at once. */
+export async function adminCreateProjectFromWizard(
+  _: State,
+  f: FormData,
+): Promise<State> {
+  if (!(await getAdminSessionOk())) return { ok: false, error: "Нужен вход в панель IE" };
+  if (!hasSupabaseServiceConfig())
+    return { ok: false, error: "Не задан SUPABASE_SERVICE_ROLE_KEY" };
+  const parsed = parseWizardForm(f);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+  const orgId = String(f.get("org_id") ?? "").trim() || null;
+  const publish = f.get("publish") === "yes";
+  const db = createServiceRoleClient();
+  const { data, error } = await db
+    .from("catalog_projects")
+    .insert({
+      slug: `draft-${randomUUID()}`,
+      org_id: orgId,
+      payload: parsed.payload,
+      draft_payload: parsed.payload,
+      is_published: false,
+      moderation_status: "draft",
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: error.message };
+  if (publish) {
+    const { data: sub, error: sErr } = await db
+      .from("moderation_submissions")
+      .insert({
+        entity_type: "project",
+        entity_id: data.id,
+        submitted_by: null,
+        snapshot: parsed.payload,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+    if (sErr) return { ok: false, error: sErr.message };
+    const { error: aErr } = await db.rpc("moderation_approve", {
+      p_submission_id: sub.id,
+    });
+    if (aErr) return { ok: false, error: aErr.message };
+    revalidatePath("/");
+  }
+  revalidatePath("/admin/projects");
+  redirect(`/admin/projects/${data.id}`);
 }

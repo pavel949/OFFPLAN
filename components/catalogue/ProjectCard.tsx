@@ -123,7 +123,7 @@ export function ProjectCard({
     <article className={`pc${showRec && p.rec === "AVOID" ? " avoid" : ""}`}>
       <div className={`pc-stripe ${SC[p.seg] || "s-offplan-new"}`} />
       <div className="pc-head">
-        <div className="pc-rat">{p.rat}</div>
+        <div className="pc-rat">{p.rat > 0 ? p.rat : "—"}</div>
         <div className="pc-num">#{p.id}</div>
         <div className="pc-name">
           <Link href={`/project/${projectSlug(p)}`} className="pc-name-link">

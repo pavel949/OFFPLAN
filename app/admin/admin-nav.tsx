@@ -8,6 +8,7 @@ const items = [
   { href:"/admin/evidence", label:"Проверка сведений" },
   { href: "/admin", label: "Обзор" },
   { href: "/admin/projects", label: "Проекты" },
+  { href: "/admin/developers", label: "Застройщики" },
   { href: "/admin/settings", label: "Настройки" },
   { href: "/admin/leads", label: "Лиды" },
   { href: "/admin/moderation", label: "Модерация" },

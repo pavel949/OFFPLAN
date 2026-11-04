@@ -73,6 +73,12 @@ export default async function PartnerProjectEditPage({
       <div className="flex flex-wrap gap-3 mb-6 text-sm">
         <Link
           className="underline font-semibold"
+          href={`/partner/projects/${projectId}/materials`}
+        >
+          Материалы и ссылки
+        </Link>
+        <Link
+          className="underline font-semibold"
           href={`/partner/projects/${projectId}/facts`}
         >
           Фото, инфраструктура, расходы

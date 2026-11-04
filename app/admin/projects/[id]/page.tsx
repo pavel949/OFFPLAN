@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminGetProjectPayload, adminListInterests, adminListProjectDocuments } from "@/app/actions/admin-brain";
+import { adminAddSource, adminConfirmSource, adminDeleteSource, adminListSources } from "@/app/actions/project-sources";
+import { SourcesManager } from "@/components/portal/SourcesManager";
+import type { ProjectSourceRow } from "@/lib/sources";
 import { hasSupabaseServiceConfig } from "@/lib/supabase/service";
 import { InterestsSection } from "../interests-section";
 import { ProjectDocsSection } from "../project-docs-section";
@@ -26,6 +29,7 @@ export default async function AdminProjectEditPage({
   let slug = "";
   let moderation = "";
   let docs: Awaited<ReturnType<typeof adminListProjectDocuments>> = [];
+  let sources: ProjectSourceRow[] = [];
   let interests: Awaited<ReturnType<typeof adminListInterests>> = { interests: [], brokers: [] };
 
   try {
@@ -34,6 +38,7 @@ export default async function AdminProjectEditPage({
     moderation = p.moderation_status;
     payloadJson = JSON.stringify(p.payload, null, 2);
     docs = await adminListProjectDocuments(id);
+    sources = await adminListSources(id).catch(() => []);
     interests = await adminListInterests(id).catch(() => interests);
   } catch {
     notFound();
@@ -65,6 +70,14 @@ export default async function AdminProjectEditPage({
       </p>
 
       <ProjectPayloadForm projectId={id} initialJson={payloadJson} />
+      <section className="mt-8">
+        <h2 className="serif text-lg mb-2">Материалы застройщика (ссылки)</h2>
+        <SourcesManager
+          projectId={id}
+          sources={sources}
+          api={{ add: adminAddSource, remove: adminDeleteSource, confirm: adminConfirmSource }}
+        />
+      </section>
       <ProjectDocsSection projectId={id} initialDocs={docs} />
       <InterestsSection projectId={id} interests={interests.interests} brokers={interests.brokers} />
     </div>
