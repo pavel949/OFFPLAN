@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { UpdatesClient } from "./updates-client";
@@ -11,7 +11,7 @@ export default async function PartnerUpdatesPage({
   const { projectId } = await params;
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
-    return <p className="text-[var(--muted)]">Настройте Supabase</p>;
+    return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
   }
   const {
     data: { user },
@@ -37,15 +37,8 @@ export default async function PartnerUpdatesPage({
     .limit(50);
   return (
     <div className="max-w-2xl">
-      <p className="mb-4">
-        <Link
-          href={`/partner/projects/${projectId}`}
-          className="text-sm text-[var(--muted)] underline"
-        >
-          ← Проект
-        </Link>
-      </p>
-      <h1 className="serif text-2xl mb-2">Новости и прогресс стройки</h1>
+      <ProjectTabs projectId={projectId} active="/updates" />
+      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Новости со стройки</h2>
       <p className="text-[var(--muted)] text-sm mb-6">
         Публикации видны на публичной странице проекта.
       </p>

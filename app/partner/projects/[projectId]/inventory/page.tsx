@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { daysSince, freshnessOf, summarizeFreshness } from "@/lib/inventory/freshness";
@@ -12,7 +12,7 @@ export default async function PartnerInventoryPage({
   const { projectId } = await params;
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
-    return <p className="text-[var(--muted)]">Настройте Supabase</p>;
+    return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
   }
   const {
     data: { user },
@@ -49,15 +49,8 @@ export default async function PartnerInventoryPage({
 
   return (
     <div className="max-w-4xl">
-      <p className="mb-4">
-        <Link
-          href={`/partner/projects/${projectId}`}
-          className="text-sm text-[var(--muted)] underline"
-        >
-          ← Проект
-        </Link>
-      </p>
-      <h1 className="serif text-2xl mb-2">Прайс-лист и инвентарь</h1>
+      <ProjectTabs projectId={projectId} active="/inventory" />
+      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Прайс-лист и наличие лотов</h2>
       <p className="text-[var(--muted)] text-sm mb-4">
         Данные видны покупателям в публичном каталоге. Цены старше 14 дней помечаются как
         требующие подтверждения, старше 30 дней — скрываются до подтверждения.

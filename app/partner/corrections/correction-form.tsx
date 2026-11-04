@@ -3,41 +3,29 @@
 import { useActionState } from "react";
 import { submitCorrectionRequest } from "@/app/actions/partner";
 
-export function CorrectionForm() {
-  const [state, formAction] = useActionState(submitCorrectionRequest, {
-    ok: false,
-  });
-
+export function CorrectionForm({ projects }: { projects: { id: string; name: string }[] }) {
+  const [state, formAction, pending] = useActionState(submitCorrectionRequest, { ok: false } as { ok: boolean; error?: string });
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-semibold">UUID проекта (catalog_projects.id)</span>
-        <input
-          name="project_id"
-          required
-          className="admin-inp mb-0 font-mono text-xs"
-          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-semibold">Что исправить</span>
-        <textarea
-          name="message"
-          required
-          rows={5}
-          className="admin-inp mb-0"
-          placeholder="Неверная цена / сроки / описание..."
-        />
-      </label>
-      <button type="submit" className="admin-btn w-fit">
-        Отправить
-      </button>
-      {state?.ok ? (
-        <p className="text-[var(--grn)] text-sm">Запрос отправлен в IE.</p>
-      ) : null}
-      {state?.error ? (
-        <p className="text-[var(--red)] text-sm">{state.error}</p>
-      ) : null}
+    <form action={formAction} className="adm-card" key={state.ok ? "sent" : "new"}>
+      <h3>Новая просьба</h3>
+      <div className="adm-grid" style={{ marginTop: 12 }}>
+        <div className="adm-field c12">
+          <label>Проект</label>
+          <select name="project_id" required defaultValue="">
+            <option value="" disabled>Выберите проект…</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div className="adm-field c12">
+          <label>Что нужно исправить</label>
+          <textarea name="message" required placeholder="Например: на сайте указана неверная цена или срок сдачи" />
+        </div>
+      </div>
+      <p style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "center" }}>
+        <button type="submit" className="adm-btn" disabled={pending}>{pending ? "Отправляю…" : "Отправить команде"}</button>
+        {state.ok ? <span className="adm-msg ok">Отправлено. Мы ответим по почте.</span> : null}
+        {state.error ? <span className="adm-msg err">{state.error}</span> : null}
+      </p>
     </form>
   );
 }

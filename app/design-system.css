@@ -353,10 +353,14 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    12. BASE STYLES — Reset + global defaults
    ─────────────────────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* In the `base` layer so Tailwind utilities (space-y-*, p-*, mb-*, ...) can override it. Unlayered, this
+   reset beat every utility class and collapsed forms in the admin, partner and registry areas. */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {

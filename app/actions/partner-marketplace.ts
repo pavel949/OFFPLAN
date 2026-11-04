@@ -84,12 +84,13 @@ export async function saveProjectUpdate(
 ): Promise<{ ok: boolean; error?: string }> {
   const projectId = String(formData.get("project_id") ?? "").trim();
   const kind = String(formData.get("kind") ?? "news");
-  const title_en = String(formData.get("title_en") ?? "").trim();
   const title_ru = String(formData.get("title_ru") ?? "").trim();
-  const body_en = String(formData.get("body_en") ?? "").trim();
   const body_ru = String(formData.get("body_ru") ?? "").trim();
-  if (!projectId) return { ok: false, error: "Нет project_id" };
-  if (!title_en && !title_ru) return { ok: false, error: "Заголовок EN или RU" };
+  // The cabinet is Russian-first: the English fields default to the Russian text until a translation exists.
+  const title_en = String(formData.get("title_en") ?? "").trim() || title_ru;
+  const body_en = String(formData.get("body_en") ?? "").trim() || body_ru;
+  if (!projectId) return { ok: false, error: "Не выбран проект" };
+  if (!title_ru) return { ok: false, error: "Укажите заголовок" };
   const r = await getPartnerProjectContext(projectId);
   if (!r.ok) return { ok: false, error: r.error };
   const k = ["news", "construction", "milestone"].includes(kind) ? kind : "news";
