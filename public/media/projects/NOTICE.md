@@ -100,3 +100,9 @@ Each file was checked visually against its official project source. Renders do n
   Original image: https://www.banyangroupresidences.com/sites/bgr/files/styles/full_size/public/homepage_banners/Angsana-Residences-Oceanview-Phuket-Aerial-View-2.jpg.webp?itok=tIxKCLk8
   SHA-256: adbef6f3e040d78fc2a050cb68f2a7733b8feb030f0964b4c8f8a057c3487df4
   Observed: 2026-11-04
+
+## Additional reviewed materials, 2026-11-04
+
+- IE-032: /media/projects/ie-032/cover-7372e6b3adef.webp; source https://www.sansiri.com/singlehouse/thetales-bangjo-phuket/en/; SHA-256 7372e6b3adefd89a5610cc0a974e31a9a52556dc2463ab62f01c481cfb3e12f0. Observed 2026-11-04; capture date unknown. Official gallery material; no claim about current condition.
+- IE-030: /media/projects/ie-030/cover-5273746daa75.webp; source https://www.sansiri.com/singlehouse/anasiri-paklok/th/; SHA-256 5273746daa7505dd6870f6204fd2c6455f633735213c3d0d35e25e164d50a63f. Observed 2026-11-04; capture date unknown. Official gallery material; no claim about current condition.
+- IE-006: /media/projects/ie-006/cover-fc1bc931cd90.jpg; source https://www.banyangroupresidences.com/news/banyan-group-unveils-new-residential-brand-bellaguna-0; SHA-256 fc1bc931cd90eebc537cd7d01b99dcc3984aefcc2bd85766f2ed7972ff7bc630. Observed 2026-11-04; capture date unknown. Render.
