@@ -38,8 +38,10 @@ function mapDbRow(row: {
   source: string;
   notes: string;
   locale: string;
+  sales_selection?: LeadRecord["salesSelection"] | null;
 }): LeadRecord {
   return {
+    ...(row.sales_selection?{salesSelection:row.sales_selection}:{}),
     id: row.id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -110,6 +112,7 @@ export async function appendLeadUnified(
       utm: input.utm && Object.keys(input.utm).length ? input.utm : null,
       consent_at: new Date().toISOString(),
       consent_version: input.consentVersion ?? null,
+      ...(input.salesSelection?{sales_selection:input.salesSelection}:{}),
     })
     .select()
     .single();

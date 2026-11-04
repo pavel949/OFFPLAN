@@ -15,6 +15,8 @@ import { InfoForm } from "@/components/admin/InfoForm";
 import { NewsPanel } from "@/components/admin/NewsPanel";
 import { PhotosManager } from "@/components/admin/PhotosManager";
 import { UnitsEditor } from "@/components/admin/UnitsEditor";
+import { SalesModelEditor } from "@/components/admin/SalesModelEditor";
+import { adminGetSalesModel } from "@/app/actions/sales-model";
 import { SourcesManager } from "@/components/portal/SourcesManager";
 import { UnitImportPanel } from "@/components/portal/UnitImportPanel";
 import { hasSupabaseServiceConfig } from "@/lib/supabase/service";
@@ -26,6 +28,7 @@ import { ProjectPayloadForm } from "../project-payload-form";
 const TABS = [
   ["info", "Основное"],
   ["units", "Лоты и цены"],
+  ["sales", "Структура и условия"],
   ["photos", "Фото"],
   ["news", "Новости и акции"],
   ["materials", "Материалы"],
@@ -59,6 +62,7 @@ export default async function AdminProjectEditPage({
   const badge: Record<string, { n: number | string; cls: string } | null> = {
     info: null,
     units: { n: c.units, cls: c.units ? "ok" : "warn" },
+    sales: null,
     photos: { n: c.photos + (c.photosPending ? `+${c.photosPending}` : ""), cls: c.photos ? "ok" : "warn" },
     news: { n: c.news, cls: c.news ? "ok" : "" },
     materials: { n: c.links, cls: c.links ? "ok" : "warn" },
@@ -94,6 +98,7 @@ export default async function AdminProjectEditPage({
 
       {tab === "info" ? <InfoTab project={project} /> : null}
       {tab === "units" ? <UnitsTab id={id} /> : null}
+      {tab === "sales" ? <SalesTab id={id} /> : null}
       {tab === "photos" ? <PhotosTab id={id} /> : null}
       {tab === "news" ? <NewsTab id={id} /> : null}
       {tab === "materials" ? <MaterialsTab id={id} /> : null}
@@ -133,6 +138,11 @@ async function UnitsTab({ id }: { id: string }) {
       </details>
     </>
   );
+}
+
+async function SalesTab({ id }: { id: string }) {
+  const data = await adminGetSalesModel(id);
+  return <SalesModelEditor projectId={id} initial={data.model} initialRevision={data.revision} units={data.units} initialPublication={data.publication} />;
 }
 
 async function PhotosTab({ id }: { id: string }) {

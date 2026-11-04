@@ -80,6 +80,7 @@ export default async function AdminLeadDetailPage({
       </dl>
 
       <h2 className="serif text-lg mb-2">Обработка</h2>
+      {lead.salesSelection?<section className="adm-card"><h2>Выбранный юнит и условия на момент заявки</h2><p><b>{lead.salesSelection.label}</b> · {lead.salesSelection.name} · {lead.salesSelection.price.toLocaleString("ru-RU")} {lead.salesSelection.currency}</p><p>{[lead.salesSelection.phase,lead.salesSelection.building,lead.salesSelection.floor].filter(Boolean).join(" · ")}</p><p>Цена по источнику от {lead.salesSelection.priceDate}; версия условий {lead.salesSelection.revision}.</p><details><summary>Полный сохранённый состав условий</summary><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{JSON.stringify(lead.salesSelection,null,2)}</pre></details></section>:null}
       <LeadEditForm
         leadId={lead.id}
         initialStatus={lead.status}
