@@ -73,6 +73,22 @@ set local role authenticated;
 select pg_temp.src_expect_error($$update public.project_sources set project_id='00000000-0000-0000-0000-0000006000c2' where kind='brochure' and title='Brochure'$$,'project moved');
 reset role;
 
+-- sync settings: developers cannot enable folder sync themselves
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000006000a1',true);
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+insert into public.project_sources(project_id,kind,title,url,sync_enabled)
+ values ('00000000-0000-0000-0000-0000006000c1','data_room','Folder','https://drive.google.com/drive/folders/abc',true);
+do $$begin if exists(select 1 from public.project_sources where title='Folder' and sync_enabled) then raise exception 'owner enabled sync on insert'; end if; end$$;
+select pg_temp.src_expect_error($$update public.project_sources set sync_enabled=true where title='Folder'$$,'owner enabled sync on update');
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+update public.project_sources set sync_enabled=true where title='Folder';
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000006000a1',true);
+set local role authenticated;
+select pg_temp.src_expect_error($$update public.project_sources set url='https://drive.google.com/drive/folders/other' where title='Folder'$$,'owner repointed synced folder');
+reset role;
+
 -- anonymous: base table closed; public view shows only public links of published projects
 select set_config('request.jwt.claim.sub','',true);
 select set_config('request.jwt.claim.role','anon',true);

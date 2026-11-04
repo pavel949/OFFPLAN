@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminGetProjectPayload, adminListInterests, adminListProjectDocuments } from "@/app/actions/admin-brain";
 import { adminAddSource, adminConfirmSource, adminDeleteSource, adminListSources } from "@/app/actions/project-sources";
+import { adminDriveImport, adminDriveList, adminSetSourceSync } from "@/app/actions/drive-sync";
 import { SourcesManager } from "@/components/portal/SourcesManager";
 import type { ProjectSourceRow } from "@/lib/sources";
 import { hasSupabaseServiceConfig } from "@/lib/supabase/service";
@@ -76,6 +77,7 @@ export default async function AdminProjectEditPage({
           projectId={id}
           sources={sources}
           api={{ add: adminAddSource, remove: adminDeleteSource, confirm: adminConfirmSource }}
+          drive={{ list: adminDriveList, run: adminDriveImport, setSync: adminSetSourceSync }}
         />
       </section>
       <ProjectDocsSection projectId={id} initialDocs={docs} />

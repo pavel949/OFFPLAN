@@ -5,6 +5,7 @@ import {
   partnerConfirmSource,
   partnerDeleteSource,
 } from "@/app/actions/project-sources";
+import { partnerDriveImport, partnerDriveList } from "@/app/actions/drive-sync";
 import { SourcesManager } from "@/components/portal/SourcesManager";
 import type { ProjectSourceRow } from "@/lib/sources";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -31,7 +32,7 @@ export default async function MaterialsPage({
 
   const { data, error } = await db
     .from("project_sources")
-    .select("id, project_id, kind, title, url, visibility, cadence, note, confirmed_at, created_at")
+    .select("id, project_id, kind, title, url, visibility, cadence, note, confirmed_at, created_at, sync_enabled, last_synced_at, last_sync_note")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
@@ -46,6 +47,7 @@ export default async function MaterialsPage({
         projectId={projectId}
         sources={(data ?? []) as ProjectSourceRow[]}
         api={{ add: partnerAddSource, remove: partnerDeleteSource, confirm: partnerConfirmSource }}
+        drive={{ list: partnerDriveList, run: partnerDriveImport }}
       />
     </div>
   );
