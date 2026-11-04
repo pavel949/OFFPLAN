@@ -4,7 +4,7 @@ import { effectiveLevel, LEVEL_TEXT } from "@/lib/registry/levels";
 import { developerSlug } from "@/lib/developers";
 import type { HomeFeed } from "@/lib/home-feed";
 import { priceFromLabel } from "@/lib/home-search";
-import { projectSlug } from "@/lib/slug";
+import { locationSlug, projectSlug } from "@/lib/slug";
 import { SOURCE_KIND_LABEL_RU } from "@/lib/sources";
 import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
@@ -67,7 +67,7 @@ export function ProjectTile({
           <Link href={`/developers/${developerSlug(p.dt)}`}>{p.dev}</Link>
         </div>
         <div className="ie-facts">
-          <span className="ie-fact">📍 {zoneLabel(p.zone, "ru")}</span>
+          <Link href={`/locations/${locationSlug(p.zone)}`} className="ie-fact" style={{ position: "relative", zIndex: 2, textDecoration: "none" }}>📍 {zoneLabel(p.zone, "ru")}</Link>
           <span className="ie-fact">{taxLabel("type", p.type, "ru")}</span>
           <span className="ie-fact">{p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
           {p.yN > 0 ? <span className="ie-fact">доходность ~{p.yN}%</span> : null}

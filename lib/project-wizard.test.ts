@@ -47,7 +47,8 @@ describe("project wizard", () => {
     expect(r.payload.id).toBe(1);
   });
   it("rejects bad taxonomy, non-https source and short description", () => {
-    expect(parseWizardForm(form({ ...base, zone: "Mars" })).ok).toBe(false);
+    expect(parseWizardForm(form({ ...base, zone: "" })).ok).toBe(false);
+    expect(parseWizardForm(form({ ...base, zone: "__other", zoneOther: "Da Nang" })).ok).toBe(true);
     expect(parseWizardForm(form({ ...base, src: "http://x.y" })).ok).toBe(false);
     expect(parseWizardForm(form({ ...base, desc: "коротко" })).ok).toBe(false);
   });

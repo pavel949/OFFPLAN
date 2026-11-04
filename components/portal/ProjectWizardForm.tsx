@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   BEACH_KEYS,
   FOCUS_KEYS,
@@ -45,13 +45,17 @@ export function ProjectWizardForm({
   developerName,
   orgs,
   adminMode = false,
+  zones = [...ZONES],
 }: {
   action: (prev: WizardState, f: FormData) => Promise<WizardState>;
   developerName?: string;
   orgs?: Org[];
   adminMode?: boolean;
+  /** Known location names (from the regions table); any other location can be typed in. */
+  zones?: string[];
 }) {
   const [state, run, pending] = useActionState(action, { ok: false });
+  const [zoneSel, setZoneSel] = useState("");
   const year = new Date().getFullYear();
   return (
     <form action={run} className="space-y-6 max-w-2xl">
@@ -83,15 +87,22 @@ export function ProjectWizardForm({
       <fieldset className="space-y-3">
         <legend className="font-semibold">2. Расположение и тип</legend>
         <label className="block text-sm">
-          Район
-          <select className="admin-inp" name="zone" defaultValue="Bang Tao" required>
-            {ZONES.map((z) => (
+          Локация (район, город)
+          <select className="admin-inp" name="zone" value={zoneSel || zones[0]} onChange={(e) => setZoneSel(e.target.value)} required>
+            {zones.map((z) => (
               <option key={z} value={z}>
                 {zoneLabel(z, "ru")}
               </option>
             ))}
+            <option value="__other">Другая локация (ввести название)</option>
           </select>
         </label>
+        {zoneSel === "__other" ? (
+          <label className="block text-sm">
+            Название локации
+            <input className="admin-inp" name="zoneOther" required maxLength={80} placeholder="Например: Da Nang, My Khe" />
+          </label>
+        ) : null}
         <label className="block text-sm">
           Тип объекта
           <Select name="type" kind="type" keys={PROPERTY_TYPES} />

@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 import { getProjects } from "@/lib/catalog";
 import { developerSlug, summarizeDevelopers } from "@/lib/developers";
 import { GUIDE } from "@/lib/guide-content";
+import { locationSlug } from "@/lib/locations";
 import { projectSlug } from "@/lib/slug";
 
 export const revalidate = 3600;
@@ -14,6 +15,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/`, changeFrequency: "daily", priority: 1 },
     { url: `${base}/registry`, changeFrequency: "weekly", priority: 0.6 },
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${base}/locations`, changeFrequency: "weekly" as const, priority: 0.7 },
+    { url: `${base}/analytics`, changeFrequency: "daily" as const, priority: 0.7 },
+    ...[...new Set(projects.map((p) => locationSlug(p.zone)))].map((s) => ({
+      url: `${base}/locations/${s}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })),
     { url: `${base}/developers`, changeFrequency: "weekly" as const, priority: 0.7 },
     ...["", "/problems", "/how-it-works", "/contact", "/representative"].map((x) => ({
       url: `${base}/protection${x}`,

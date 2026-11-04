@@ -13,7 +13,7 @@ import { operatingCostTotals } from "@/lib/project-evidence";
 import type { PublicProjectFacts } from "@/lib/project-facts-query";
 import type { ProjectUnitRow, ProjectUpdateRow, SalesCampaignRow } from "@/lib/project-queries";
 import { effectiveLevel, LEVEL_TEXT } from "@/lib/registry/levels";
-import { projectSlug } from "@/lib/slug";
+import { locationSlug, projectSlug } from "@/lib/slug";
 import {
   SOURCE_KIND_LABEL_EN,
   SOURCE_KIND_LABEL_RU,
@@ -158,7 +158,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
           </div>
           <h1 className="ie-ptitle">{p.n}</h1>
           <p className="ie-psub">
-            {t("Застройщик", "Developer")}: <Link href={`/developers/${developer.slug}`}>{p.dev}</Link> · {zoneLabel(p.zone, lang)} · {taxLabel("type", p.type, lang)}
+            {t("Застройщик", "Developer")}: <Link href={`/developers/${developer.slug}`}>{p.dev}</Link> · <Link href={`/locations/${locationSlug(p.zone)}`}>{zoneLabel(p.zone, lang)}</Link> · {taxLabel("type", p.type, lang)}
           </p>
           <div className="ie-phero-row">
             <div className="ie-pprice">

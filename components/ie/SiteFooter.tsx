@@ -23,8 +23,10 @@ export function SiteFooter() {
           <div>
             <h4>Покупателям</h4>
             <Link href="/">Каталог новостроек</Link>
+            <Link href="/locations">Локации</Link>
             <Link href="/developers">Застройщики</Link>
-            <Link href="/market?tab=analytics">Аналитика рынка</Link>
+            <Link href="/analytics">Аналитика рынка</Link>
+            <Link href="/market?tab=risk">Риски и due diligence</Link>
             <Link href="/market?tab=calc">Калькулятор доходности</Link>
             <Link href="/market?tab=shortlist">Шорт-лист</Link>
           </div>

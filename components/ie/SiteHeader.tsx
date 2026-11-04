@@ -9,8 +9,9 @@ type Item = { href: string; label: string; children?: readonly { href: string; l
 
 const NAV: Item[] = [
   { href: "/", label: "Каталог" },
+  { href: "/locations", label: "Локации" },
   { href: "/developers", label: "Застройщики" },
-  { href: "/market?tab=analytics", label: "Аналитика рынка" },
+  { href: "/analytics", label: "Аналитика" },
   { href: "/market?tab=calc", label: "Калькулятор" },
   { href: "/guide", label: "Знания" },
   { href: "/protection", label: "Защита прав", children: PROTECTION_NAV },

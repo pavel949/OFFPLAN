@@ -13,7 +13,8 @@ describe("catalogue schema", () => {
 
   it("rejects free-text taxonomy values and out-of-range scores", () => {
     const base = (rawProjects as unknown[])[0] as Record<string, unknown>;
-    expect(catalogProjectSchema.safeParse({ ...base, zone: "Bangtao" }).success).toBe(false);
+    expect(catalogProjectSchema.safeParse({ ...base, zone: "Bangtao" }).success).toBe(true); // any location is allowed
+    expect(catalogProjectSchema.safeParse({ ...base, zone: "" }).success).toBe(false);
     expect(catalogProjectSchema.safeParse({ ...base, risk: 5 }).success).toBe(false);
     expect(catalogProjectSchema.safeParse({ ...base, rat: 11 }).success).toBe(false);
     expect(catalogProjectSchema.safeParse({ ...base, dt: "" }).success).toBe(false);
@@ -22,7 +23,7 @@ describe("catalogue schema", () => {
 
   it("read path skips only the invalid rows", () => {
     const rows = rawProjects as unknown[];
-    const bad = { ...(rows[0] as object), zone: "nowhere" };
+    const bad = { ...(rows[0] as object), rat: 99 };
     const seen: number[] = [];
     const out = parseCatalogRows([rows[1], bad, rows[2]], (i) => seen.push(i));
     expect(out).toHaveLength(2);

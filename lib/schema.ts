@@ -12,7 +12,6 @@ import {
   RISK_MIN,
   SEGMENTS,
   STATUS_KEYS,
-  ZONES,
 } from "./taxonomy";
 
 export const recSchema = z.enum(REC_LABELS);
@@ -28,7 +27,8 @@ export const catalogProjectSchema = z.object({
   dev: z.string().trim().min(1).max(200),
   /** Short developer code used by the developer filter. */
   dt: z.string().trim().min(1).max(60),
-  zone: z.enum(ZONES),
+  /** Location name. Any location in the world is valid; known ones are listed in the `regions` table. */
+  zone: z.string().trim().min(1).max(80),
   seg: z.enum(SEGMENTS),
   type: z.enum(PROPERTY_TYPES),
   pT: z.string().max(60),
