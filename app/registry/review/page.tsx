@@ -86,6 +86,7 @@ export default async function ReviewQueuePage() {
           ? "Вы можете брать дела, проверять пункты и принимать решения (с учётом отвода и правила «четырёх глаз»)."
           : "Режим просмотра: администраторы платформы решений не принимают."}
       </p>
+      {canAct ? <p className="mb-6"><Link href="/registry/methodology" className="underline font-semibold">Утверждение методологии ClearView →</Link></p> : null}
       <h2 className="text-sm font-bold uppercase tracking-wide mb-2">Мои дела</h2>
       <Table list={mine} />
       <h2 className="text-sm font-bold uppercase tracking-wide mt-8 mb-2">Очередь</h2>

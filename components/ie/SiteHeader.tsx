@@ -25,6 +25,8 @@ const NAV: Item[] = [
       { href: "/analytics", label: "Аналитика рынка" },
       { href: "/market?tab=calc", label: "Калькулятор доходности" },
       { href: "/market?tab=risk", label: "Риски и due diligence" },
+      { href: "/quick-assessment", label: "Быстрая проверка проекта" },
+      { href: "/methodology", label: "Методология ClearView" },
     ],
   },
   { href: "/guide", label: "Знания" },

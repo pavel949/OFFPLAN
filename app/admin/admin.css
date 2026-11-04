@@ -523,3 +523,14 @@
 .pt-warn { background: rgba(200,120,0,.1); border: 1px solid rgba(200,120,0,.3); color: #7a4a00; border-radius: 12px; padding: 12px 16px; font-size: 14px; margin-bottom: 18px; line-height: 1.5; }
 .pt-lock { background: rgba(10,28,54,.06); border-radius: 12px; padding: 12px 16px; font-size: 14px; margin-bottom: 18px; }
 @media (max-width: 700px) { .pt-bar-in { gap: 8px; padding-top: 8px; padding-bottom: 8px; } .pt-nav a { padding: 7px 10px; font-size: 13px; } .pt-user span { display: none; } }
+
+/* ClearView studio (cv-*) */
+.cv-studio { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; align-items: start; }
+@media (max-width: 1100px) { .cv-studio { grid-template-columns: 1fr; } }
+.cv-rail { position: sticky; top: 16px; display: grid; gap: 14px; }
+.cv-num { width: 86px; text-align: right; font-variant-numeric: tabular-nums; }
+.cv-changed { background: rgba(212,173,90,.18) !important; }
+.cv-sum { display: flex; height: 26px; border-radius: 8px; overflow: hidden; margin: 8px 0 14px; }
+.cv-sum i { display: grid; place-items: center; color: #fff; font-style: normal; font-size: 10px; font-weight: 800; }
+.cv-chip { display: inline-flex; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 800; background: rgba(11,27,52,.08); }
+.cv-chip.ok { background: rgba(31,138,76,.14); color: var(--grn); } .cv-chip.bad { background: rgba(200,40,40,.12); color: var(--red); } .cv-chip.warn { background: rgba(200,120,0,.14); color: var(--amb); }
