@@ -24,6 +24,7 @@ export function SiteFooter() {
             <h4>Покупателям</h4>
             <Link href="/">Каталог новостроек</Link>
             <Link href="/locations">Локации</Link>
+            <Link href="/countries">Страны: Таиланд, Вьетнам</Link>
             <Link href="/developers">Застройщики</Link>
             <Link href="/analytics">Аналитика рынка</Link>
             <Link href="/market?tab=risk">Риски и due diligence</Link>

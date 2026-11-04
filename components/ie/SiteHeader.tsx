@@ -9,13 +9,26 @@ type Item = { href: string; label: string; children?: readonly { href: string; l
 
 const NAV: Item[] = [
   { href: "/", label: "Каталог" },
-  { href: "/locations", label: "Локации" },
+  {
+    href: "/locations", label: "Страны и локации",
+    children: [
+      { href: "/locations", label: "Все локации" },
+      { href: "/countries/thailand", label: "🇹🇭 Таиланд" },
+      { href: "/countries/vietnam", label: "🇻🇳 Вьетнам" },
+      { href: "/countries", label: "Все страны" },
+    ],
+  },
   { href: "/developers", label: "Застройщики" },
-  { href: "/analytics", label: "Аналитика" },
-  { href: "/market?tab=calc", label: "Калькулятор" },
+  {
+    href: "/analytics", label: "Аналитика",
+    children: [
+      { href: "/analytics", label: "Аналитика рынка" },
+      { href: "/market?tab=calc", label: "Калькулятор доходности" },
+      { href: "/market?tab=risk", label: "Риски и due diligence" },
+    ],
+  },
   { href: "/guide", label: "Знания" },
-  { href: "/protection", label: "Защита прав", children: PROTECTION_NAV },
-  { href: "/registry", label: "Реестр проверки" },
+  { href: "/protection", label: "Защита прав", children: [...PROTECTION_NAV, { href: "/registry", label: "Реестр проверки проектов" }] },
 ];
 
 /** Floats transparent over dark heroes and turns into frosted glass after a few pixels of scroll. */
@@ -48,7 +61,7 @@ export function SiteHeader() {
           {NAV.map((n) =>
             n.children ? (
               <div key={n.href} className="ie-nav-group">
-                <Link href={n.href} aria-haspopup="true" aria-current={path.startsWith("/protection") ? "page" : undefined}>
+                <Link href={n.href} aria-haspopup="true" aria-current={(n.href === "/protection" && (path.startsWith("/protection") || path.startsWith("/registry"))) || (n.href === "/locations" && (path.startsWith("/locations") || path.startsWith("/countries"))) || (n.href === "/analytics" && path.startsWith("/analytics")) ? "page" : undefined}>
                   {n.label} <span aria-hidden="true" className="ie-caret">▾</span>
                 </Link>
                 <div className="ie-nav-sub" role="menu">
