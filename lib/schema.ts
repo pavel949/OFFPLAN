@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { locationEvidenceSchema } from "./project-location";
 import {
   BEACH_KEYS,
   FOCUS_KEYS,
@@ -22,6 +23,7 @@ export const recSchema = z.enum(REC_LABELS);
  * Matches `data/seed/projects.json`.
  */
 export const catalogProjectSchema = z.object({
+  locationEvidence: locationEvidenceSchema.optional(),
   id: z.number().int().positive(),
   n: z.string().trim().min(1).max(200),
   dev: z.string().trim().min(1).max(200),
@@ -70,7 +72,10 @@ export function parseCatalogRows(
 ): z.infer<typeof catalogProjectSchema>[] {
   const out: z.infer<typeof catalogProjectSchema>[] = [];
   rows.forEach((row, i) => {
-    const r = catalogProjectSchema.safeParse(row);
+    // Bad optional location metadata must not hide an otherwise valid project.
+    const clean = row && typeof row === "object" && "locationEvidence" in row && !locationEvidenceSchema.safeParse(row.locationEvidence).success
+      ? { ...row, locationEvidence: undefined } : row;
+    const r = catalogProjectSchema.safeParse(clean);
     if (r.success) out.push(r.data);
     else onInvalid?.(i, r.error);
   });

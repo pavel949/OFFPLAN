@@ -20,7 +20,7 @@ export function floorLabel(value: string, lang: "ru" | "en") {
   return value.replace(/GROUND(?: FLOOR)?/gi, "первый уровень").replace(/\b(?:FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH|EIGHTH|NINTH|TENTH)\b/gi, v => ({FIRST:"первый",SECOND:"второй",THIRD:"третий",FOURTH:"четвёртый",FIFTH:"пятый",SIXTH:"шестой",SEVENTH:"седьмой",EIGHTH:"восьмой",NINTH:"девятый",TENTH:"десятый"})[v.toUpperCase()] ?? v).replace(/(\d+)(?:st|nd|rd|th)\s*Floor/gi,"$1-й этаж");
 }
 
-export function projectPriceM(p: CatalogProject, ownership = "", bedrooms = "", now = Date.now()) {
+export function projectPriceM(p: Pick<CatalogProject, "pN" | "sales">, ownership = "", bedrooms = "", now = Date.now()) {
   if (p.sales?.publication) {
     const active = currentAvailability(p.sales.publication, now);
     const options = active?.pricing?.filter(o => o.currency === "THB" && (!ownership || o.ownership === ownership) && (!bedrooms || o.bedrooms === Number(bedrooms)));

@@ -2,6 +2,7 @@
 
 import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
 import { displayDate as fmtDate } from "@/lib/display-date";
+import { LOCATION_PRECISION } from "@/lib/project-location";
 import { usePublicationExpired } from "./usePublicationExpired";
 import Image from "next/image";
 import Link from "next/link";
@@ -123,7 +124,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   const site = facts.sources.find((s) => s.kind === "website");
   const otherMaterials = facts.sources.filter((s) => s.kind !== "website");
   const devSite = developer.website && /^https:\/\//.test(developer.website) ? developer.website : null;
-  const mapHref = extras.lat != null && extras.lng != null ? `https://www.google.com/maps?q=${extras.lat},${extras.lng}` : null;
+  const mapHref = p.location && p.location.precision !== "sales_office" ? `https://www.google.com/maps?q=${p.location.lat},${p.location.lng}` : null;
   const inv = facts.inventory;
   const publishedCurrencies = new Set(unitSales?.offers.map(o=>o.currency));
   const displayPrice = unitSales ? unitSales.offers.length && publishedCurrencies.size===1 ? formatPrice(Math.min(...unitSales.offers.map(o=>o.price)),unitSales.offers[0].currency,lang) : t("Уточняется по юниту","Ask for unit pricing") : p.pT;
@@ -455,7 +456,9 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
               <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => setLeadOpen(true)}>
                 {t("Получить прайс и условия", "Get price list & terms")}
               </button>
-              {mapHref ? <a className="ie-btn ie-btn--line" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} href={mapHref} target="_blank" rel="noopener noreferrer">{t("Показать на карте", "Open map")} ↗</a> : null}
+              <Link className="ie-btn ie-btn--line" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} href={`/?view=map&q=${encodeURIComponent(p.n)}`} prefetch={false}>{t("На карте OFFPLAN", "OFFPLAN map")} →</Link>
+              {p.location ? <p className="ie-small">{LOCATION_PRECISION[p.location.precision]} · {p.location.observedOn}<br/><a href={p.location.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">{p.location.sourceTitle}</a><br/>{p.location.note}</p> : <p className="ie-small">{t("Точное расположение пока не подтверждено. Район в карточке не заменяет адрес проекта.","Exact location is not confirmed. The catalogue area is not a project address.")}</p>}
+              {mapHref ? <a className="ie-btn ie-btn--line" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} href={mapHref} target="_blank" rel="noopener noreferrer">{t("Внешняя карта", "External map")} ↗</a> : null}
             </div>
             <div className="ie-help">
               {t("Вопрос по сделке или конфликт с застройщиком (просрочка, возврат денег)?", "A question about the deal or a dispute with the developer?")}{" "}

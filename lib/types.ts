@@ -13,6 +13,8 @@ export interface ProjectTexts {
 }
 
 export interface CatalogProject {
+  locationEvidence?: import("./project-location").ProjectLocation;
+  location?: import("./project-location").ProjectLocation;
   id: number;
   n: string;
   dev: string;

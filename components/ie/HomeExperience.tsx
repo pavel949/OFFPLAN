@@ -2,6 +2,8 @@
 import { usePublicationExpired } from "./usePublicationExpired";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { toMapProject } from "@/lib/project-map";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -18,6 +20,7 @@ import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import { ProjectTile } from "./ProjectTile";
 import { OmbudsmanLogo } from "./OmbudsmanLogo";
+const ProjectMapPanel = dynamic(()=>import("./ProjectMapPanel").then(m=>m.ProjectMapPanel),{ssr:false,loading:()=> <p role="status">Загружаем карту проектов…</p>});
 
 const STAGES: [string, string][] = [
   ["", "Все"],
@@ -95,7 +98,8 @@ export function HomeExperience({
 
   const zones = useMemo(() => [...new Set(projects.map((p) => p.zone))].sort(), [projects]);
   const years = useMemo(() => [...new Set(projects.map((p) => p.compY).filter((y): y is number => y != null))].sort(), [projects]);
-  const list = filterProjects(projects, filters);
+  const list = useMemo(()=>{void expired;return filterProjects(projects, filters);},[projects,filters,expired]);
+  const mapProjects = useMemo(()=>filters.view==="map" ? list.map(toMapProject) : [],[list,filters.view]);
   void expired; // The publication clock also re-evaluates budget filtering at expiry.
   const active = hasActiveFilters(filters);
   // Stage tab counts reflect every other active filter, so the numbers always add up.
@@ -244,6 +248,10 @@ export function HomeExperience({
               ))}
             </div>
             <div className="ie-toolbar-right">
+              <div className="ie-map-mode" role="group" aria-label="Представление каталога">
+                <button type="button" aria-pressed={filters.view!=="map"} onClick={()=>set("view")("list")}>Список</button>
+                <button type="button" aria-pressed={filters.view==="map"} onClick={()=>set("view")("map")}>Карта</button>
+              </div>
               <label className="ie-sort">
                 <span>Порядок</span>
                 <select value={filters.sort} onChange={(e) => set("sort")(e.target.value)} aria-label="Порядок сортировки">
@@ -268,7 +276,7 @@ export function HomeExperience({
                 className="ie-btn ie-btn--line"
                 onClick={() => {
                   setDraft("");
-                  apply(EMPTY_FILTERS);
+                  apply({...EMPTY_FILTERS,view:filters.view});
                 }}
               >
                 Сбросить фильтры
@@ -276,14 +284,15 @@ export function HomeExperience({
             ) : null}
           </div>
           {list.some(p=>p.stK==="ready" && p.compY!=null && p.compY<new Date().getFullYear()-5) ? <p className="ie-small">Здесь также есть ранее построенные проекты для изучения истории застройщиков. Год постройки не означает, что в проекте сейчас продаются юниты. Для новых строек выберите соответствующую стадию.</p> : null}
-          {list.length ? (
+          {filters.view === "map" ? <ProjectMapPanel projects={mapProjects} onZoneChange={zone=>set("zone")(zone)} /> : null}
+          {list.length && filters.view !== "map" ? (
             <div className="ie-grid">
               {list.slice(0, limit).map((p) => (
                 <ProjectTile key={p.id} p={p} feed={feed} />
               ))}
             </div>
           ) : null}
-          {list.length > limit ? (
+          {list.length > limit && filters.view !== "map" ? (
             <div style={{ textAlign: "center", marginTop: 28 }}>
               <button type="button" className="ie-btn ie-btn--ink" onClick={() => setLimit((n) => n + 24)}>
                 Показать ещё ({list.length - limit})
@@ -299,7 +308,7 @@ export function HomeExperience({
                 className="ie-btn ie-btn--ink"
                 onClick={() => {
                   setDraft("");
-                  apply(EMPTY_FILTERS);
+                  apply({...EMPTY_FILTERS,view:filters.view});
                 }}
               >
                 Показать все проекты

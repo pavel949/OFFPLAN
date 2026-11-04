@@ -7,6 +7,7 @@ import type { CatalogProject } from "./types";
  * plus explicit filters. Pure functions, no I/O; the UI keeps this state in the URL.
  */
 export type HomeFilters = {
+  view: string;
   q: string;
   zone: string;
   type: string;
@@ -19,6 +20,7 @@ export type HomeFilters = {
 };
 
 export const EMPTY_FILTERS: HomeFilters = {
+  view: "list",
   q: "",
   zone: "",
   type: "",
@@ -87,7 +89,8 @@ export function parseQuery(raw: string): ParsedQuery {
   return out;
 }
 
-function haystack(p: CatalogProject): string {
+export type SearchProject = Pick<CatalogProject, "id" | "n" | "dev" | "dt" | "zone" | "seg" | "type" | "tags" | "stK" | "compY" | "pN" | "sales">;
+function haystack(p: SearchProject): string {
   return norm(
     [
       p.n,
@@ -102,14 +105,14 @@ function haystack(p: CatalogProject): string {
   );
 }
 
-const STAGE_MATCH: Record<string, (p: CatalogProject) => boolean> = {
+const STAGE_MATCH: Record<string, (p: SearchProject) => boolean> = {
   unknown: (p) => p.stK === "unknown",
   offplan: (p) => p.stK === "offplan",
   building: (p) => p.stK === "building",
   ready: (p) => p.stK === "ready",
 };
 
-export function filterProjects(all: CatalogProject[], f: HomeFilters): CatalogProject[] {
+export function filterProjects<T extends SearchProject>(all: T[], f: HomeFilters): T[] {
   const pq = parseQuery(f.q);
   const budget = f.budget ? Number(f.budget) : pq.maxPriceM;
   const type = f.type || pq.type;
@@ -148,6 +151,7 @@ export function filtersFromParams(p: URLSearchParams): HomeFilters {
   const get = (k: string) => p.get(k) ?? "";
   const sort = get("sort");
   return {
+    view: get("view") === "map" ? "map" : "list",
     q: get("q"),
     zone: get("zone"),
     type: get("type"),
@@ -170,7 +174,7 @@ export function filtersToParams(f: HomeFilters): URLSearchParams {
 
 export function hasActiveFilters(f: HomeFilters): boolean {
   return (Object.keys(EMPTY_FILTERS) as (keyof HomeFilters)[]).some(
-    (k) => k !== "sort" && !!f[k],
+    (k) => k !== "sort" && k !== "view" && !!f[k],
   );
 }
 
