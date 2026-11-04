@@ -30,6 +30,10 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Sales HTTP integration (isolated API)
+        run: npm run test:sales-http
+        timeout-minutes: 5
+
       - name: Build
         # Public routes render at request time. Production never substitutes demo seed for the database.
         run: npm run build

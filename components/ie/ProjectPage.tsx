@@ -383,7 +383,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             ) : (
               <p className="ie-small">{t("Подтверждённая спецификация пока не предоставлена.", "A confirmed specification has not been supplied.")}</p>
             )}
-            {costs.length ? (
+            {unitSales ? <p className="ie-small"><a href="#unit-offers">{t("Расходы и график оплаты указаны в условиях выбранного юнита выше.","Costs and payment schedules are shown with the selected unit above.")}</a></p> : costs.length ? (
               <>
                 <label className="ie-field">
                   {t("Площадь выбранного лота, м²", "Selected unit area, sqm")}

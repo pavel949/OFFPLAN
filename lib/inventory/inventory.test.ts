@@ -55,6 +55,10 @@ describe("parseInventoryText", () => {
     expect(parseInventoryText(big).errors[0].message).toContain("Слишком много");
     expect(parseInventoryText("").errors).toHaveLength(1);
   });
+  it("does not invent availability when an imported status is absent",()=>{
+    const r=parseInventoryText("label,price,status\nA101,1000000,\nA102,,уточняется");
+    expect(r.errors).toEqual([]);expect(r.rows.map(r=>r.status)).toEqual(["unknown","unknown"]);
+  });
 });
 
 describe("freshness", () => {

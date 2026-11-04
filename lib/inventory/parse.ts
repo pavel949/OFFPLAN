@@ -3,7 +3,7 @@
  * Accepts TSV (Excel copy-paste), CSV and semicolon-CSV; English and Russian column names.
  */
 
-export type UnitStatus = "available" | "reserved" | "sold";
+export type UnitStatus = "unknown" | "available" | "reserved" | "sold";
 
 export interface ParsedUnit {
   line: number;
@@ -38,6 +38,8 @@ const ALIASES: Record<string, string[]> = {
 };
 
 const STATUS_MAP: Record<string, UnitStatus> = {
+  unknown: "unknown",
+  уточняется: "unknown",
   available: "available",
   free: "available",
   "в продаже": "available",
@@ -178,7 +180,7 @@ export function parseInventoryText(text: string, defaultCurrency = DEFAULT_CURRE
     const rowErr = (message: string) => errors.push({ line, message: `${label}: ${message}` });
 
     const statusRaw = cell("status").toLowerCase();
-    let status: UnitStatus = "available";
+    let status: UnitStatus = "unknown";
     if (statusRaw) {
       const s = STATUS_MAP[statusRaw];
       if (!s) return rowErr(`неизвестный статус «${cell("status")}» (допустимо: свободен / бронь / продан)`);
