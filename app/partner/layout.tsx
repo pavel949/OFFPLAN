@@ -1,3 +1,4 @@
+import "../admin/admin.css";
 export default function PartnerLayout({
   children,
 }: {
