@@ -13,6 +13,10 @@ import {
   type ProjectSourceRow,
 } from "@/lib/sources";
 import type { SourceState } from "@/app/actions/project-sources";
+import type { DriveListState } from "@/app/actions/drive-sync";
+import { parseDriveUrl } from "@/lib/drive/url";
+import type { ImportState } from "@/lib/inventory/run";
+import { DriveSyncPanel } from "./DriveSyncPanel";
 
 type Api = {
   add: (prev: SourceState, f: FormData) => Promise<SourceState>;
@@ -26,14 +30,23 @@ const FRESH_LABEL = {
   unconfirmed: { text: "не подтверждено", color: "var(--amb, #b26a00)" },
 } as const;
 
+type DriveApi = {
+  list: (sourceId: string) => Promise<DriveListState>;
+  run: (prev: ImportState, f: FormData) => Promise<ImportState>;
+  /** Present for IE staff only: enable/disable folder sync for a source. */
+  setSync?: (sourceId: string, projectId: string, enabled: boolean) => Promise<{ ok: boolean; error?: string }>;
+};
+
 export function SourcesManager({
   projectId,
   sources,
   api,
+  drive,
 }: {
   projectId: string;
   sources: ProjectSourceRow[];
   api: Api;
+  drive?: DriveApi;
 }) {
   const [state, action, pending] = useActionState(api.add, { ok: false });
   const [busy, start] = useTransition();
@@ -80,6 +93,37 @@ export function SourcesManager({
                   </span>
                 </div>
                 {s.note ? <div className="text-xs mt-1">{s.note}</div> : null}
+                {drive && parseDriveUrl(s.url) ? (
+                  <div className="text-xs mt-2">
+                    {s.sync_enabled ? (
+                      <>
+                        <b>Синхронизация с Google Drive включена</b>
+                        {s.last_synced_at
+                          ? ` · последний импорт ${new Date(s.last_synced_at).toLocaleString("ru-RU")} (${s.last_sync_note})`
+                          : ""}
+                        <DriveSyncPanel sourceId={s.id} api={{ list: drive.list, run: drive.run }} />
+                      </>
+                    ) : (
+                      <span className="text-[var(--muted,#666)]">
+                        Чтобы подтягивать прайс из этой папки, откройте доступ «Читатель» для сервисного
+                        аккаунта IE и напишите нам: команда включит синхронизацию.
+                      </span>
+                    )}
+                    {drive.setSync ? (
+                      <div className="mt-1">
+                        <button
+                          className="admin-btn"
+                          disabled={busy}
+                          onClick={() =>
+                            start(async () => void (await drive.setSync!(s.id, projectId, !s.sync_enabled)))
+                          }
+                        >
+                          {s.sync_enabled ? "Выключить синхронизацию" : "Включить синхронизацию"}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="flex gap-2">
                 <button

@@ -127,7 +127,7 @@ export async function adminListSources(projectId: string): Promise<ProjectSource
   if (typeof a === "string") throw new Error(a);
   const { data, error } = await a.db
     .from("project_sources")
-    .select("id, project_id, kind, title, url, visibility, cadence, note, confirmed_at, created_at")
+    .select("id, project_id, kind, title, url, visibility, cadence, note, confirmed_at, created_at, sync_enabled, last_synced_at, last_sync_note")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);

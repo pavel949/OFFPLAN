@@ -153,6 +153,9 @@ export type ProjectSourceRow = {
   note: string;
   confirmed_at: string | null;
   created_at: string;
+  sync_enabled: boolean;
+  last_synced_at: string | null;
+  last_sync_note: string;
 };
 
 export type PublicSource = Pick<

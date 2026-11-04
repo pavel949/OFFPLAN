@@ -2,7 +2,7 @@
 -- re-applies the hardening migration (idempotent) and checks what the API roles can really do.
 grant all on all tables in schema public to anon, authenticated, service_role;
 \i supabase/migrations/20261104015922_harden_privileges.sql
-\i supabase/migrations/20261104015930_drop_stale_policies.sql
+\i supabase/migrations/20261104031823_drop_stale_policies.sql
 
 create or replace function pg_temp.as_role(r text, uid uuid default null) returns void language plpgsql as $$
 begin
