@@ -276,6 +276,10 @@ export function CatalogueShell({
             <span className="i-en">✉ Inquiry</span>
             <span className="i-ru">✉ Заявка</span>
           </button>
+          <Link href="/login" className="lang-btn" style={{ textDecoration: "none" }}>
+            <span className="i-en">Sign in</span>
+            <span className="i-ru">Войти</span>
+          </Link>
           <button type="button" className="lang-btn" onClick={toggleLang}>
             {lang === "en" ? "🇷🇺 РУС" : "🇬🇧 ENG"}
           </button>

@@ -1,0 +1,14 @@
+.login-page { min-height: 100vh; padding: 40px 20px; background: var(--background, #f2ede6); color: var(--foreground, #0b1b34); }
+.login-wrap { max-width: 1040px; margin: 0 auto; }
+.login-back { display: inline-block; margin-bottom: 24px; font-size: 14px; text-decoration: underline; }
+.login-title { font-size: 32px; margin: 0 0 4px; }
+.login-sub { font-size: 14px; color: var(--muted, #667); margin: 0 0 28px; }
+.login-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 820px) { .login-grid { grid-template-columns: repeat(3, 1fr); } }
+.login-card { border: 1px solid var(--bdr, #ddd); background: #fff; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.login-card h2 { font-size: 20px; margin: 0; }
+.login-card p { font-size: 13px; color: var(--muted, #667); margin: 0; line-height: 1.45; }
+.login-form { display: flex; flex-direction: column; gap: 10px; }
+.login-form label { font-size: 13px; }
+.login-ok { color: #1a7f4b; font-size: 13px; }
+.login-err { color: #b3261e; font-size: 13px; }
