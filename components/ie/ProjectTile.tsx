@@ -12,10 +12,6 @@ import { Scene } from "./Scene";
 
 const STAGE_RU: Record<string, string> = { offplan: "Старт продаж", building: "Строится", ready: "Сдан" };
 
-function daysAgo(iso: string): number {
-  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
-}
-
 export function ProjectTile({
   p,
   feed,
@@ -29,11 +25,6 @@ export function ProjectTile({
   const avail = feed.availability[p.id];
   const level = effectiveLevel(p.ver);
   const material = (feed.sources[p.id] ?? [])[0];
-  const total = Number(String(p.units).replace(/\D/g, "")) || null;
-  const soldPct =
-    avail?.available != null && total && total >= avail.available
-      ? Math.round(((total - avail.available) / total) * 100)
-      : null;
 
   return (
     <article className="ie-tile">
@@ -72,17 +63,10 @@ export function ProjectTile({
           <span className="ie-fact">{p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
           {p.yN > 0 ? <span className="ie-fact">доходность ~{p.yN}%</span> : null}
         </div>
-        {soldPct != null ? (
-          <div title={`Свободно ${avail?.available} из ${total}`}>
-            <div className="ie-meter" role="img" aria-label={`Продано ${soldPct}%`}>
-              <i style={{ width: `${soldPct}%` }} />
-            </div>
-          </div>
-        ) : null}
         <div className="ie-tile-foot">
           <span>
             {avail?.available != null
-              ? `В продаже: ${avail.available} лот.${avail.recorded ? ` · обновлено ${daysAgo(avail.recorded)} дн. назад` : ""}`
+              ? `Доступны: ${avail.available} из ${avail.recorded ?? "—"} внесённых лотов`
               : level > 0
                 ? "Проверено реестром"
                 : "Данные заявлены застройщиком"}

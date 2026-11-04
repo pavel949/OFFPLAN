@@ -19,7 +19,7 @@ export type HomeFeed = {
     at: string;
   }[];
   campaigns: Record<number, { labelRu: string; endsAt: string | null }>;
-  availability: Record<number, { available: number | null; recorded: string | null }>;
+  availability: Record<number, { available: number | null; recorded: number | null }>;
   sources: Record<number, PublicSource[]>;
 };
 
@@ -88,7 +88,7 @@ export async function getHomeFeed(): Promise<HomeFeed> {
           if (id != null)
             feed.availability[id] = {
               available: (r.available as number | null) ?? null,
-              recorded: (r.recorded as string | null) ?? null,
+              recorded: (r.recorded as number | null) ?? null,
             };
         }
         for (const r of src.data ?? []) {

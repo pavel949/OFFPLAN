@@ -167,5 +167,6 @@ export const SEGMENT_KEYS = SEGMENTS;
 
 /** "฿315M+" style price; falls back to the stored label. */
 export function priceFromLabel(p: CatalogProject): string {
+  if (!(p.pN > 0) || p.pT === "POA") return "Цена уточняется";
   return p.pT || (p.pN ? `฿${p.pN}M+` : "по запросу");
 }
