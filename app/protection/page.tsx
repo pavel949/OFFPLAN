@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProtectionShell } from "@/components/ie/ProtectionShell";
+import { StatusCard } from "@/components/ie/StatusCard";
 import { DISCLAIMER, LEVELS } from "@/lib/protection-content";
 
 export const metadata: Metadata = {
@@ -18,6 +19,12 @@ export default function ProtectionPage() {
       title="Покупка новостройки — это не только выбор квартиры"
       lead="Деньги вы вносите заранее, а получаете объект через годы и в другой стране. Мы создали платформу, чтобы смотреть, выбирать и проверять проекты в одном месте, и чтобы вы знали, к кому обратиться, если что-то пошло не так."
     >
+      <section className="ie-section" style={{ paddingBottom: 0 }}>
+        <div className="ie-wrap">
+          <StatusCard />
+        </div>
+      </section>
+
       <section className="ie-section">
         <div className="ie-wrap">
           <div className="ie-section-head">

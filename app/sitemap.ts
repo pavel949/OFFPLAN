@@ -4,6 +4,7 @@ import { getProjects } from "@/lib/catalog";
 import { developerSlug, summarizeDevelopers } from "@/lib/developers";
 import { GUIDE } from "@/lib/guide-content";
 import { locationSlug } from "@/lib/locations";
+import { GEO } from "@/lib/geo-seed";
 import { projectSlug } from "@/lib/slug";
 
 export const revalidate = 3600;
@@ -22,6 +23,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.6,
     })),
+    { url: `${base}/countries`, changeFrequency: "weekly" as const, priority: 0.7 },
+    ...GEO.map((c) => ({ url: `${base}/countries/${c.slug}`, changeFrequency: "weekly" as const, priority: 0.6 })),
+    ...GEO.flatMap((c) => c.regions.flatMap((r) => r.locations.map((l) => ({ url: `${base}/locations/${l.slug}`, changeFrequency: "weekly" as const, priority: 0.4 })))),
     { url: `${base}/developers`, changeFrequency: "weekly" as const, priority: 0.7 },
     ...["", "/problems", "/how-it-works", "/contact", "/representative"].map((x) => ({
       url: `${base}/protection${x}`,

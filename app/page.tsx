@@ -3,11 +3,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HomeExperience } from "@/components/ie/HomeExperience";
 import { SiteFooter } from "@/components/ie/SiteFooter";
+import { StatusCard } from "@/components/ie/StatusCard";
 import { SiteHeader } from "@/components/ie/SiteHeader";
 import { getCatalogMeta, getProjects } from "@/lib/catalog";
 import { developerSlug, summarizeDevelopers } from "@/lib/developers";
 import { getHomeFeed } from "@/lib/home-feed";
 import { GUIDE } from "@/lib/guide-content";
+import { GEO } from "@/lib/geo-seed";
 import { effectiveLevel } from "@/lib/registry/levels";
 import { projectSlug } from "@/lib/slug";
 
@@ -51,6 +53,7 @@ export default async function Home() {
               <div><b>Выбирайте с проверкой</b><span>Уровни проверки реестра и досье каждого застройщика.</span></div>
               <div><b>Связывайтесь с нами</b><span>Вопросы до сделки и помощь при конфликтах и просрочках.</span></div>
             </div>
+            <StatusCard />
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link href="/protection" className="ie-btn ie-btn--gold">Как мы защищаем инвесторов</Link>
               <Link href="/protection/contact" className="ie-btn ie-btn--ghost">Обратиться за помощью</Link>
@@ -110,6 +113,26 @@ export default async function Home() {
                   <span>{d.projects.length} проект.</span>
                   {d.completed ? <span>{d.completed} сдано</span> : null}
                 </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="ie-section" style={{ paddingTop: 0 }}>
+        <div className="ie-wrap">
+          <div className="ie-section-head">
+            <div><div className="ie-eyebrow">География</div><h2>Страны и локации</h2></div>
+            <p>Начинаем с Таиланда: Пхукет, Бангкок, Паттайя, Хуахин. Вьетнам готовится к запуску.</p>
+            <Link href="/countries" className="ie-btn ie-btn--line">Все страны →</Link>
+          </div>
+          <div className="ie-countries">
+            {GEO.filter((c) => c.regions.length).map((c) => (
+              <Link key={c.code} href={`/countries/${c.slug}`} className={`ie-country ie-country--${c.status}`}>
+                <div className="ie-country-top"><span className="ie-flag" aria-hidden="true">{c.flag}</span><span className={`ie-pill ie-pill--${c.status}`}>{c.status === "active" ? "Работает" : "Готовим запуск"}</span></div>
+                <h2>{c.ru}</h2>
+                <p>{c.regions.map((r) => r.ru).join(" · ")}</p>
+                <span className="ie-country-go">Страна, локации и правила →</span>
               </Link>
             ))}
           </div>

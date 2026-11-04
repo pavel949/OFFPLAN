@@ -17,4 +17,5 @@ psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/30_deals.sql | sed "/^$/d"
 
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/40_project_evidence.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/60_project_sources.sql | sed "/^$/d"
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/70_legal_topics.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/50_privileges.sql | sed "/^$/d"

@@ -13,10 +13,47 @@ export const PROTECTION_NAV = [
   { href: "/protection/representative", label: "Уполномоченный представитель" },
 ] as const;
 
+/**
+ * Official appointment, source: Order of the Moscow City Business Ombudsman No. 320-П of 10 July 2025
+ * (owner's copy). Wording follows the order. The order concerns the protection of Russian and foreign
+ * BUSINESS ENTITIES; it does not by itself extend to private disputes of individual buyers, and the page
+ * says so. Do not use the Ombudsman's coat of arms or letterhead on the site.
+ */
+export const APPOINTMENT = {
+  title: "Общественный представитель Уполномоченного по защите прав предпринимателей в городе Москве в Королевстве Таиланд",
+  titleEn: "Public Representative of the Moscow City Business Ombudsman in the Kingdom of Thailand",
+  order: "№ 320-П",
+  orderDate: "10 июля 2025 г.",
+  orderDateIso: "2025-07-10",
+  issuedBy: "Уполномоченный по защите прав предпринимателей в городе Москве (Т. В. Сизова)",
+  appointed: "Павел Александрович Игнатьев",
+  appointedPost: "Managing Director, Ignatev Estate Co., Ltd.",
+  territory: "Королевство Таиланд",
+  term: "На срок полномочий Уполномоченного",
+  legalBasis: "Закон города Москвы от 30 октября 2013 г. № 56 (ст. 3 и ч. 3 ст. 17)",
+  purposes: [
+    "Защита прав и законных интересов российских и иностранных субъектов предпринимательской деятельности",
+    "Развитие общественных институтов, ориентированных на защиту прав и законных интересов предпринимателей",
+    "Содействие Уполномоченному в осуществлении его полномочий",
+  ],
+  powers:
+    "Права и полномочия, предусмотренные Положением об общественных уполномоченных Уполномоченного по защите прав предпринимателей в городе Москве (приказ Уполномоченного № 244-П от 25 марта 2024 г.). В своей деятельности представитель руководствуется этим Положением.",
+  portal: "https://business-ombudsman.mos.ru/",
+  office: {
+    name: "Аппарат Уполномоченного по защите прав предпринимателей в городе Москве",
+    address: "Тверская улица, д. 13, Москва, 125032",
+    phone: "8 (495) 620-2734",
+    email: "Ombudsman@mos.ru",
+  },
+  /** Optional: path of a published copy of the order under /public (not published by default). */
+  orderPdf: null as string | null,
+} as const;
+
 export const REPRESENTATIVE = {
-  name: "Павел Игнатьев",
-  role: "Общественный представитель Уполномоченного по защите прав предпринимателей в городе Москве в Королевстве Таиланд",
-  order: "приказ № 320-П",
+  name: "Павел Александрович Игнатьев",
+  shortName: "Павел Игнатьев",
+  role: APPOINTMENT.title,
+  order: `приказ ${APPOINTMENT.order} от ${APPOINTMENT.orderDate}`,
   company: "Ignatev Estate Co., Ltd, Пхукет, Таиланд",
   phone: "+66 92 240 7355",
   /** Optional, filled by the owner: photo path under /public, biography paragraphs, key facts. */
@@ -26,7 +63,7 @@ export const REPRESENTATIVE = {
 } as const;
 
 export const DISCLAIMER =
-  "Ignatev Estate — частный проект. Он не является государственным или муниципальным ресурсом. Статус общественного представителя Уполномоченного не означает, что Уполномоченный, Правительство Москвы или иные органы поддерживают, проверяют или гарантируют платформу, проекты застройщиков или сделки. Мы не обещаем результат по конкретному спору и не оказываем юридические услуги, если это не оговорено отдельным письменным договором.";
+  "Ignatev Estate — частная компания, а платформа — её частный проект. Статус общественного представителя подтверждается приказом Уполномоченного, но не означает, что Уполномоченный, Правительство Москвы или иные органы поддерживают, проверяют или гарантируют платформу, проекты застройщиков или сделки. Мы не обещаем результат по конкретному спору и не оказываем юридические услуги, если это не оговорено отдельным письменным договором.";
 
 export type Pain = {
   id: string;

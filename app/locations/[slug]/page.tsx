@@ -19,7 +19,10 @@ type Params = { params: Promise<{ slug: string }> };
 async function load(slug: string) {
   const [projects, regions] = await Promise.all([getProjects(), getRegionMeta()]);
   const inLoc = projects.filter((p) => locationSlug(p.zone) === slug);
-  if (!inLoc.length) return null;
+  if (!inLoc.length) {
+    const known = regions[slug];
+    return known && known.level === "district" ? { projects, regions, inLoc, meta: known } : null;
+  }
   return { projects, regions, inLoc, meta: metaFor(inLoc[0].zone, regions) };
 }
 
@@ -44,6 +47,7 @@ export default async function LocationPage({ params }: Params) {
   const devs = groupBy(d.inLoc, (p) => developerSlug(p.dt), (p) => p.dev);
   const siblings = locationRows(d.projects, d.regions).filter((r) => r.key !== slug && r.meta.parentSlug === d.meta.parentSlug).slice(0, 8);
   const topType = Object.entries(s.byType).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "villa";
+  const empty = d.inLoc.length === 0;
   const onSale = d.inLoc.reduce((n, p) => n + (feed.availability[p.id]?.available ?? 0), 0);
   const hasSale = d.inLoc.some((p) => feed.availability[p.id]?.available != null);
 
@@ -59,23 +63,29 @@ export default async function LocationPage({ params }: Params) {
           </div>
           <div className="ie-eyebrow" style={{ marginTop: 14 }}>{d.meta.parentNameRu ?? "Локация"}</div>
           <h1 className="ie-ptitle">{d.meta.nameRu}</h1>
-          <p className="ie-psub">{s.projects} проект. · {s.developers} застройщиков · медиана цены {fmtM(s.price.median)}</p>
+          <p className="ie-psub">{empty ? "Проектов пока нет: локация заведена в справочник и готова принимать проекты" : `${s.projects} проект. · ${s.developers} застройщиков · медиана цены ${fmtM(s.price.median)}`}</p>
           <div style={{ display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" }}>
-            <Link className="ie-btn ie-btn--gold" href={`/?zone=${encodeURIComponent(d.inLoc[0].zone)}#ie-results`}>Смотреть все проекты</Link>
-            <Link className="ie-btn ie-btn--ghost" href={`/analytics?loc=${slug}`}>Аналитика локации</Link>
+            {empty ? (
+              <Link className="ie-btn ie-btn--gold" href="/partner">Добавить проект в эту локацию</Link>
+            ) : (
+              <>
+                <Link className="ie-btn ie-btn--gold" href={`/?zone=${encodeURIComponent(d.inLoc[0].zone)}#ie-results`}>Смотреть все проекты</Link>
+                <Link className="ie-btn ie-btn--ghost" href={`/analytics?loc=${slug}`}>Аналитика локации</Link>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       <div className="ie-wrap" style={{ padding: "36px 0 70px", display: "grid", gap: 20 }}>
-        <div className="ie-kpis">
+        {empty ? null : <div className="ie-kpis">
           <div className="ie-kpi"><small>Проектов</small><b>{s.projects}</b><span>{s.stage.ready} сдано · {s.stage.building} строится · {s.stage.offplan} старт</span></div>
           <div className="ie-kpi"><small>Цена от — до</small><b>{fmtM(s.price.min)}–{fmtM(s.price.max)}</b><span>медиана {fmtM(s.price.median)} (по {s.price.n} проект.)</span></div>
           <div className="ie-kpi"><small>Доходность (заявл.)</small><b>{fmtPct(s.yield.avg)}</b><span>среднее по {s.yield.n} проект.</span></div>
           <div className="ie-kpi"><small>Лотов в проектах</small><b>{fmtInt(s.units.total)}</b><span>данные по {s.units.coveredProjects} из {s.projects} проект.</span></div>
           <div className="ie-kpi"><small>Застройщиков</small><b>{s.developers}</b><span>{hasSale ? `${onSale} лотов в продаже` : "наличие лотов не внесено"}</span></div>
           <div className="ie-kpi"><small>Цена за м²</small><b>{s.perSqm.median ? `฿${fmtInt(s.perSqm.median)}` : "—"}</b><span>{s.perSqm.n ? `медиана по ${s.perSqm.n} проект.` : "в проектах не указана"}</span></div>
-        </div>
+        </div>}
 
         <section className="ie-card">
           <h2 className="ie-h2">О локации</h2>
@@ -99,7 +109,15 @@ export default async function LocationPage({ params }: Params) {
           )}
         </section>
 
-        <div className="ie-two">
+        {empty ? (
+          <section className="ie-card">
+            <h2 className="ie-h2">Проектов пока нет</h2>
+            <p className="ie-lead">Застройщик или оператор может добавить проект в эту локацию через кабинет: после публикации он появится здесь, в каталоге и в аналитике, а показатели локации начнут считаться автоматически.</p>
+            <Link href="/partner" className="ie-btn ie-btn--ink">Кабинет застройщика</Link>
+          </section>
+        ) : null}
+
+        {empty ? null : <div className="ie-two">
           <section className="ie-card">
             <h2 className="ie-h2">Типы проектов</h2>
             <Bars
@@ -120,16 +138,16 @@ export default async function LocationPage({ params }: Params) {
               ))}
             </ul>
           </section>
-        </div>
+        </div>}
 
-        <section>
+        {empty ? null : <section>
           <div className="ie-section-head" style={{ marginBottom: 18 }}>
             <div><div className="ie-eyebrow">Проекты</div><h2>Что строится в {d.meta.nameRu}</h2></div>
           </div>
           <div className="ie-grid">
             {d.inLoc.map((p) => <ProjectTile key={p.id} p={p} feed={feed} />)}
           </div>
-        </section>
+        </section>}
 
         {siblings.length ? (
           <section className="ie-card">

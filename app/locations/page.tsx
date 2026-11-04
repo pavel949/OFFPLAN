@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/ie/SiteFooter";
 import { SiteHeader } from "@/components/ie/SiteHeader";
 import { fmtM, fmtPct, TYPE_RU } from "@/lib/analytics";
 import { getProjects } from "@/lib/catalog";
+import { getCountryTrees } from "@/lib/countries";
 import { getRegionMeta, locationRows } from "@/lib/locations";
 
 export const metadata: Metadata = {
@@ -15,8 +16,9 @@ export const metadata: Metadata = {
 };
 
 export default async function LocationsPage() {
-  const [projects, regions] = await Promise.all([getProjects(), getRegionMeta()]);
+  const [projects, regions, trees] = await Promise.all([getProjects(), getRegionMeta(), getCountryTrees()]);
   const rows = locationRows(projects, regions);
+  const rowBySlug = new Map(rows.map((r) => [r.key, r]));
   const groups = new Map<string, typeof rows>();
   for (const r of rows) {
     const k = r.meta.parentNameRu ?? "Другие локации";
@@ -41,45 +43,64 @@ export default async function LocationsPage() {
       </section>
       <section className="ie-section">
         <div className="ie-wrap">
-          {[...groups].map(([parent, list]) => (
-            <div key={parent} style={{ marginBottom: 44 }}>
+          {trees.filter((c) => c.regions.length).map((c) => (
+            <div key={c.code} style={{ marginBottom: 56 }}>
               <div className="ie-section-head">
                 <div>
-                  <div className="ie-eyebrow">{list.reduce((s, r) => s + r.projects, 0)} проектов</div>
-                  <h2>{parent}</h2>
+                  <div className="ie-eyebrow">{c.flag} {c.status === "active" ? "Работает" : "Готовим запуск"}</div>
+                  <h2>{c.ru}</h2>
                 </div>
+                <Link href={`/countries/${c.slug}`} className="ie-btn ie-btn--line">Страна, правила и право →</Link>
               </div>
-              <div className="ie-locs">
-                {list.map((r) => {
-                  const top = Object.entries(r.types).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "villa";
-                  return (
-                    <Link key={r.key} href={`/locations/${r.key}`} className="ie-loc">
-                      <div className="ie-loc-media">
-                        <Scene seed={r.key.length * 7 + r.projects} kind={top === "condo" ? "condo" : top === "house" ? "house" : "villa"} />
-                        <span className="ie-loc-count">{r.projects} проект.</span>
-                        <div className="ie-loc-name">
-                          <small>{r.meta.parentNameRu ?? "Локация"}</small>
-                          <b>{r.meta.nameRu}</b>
-                        </div>
+              {c.regions.map((reg) => {
+                const withProjects = reg.locations.filter((l) => rowBySlug.has(l.slug));
+                const empty = reg.locations.filter((l) => !rowBySlug.has(l.slug));
+                const total = withProjects.reduce((n, l) => n + (rowBySlug.get(l.slug)?.projects ?? 0), 0);
+                return (
+                  <div key={reg.slug} style={{ marginBottom: 34 }}>
+                    <div className="ie-region-head" style={{ marginBottom: 14 }}>
+                      <h3 className="ie-serif" style={{ fontSize: 30, margin: 0 }}>{reg.ru}</h3>
+                      <span>{total ? `${total} проектов` : "проектов пока нет"}</span>
+                    </div>
+                    {withProjects.length ? (
+                      <div className="ie-locs">
+                        {withProjects.map((l) => {
+                          const r = rowBySlug.get(l.slug)!;
+                          const top = Object.entries(r.types).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "villa";
+                          return (
+                            <Link key={r.key} href={`/locations/${r.key}`} className="ie-loc">
+                              <div className="ie-loc-media">
+                                <Scene seed={r.key.length * 7 + r.projects} kind={top === "condo" ? "condo" : top === "house" ? "house" : "villa"} />
+                                <span className="ie-loc-count">{r.projects} проект.</span>
+                                <div className="ie-loc-name"><small>{reg.ru}</small><b>{l.ru}</b></div>
+                              </div>
+                              <div className="ie-loc-body">
+                                <div className="ie-loc-stats">
+                                  <div><b>{fmtM(r.median)}</b><small>медиана цены</small></div>
+                                  <div><b>{fmtPct(r.yieldAvg)}</b><small>доходность</small></div>
+                                  <div><b>{r.developers}</b><small>застройщиков</small></div>
+                                </div>
+                                <div className="ie-loc-types">
+                                  {Object.entries(r.types).sort((a, b) => b[1] - a[1]).map(([t, n]) => (<span key={t} className="ie-fact">{TYPE_RU[t] ?? t}: {n}</span>))}
+                                  {r.ready ? <span className="ie-fact">сдано: {r.ready}</span> : null}
+                                </div>
+                                <span className="ie-loc-go">Изучить локацию →</span>
+                              </div>
+                            </Link>
+                          );
+                        })}
                       </div>
-                      <div className="ie-loc-body">
-                        <div className="ie-loc-stats">
-                          <div><b>{fmtM(r.median)}</b><small>медиана цены</small></div>
-                          <div><b>{fmtPct(r.yieldAvg)}</b><small>доходность</small></div>
-                          <div><b>{r.developers}</b><small>застройщиков</small></div>
-                        </div>
-                        <div className="ie-loc-types">
-                          {Object.entries(r.types).sort((a, b) => b[1] - a[1]).map(([t, n]) => (
-                            <span key={t} className="ie-fact">{TYPE_RU[t] ?? t}: {n}</span>
-                          ))}
-                          {r.ready ? <span className="ie-fact">сдано: {r.ready}</span> : null}
-                        </div>
-                        <span className="ie-loc-go">Изучить локацию →</span>
+                    ) : null}
+                    {empty.length ? (
+                      <div className="ie-loc-types" style={{ marginTop: withProjects.length ? 16 : 0 }}>
+                        {empty.map((l) => (
+                          <Link key={l.slug} href={`/locations/${l.slug}`} className="ie-fact ie-fact--soon" style={{ textDecoration: "none" }}>{l.ru} · скоро</Link>
+                        ))}
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>

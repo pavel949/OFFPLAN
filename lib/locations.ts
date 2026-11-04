@@ -3,6 +3,7 @@ import { groupBy, type GroupRow } from "./analytics";
 import { locationSlug } from "./slug";
 import { zoneLabel } from "./taxonomy";
 import type { CatalogProject } from "./types";
+import { GEO } from "./geo-seed";
 import { withTimeout } from "./with-timeout";
 
 /**
@@ -24,8 +25,26 @@ export type LocationMeta = {
 
 export { locationSlug };
 
+/** Offline / development fallback: the same taxonomy that the migration loads into `regions`. */
+export function geoFallbackMeta(): Record<string, LocationMeta> {
+  const out: Record<string, LocationMeta> = {};
+  for (const c of GEO)
+    for (const r of c.regions)
+      for (const l of r.locations)
+        out[l.slug] = {
+          slug: l.slug, zone: l.en, nameRu: l.ru, nameEn: l.en, level: "district",
+          parentSlug: r.slug, parentNameRu: r.ru, parentNameEn: r.en, jurisdiction: c.code,
+        };
+  return out;
+}
+
 export async function getRegionMeta(): Promise<Record<string, LocationMeta>> {
-  if (!hasSupabasePublicConfig()) return {};
+  if (!hasSupabasePublicConfig()) return geoFallbackMeta();
+  const fromDb = await getRegionMetaDb();
+  return Object.keys(fromDb).length ? fromDb : geoFallbackMeta();
+}
+
+async function getRegionMetaDb(): Promise<Record<string, LocationMeta>> {
   return withTimeout(
     (async () => {
       try {
