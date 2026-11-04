@@ -9,6 +9,7 @@ begin
   end if;
 end $$;
 insert into public.developer_import_projects(external_id,developer_code,name,source_url,source_data) values('IE-999','DEV-SANSIRI','Test','https://example.com','{}');
+insert into public.developer_import_projects(external_id,developer_code,name,source_url,source_data) values('IE-998','DEV-SUDARA','Sudara source test','https://example.com','{}');
 insert into public.developer_import_records(dataset,source_row,external_project_id,source_key,data) values
 ('offers',2,'IE-999','same-unit-freehold','{"unit_id":"unit1","ownership":"freehold","status":"unknown"}'),
 ('offers',3,'IE-999','same-unit-leasehold','{"unit_id":"unit1","ownership":"leasehold","status":"unknown"}');

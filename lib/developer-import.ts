@@ -10,7 +10,7 @@ export const IMPORT_SECTIONS: Record<string, string> = {
   'N21 Lifecycle': 'Жизненный цикл', 'N22 Audit': 'Аудит', 'N08 Data QA': 'Качество данных',
 };
 export const DEVELOPER_LABELS: Record<string,string> = {
-  'DEV-BANYAN':'Banyan Group', 'DEV-SANSIRI':'Sansiri', 'DEV-ASSETWISE':'Rhom Bho / AssetWise / The Title',
+  'DEV-BANYAN':'Banyan Group', 'DEV-SANSIRI':'Sansiri', 'DEV-ASSETWISE':'Rhom Bho / AssetWise / The Title', 'DEV-SUDARA':'Sudara / Princess Villa Limited',
 };
 export function importPage(value?: string) {
   const n=Number(value || 1);
