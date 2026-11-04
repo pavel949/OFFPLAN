@@ -1,3 +1,4 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLeadUnified } from "@/lib/leads/unified";
@@ -17,6 +18,7 @@ export default async function AdminLeadDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!(await getAdminSessionOk())) return null;
   const { id } = await params;
   const lead = await getLeadUnified(id);
   if (!lead) notFound();

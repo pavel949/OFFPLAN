@@ -114,7 +114,7 @@ export function filterProjects(all: CatalogProject[], f: HomeFilters): CatalogPr
     if (f.zone && p.zone !== f.zone) return false;
     if (type && p.type !== type) return false;
     if (stageFn && !stageFn(p)) return false;
-    if (budget != null && Number.isFinite(budget) && p.pN > budget) return false;
+    if (budget != null && Number.isFinite(budget) && (!(p.pN > 0) || p.pN > budget)) return false;
     if (year != null && p.compY !== year) return false;
     if (pq.minBR != null && p.minBR > pq.minBR) return false;
     if (pq.terms.length) {
@@ -126,6 +126,7 @@ export function filterProjects(all: CatalogProject[], f: HomeFilters): CatalogPr
 
   const by = f.sort;
   return [...list].sort((a, b) => {
+    if ((by === "price-asc" || by === "price-desc") && (!(a.pN > 0) || !(b.pN > 0))) return Number(!(a.pN > 0)) - Number(!(b.pN > 0));
     if (by === "price-asc") return a.pN - b.pN;
     if (by === "price-desc") return b.pN - a.pN;
     if (by === "year") return a.compY - b.compY || a.pN - b.pN;

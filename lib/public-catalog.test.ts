@@ -16,3 +16,19 @@ describe("toPublicProject", () => {
     expect(toPublicProject(p, true).rec).toBe("AVOID");
   });
 });
+
+
+describe("public price freshness", () => {
+  it("strips unconfirmed, invalid, future and expired prices before serialization", () => {
+    for (const date of [null, "invalid", "2999-01-01", "2020-01-01"]) {
+      const out = toPublicProject({ ...p, dataConfirmedAt: date });
+      expect(out).toMatchObject({ pN: 0, pT: "POA", pU: "", sqmP: "" });
+    }
+  });
+  it("preserves recently confirmed prices without mutating the original", () => {
+    const row = { ...p, dataConfirmedAt: new Date().toISOString() };
+    expect(toPublicProject(row).pN).toBe(p.pN);
+    expect(toPublicProject(row).pT).toBe(p.pT);
+    expect(row.rec).toBe(p.rec);
+  });
+});

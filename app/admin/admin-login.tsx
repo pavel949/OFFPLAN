@@ -13,7 +13,7 @@ export function AdminLogin() {
         <p>Вход в панель управления лидами и каталогом.</p>
         <form action={formAction}>
           <label className="block text-xs font-semibold text-[var(--txt2)] mb-1">
-            Пароль (ADMIN_SECRET)
+            Пароль администратора
           </label>
           <input
             className="admin-inp"
