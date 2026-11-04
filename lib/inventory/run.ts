@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { activeJurisdiction } from "../jurisdiction";
 import {
   applyUnitPlan,
+  UnitImportError,
   loadExistingUnits,
   planUnitImport,
   type ImportSource,
@@ -83,6 +84,6 @@ export async function runUnitImport(input: {
     return { ok: true, mode: "apply", summary, applied };
   } catch (e) {
     console.error("[inventory] import failed", e);
-    return { ok: false, mode: input.mode, error: e instanceof Error ? e.message : "Ошибка импорта" };
+    return { ok: false, mode: input.mode, canApply: false, ...(e instanceof UnitImportError ? { applied: e.applied } : {}), error: e instanceof Error ? e.message : "Ошибка импорта" };
   }
 }

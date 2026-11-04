@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/ie/SiteFooter";
 import { SiteHeader } from "@/components/ie/SiteHeader";
 import {
-  DISCLAIMER, DOMAIN_PUBLIC, EVIDENCE_PUBLIC, GATES_PUBLIC, GOVERNANCE, NOT_PUBLISHED, PRICES, PRINCIPLES, TIERS_PUBLIC, WHY_CLOSED,
+  DISCLAIMER, DOMAIN_PUBLIC, EVIDENCE_PUBLIC, GATES_PUBLIC, GOVERNANCE, NOT_PUBLISHED, PRINCIPLES, TIERS_PUBLIC, WHY_CLOSED,
 } from "@/lib/clearview/public-content";
 import { createAnonClient, hasSupabasePublicConfig } from "@/lib/supabase/anon";
 
@@ -34,7 +34,7 @@ export default async function MethodologyPage() {
           <div className="ie-eyebrow" style={{ marginTop: 18 }}>ClearView</div>
           <h1>Как мы оцениваем проекты</h1>
           <p>Независимая оценка рисков новостроек: что проверяется, что останавливает оценку и почему результату можно доверять.</p>
-          <p style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Link className="ie-btn ie-btn--gold" href="/quick-assessment">Пройти быструю проверку</Link><a className="ie-btn ie-btn--line" href="#order">Заказать оценку</a></p>
+          <p style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Link className="ie-btn ie-btn--gold" href="/quick-assessment">Пройти быструю проверку</Link><a className="ie-btn ie-btn--line" href="#order">Статус сервиса</a></p>
         </div>
       </section>
 
@@ -47,7 +47,7 @@ export default async function MethodologyPage() {
         <section>
           <h2>Как идёт оценка</h2>
           <div className="cv-cards">
-            {[["1", "Область применения", "Новостройки жилой недвижимости на Пхукете: кондо, виллы, дома."], ["2", "Стоп-условия", "Десять проверок «да или нет». Любое срабатывание останавливает оценку."], ["3", "Девять областей", "Пункты риска оцениваются по доказательствам; недостаток данных снижает оценку."], ["4", "Итог и ограничения", "Результат складывается из областей. Провал в одной ключевой области не усредняется и ограничивает итог."], ["5", "Мониторинг", "Разрешения, обременения, квота, сроки и документы отслеживаются; оценка пересчитывается."]].map(([n, t, d]) => (
+            {[["1", "Область применения", "Новостройки жилой недвижимости на Пхукете: кондо, виллы, дома."], ["2", "Стоп-условия", "Десять проверок «да или нет». Любое срабатывание останавливает оценку."], ["3", "Девять областей", "Пункты риска оцениваются по доказательствам; недостаток данных снижает оценку."], ["4", "Итог и ограничения", "Результат складывается из областей. Провал в одной ключевой области не усредняется и ограничивает итог."], ["5", "Обновление", "Автоматический мониторинг пока не запущен. Актуальность разрешений, обременений и документов требует повторной проверки."]].map(([n, t, d]) => (
               <div className="cv-card" key={n}><span className="cv-pill">Шаг {n}</span><h3>{t}</h3><p>{d}</p></div>
             ))}
           </div>
@@ -91,14 +91,15 @@ export default async function MethodologyPage() {
         </section>
 
         <section>
-          <h2>Независимость и порядок работы</h2>
+          <h2>Требования к независимой оценке</h2>
+          <p className="cv-lead">Ниже — требования к будущему процессу полной оценки. Эта страница не подтверждает наличие действующей платной услуги, отдельного юридического лица или подписанного экспертами отчёта по конкретному проекту.</p>
           <ul style={{ paddingLeft: 20, display: "grid", gap: 8, fontSize: 15, lineHeight: 1.6, maxWidth: 820 }}>{GOVERNANCE.map((g) => <li key={g}>{g}</li>)}</ul>
         </section>
 
         <section>
           <h2>Версии правил и их отпечатки</h2>
           <p className="cv-lead">Отпечаток публикуется в момент выпуска версии и указывается в каждом отчёте. Он доказывает, что формула, по которой оценён проект, не менялась.</p>
-          {vers.length === 0 ? <p className="cv-lead">Первая версия проходит утверждение независимыми аналитиками и скоро будет опубликована.</p> : (
+          {vers.length === 0 ? <p className="cv-lead">Опубликованные версии не найдены или временно недоступны. Из этого нельзя сделать вывод об утверждении методологии.</p> : (
             <div style={{ display: "grid", gap: 10 }}>
               {vers.map((v) => (
                 <div className="cv-card" key={v.version}>
@@ -112,9 +113,9 @@ export default async function MethodologyPage() {
         </section>
 
         <section id="order">
-          <h2>Как заказать</h2>
-          <div className="cv-cards">{PRICES.map((p) => <div className="cv-card" key={p.t}><span className="cv-pill">{p.p}</span><h3>{p.t}</h3><p>{p.d}</p></div>)}</div>
-          <p className="cv-lead" style={{ marginTop: 14 }}>Цены указаны без НДС. Стоимость не зависит от результата оценки. Для первых пяти застройщиков действует пилотная скидка 50% в обмен на публикацию отчёта. <Link href="/partner/login" style={{ textDecoration: "underline" }}>Заказать в кабинете застройщика</Link>.</p>
+          <h2>Статус сервиса</h2>
+          <p className="cv-lead">Доступна бесплатная быстрая самопроверка. Она использует встроенную версию ClearView 2.2 и ответы пользователя, а не проверенные документы проекта. Публикация версии в студии пока не изменяет эту самопроверку автоматически.</p>
+          <p>Заказы, оплата, подписки и автоматический мониторинг ещё не подключены. Кабинет застройщика позволяет размещать проекты и материалы для проверки; оформление платной оценки в нём пока недоступно. Тарифы и условия пилота требуют отдельного подтверждения.</p>
         </section>
 
         <p className="cv-note">{DISCLAIMER}</p>

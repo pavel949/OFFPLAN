@@ -15,6 +15,8 @@ export interface ParsedUnit {
   price: number | null;
   currency: string;
   status: UnitStatus;
+  /** Columns explicitly present; missing optional columns must not erase existing data. */
+  providedFields?: string[];
 }
 
 export interface ParseResult {
@@ -227,7 +229,7 @@ export function parseInventoryText(text: string, defaultCurrency = DEFAULT_CURRE
     if (prev !== undefined) return rowErr(`дубликат (строка ${prev})`);
     seen.set(key, line);
 
-    rows.push({ line, label, externalKey, bedrooms, floor, sqm, price, currency, status });
+    rows.push({ line, label, externalKey, bedrooms, floor, sqm, price, currency, status, providedFields: [...Object.keys(idx), ...(Object.keys(SYMBOLS).some(s => priceRaw.includes(s)) ? ["currency"] : [])] });
   });
 
   return { rows, errors, delimiter };

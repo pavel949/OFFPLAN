@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LocalPhotoPreview } from "@/components/shared/LocalPhotoPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { submitUploadedPhotos } from "@/app/actions/project-evidence";
 
@@ -31,52 +32,58 @@ export function PhotoUploader({ projectId }: { projectId: string }) {
     if (!sb) return setMsg({ ok: false, text: "Нет подключения к базе" });
     setBusy(true);
     setMsg(null);
-    const done: { path: string; caption: string }[] = [];
-    for (const it of items) {
-      const ext = it.file.type === "image/png" ? "png" : it.file.type === "image/webp" ? "webp" : "jpg";
-      const path = `${projectId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await sb.storage.from("project-photos").upload(path, it.file, {
-        contentType: it.file.type,
-        cacheControl: "31536000",
-      });
-      if (error) {
-        setBusy(false);
-        return setMsg({ ok: false, text: `Не удалось загрузить «${it.file.name}»: ${error.message}` });
+    try {
+      const done: { path: string; caption: string }[] = [];
+      for (const it of items) {
+        const ext = it.file.type === "image/png" ? "png" : it.file.type === "image/webp" ? "webp" : "jpg";
+        const path = `${projectId}/${crypto.randomUUID()}.${ext}`;
+        const { error } = await sb.storage.from("project-photos").upload(path, it.file, {
+          contentType: it.file.type,
+          cacheControl: "31536000",
+        });
+        if (error) {
+          setBusy(false);
+          return setMsg({ ok: false, text: `Не удалось загрузить «${it.file.name}»: ${error.message}` });
+        }
+        done.push({ path, caption: it.caption });
       }
-      done.push({ path, caption: it.caption });
+      const r = await submitUploadedPhotos({ projectId, observedAt: date, items: done });
+      setBusy(false);
+      if (!r.ok) return setMsg({ ok: false, text: r.error ?? "Ошибка" });
+      setItems([]);
+      setMsg({ ok: true, text: `Отправлено на проверку: ${r.saved}. После одобрения фото появятся на странице проекта.` });
+    } catch {
+      setMsg({ ok: false, text: "Соединение прервано. Некоторые фотографии могли сохраниться. Проверьте список материалов перед повторной загрузкой." });
+    } finally {
+      setBusy(false);
     }
-    const r = await submitUploadedPhotos({ projectId, observedAt: date, items: done });
-    setBusy(false);
-    if (!r.ok) return setMsg({ ok: false, text: r.error ?? "Ошибка" });
-    setItems([]);
-    setMsg({ ok: true, text: `Отправлено на проверку: ${r.saved}. После одобрения фото появятся на странице проекта.` });
   }
 
   return (
     <section className="rounded-lg border border-[var(--bdr)] p-4 space-y-3">
       <h2 className="text-sm font-bold uppercase tracking-wide">Загрузить фотографии</h2>
       <p className="text-sm text-[var(--muted)]">
-        Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз). Укажите дату съёмки: фотоотчёт показывается с датой.
+        Хранилище фотографий публично по ссылке сразу после загрузки; документы для проверки здесь размещать нельзя. Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз). Укажите дату съёмки: фотоотчёт показывается с датой.
         Первое одобренное фото станет обложкой проекта.
       </p>
-      <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
+      <input type="file" multiple disabled={busy} accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
       <label className="block text-xs">
         Дата съёмки
-        <input type="date" value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
+        <input type="date" disabled={busy} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
       </label>
       {items.length ? (
         <ul className="space-y-2">
           {items.map((it, i) => (
             <li key={i} className="flex gap-3 items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={URL.createObjectURL(it.file)} alt="" className="w-16 h-12 object-cover rounded" />
+              <LocalPhotoPreview file={it.file} className="w-16 h-12 object-cover rounded" />
               <input
                 className="admin-inp mb-0 flex-1"
+                disabled={busy}
                 placeholder="Подпись: например, «Фасад, блок A»"
                 value={it.caption}
                 onChange={(e) => setItems((cur) => cur.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
               />
-              <button type="button" className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
+              <button type="button" disabled={busy} className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
                 убрать
               </button>
             </li>
