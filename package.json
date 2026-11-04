@@ -18,6 +18,7 @@
   "dependencies": {
     "@fontsource/cormorant-garamond": "5.3.0",
     "@fontsource/josefin-sans": "5.3.0",
+    "@fontsource/manrope": "^5.3.0",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
     "next": "15.5.14",

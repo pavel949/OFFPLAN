@@ -1,68 +1,122 @@
 export const dynamic = "force-dynamic";
-import fs from "fs";
-import path from "path";
+import Link from "next/link";
 import { Suspense } from "react";
-import { CatalogueShell } from "@/components/catalogue/CatalogueShell";
-import {
-  getCatalogHeadlineFromDb,
-  getCatalogMeta,
-  getProjects,
-  getPublicRatingMethodology,
-} from "@/lib/catalog";
-
-function loadTabHtml(name: string): string {
-  try {
-    return fs.readFileSync(
-      path.join(process.cwd(), `content/html-tabs/${name}.html`),
-      "utf8",
-    );
-  } catch {
-    return `<p class="text-sm opacity-70">Tab “${name}” could not be loaded.</p>`;
-  }
-}
+import { HomeExperience } from "@/components/ie/HomeExperience";
+import { SiteFooter } from "@/components/ie/SiteFooter";
+import { SiteHeader } from "@/components/ie/SiteHeader";
+import { getCatalogMeta, getProjects } from "@/lib/catalog";
+import { developerSlug, summarizeDevelopers } from "@/lib/developers";
+import { getHomeFeed } from "@/lib/home-feed";
+import { GUIDE } from "@/lib/guide-content";
+import { effectiveLevel } from "@/lib/registry/levels";
+import { projectSlug } from "@/lib/slug";
 
 export default async function Home() {
-  const [projects, methodology, headline] = await Promise.all([
-    getProjects(),
-    getPublicRatingMethodology(),
-    getCatalogHeadlineFromDb(),
-  ]);
-  const baseMeta = getCatalogMeta(projects);
-  const meta = headline
-    ? {
-        ...baseMeta,
-        totalValueBnTHB: headline.totalValueBnTHB,
-        quarterLabel: headline.quarterLabel,
-      }
-    : baseMeta;
-  const zones = [...new Set(projects.map((p) => p.zone))].sort();
-  const htmlTabs = {
-    analytics: loadTabHtml("analytics"),
-    risk: loadTabHtml("risk"),
-    devs: loadTabHtml("devs"),
-    services: loadTabHtml("services"),
-    calcBenchmarks: loadTabHtml("calc-benchmarks"),
-  };
+  const [projects, feed] = await Promise.all([getProjects(), getHomeFeed()]);
+  const meta = getCatalogMeta(projects);
+  const devs = summarizeDevelopers(projects);
+  const verified = projects.filter((p) => effectiveLevel(p.ver) > 0).length;
+  const byId = new Map(projects.map((p) => [p.id, p]));
+  const news = feed.updates.slice(0, 6).filter((u) => byId.has(u.projectId));
 
   return (
-    <Suspense
-      fallback={
-        <div
-          className="layout"
-          style={{ paddingTop: 80, paddingLeft: 14, color: "var(--ink)" }}
-        >
-          Loading…
+    <div className="ie-page">
+      <SiteHeader />
+      <Suspense fallback={<div style={{ minHeight: "70vh", background: "#060f1e" }} />}>
+        <HomeExperience
+          projects={projects}
+          feed={feed}
+          stats={{
+            projects: projects.length,
+            developers: devs.length,
+            verified,
+            updatedLabel: meta.quarterLabel,
+          }}
+        />
+      </Suspense>
+
+      {news.length ? (
+        <section className="ie-section ie-section--dark">
+          <div className="ie-wrap">
+            <div className="ie-section-head">
+              <div>
+                <div className="ie-eyebrow">Со строительных площадок</div>
+                <h2>Свежие новости проектов</h2>
+              </div>
+              <p>Фотоотчёты, этапы и анонсы публикуют сами застройщики.</p>
+            </div>
+            <div className="ie-news">
+              {news.map((u) => {
+                const p = byId.get(u.projectId)!;
+                return (
+                  <Link key={u.id} href={`/project/${projectSlug(p)}`} className="ie-news-item">
+                    <time dateTime={u.at}>{new Date(u.at).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })} · {p.n}</time>
+                    <h3>{u.titleRu}</h3>
+                    {u.bodyRu ? <p>{u.bodyRu.slice(0, 140)}</p> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="ie-section ie-section--dark" style={{ paddingTop: news.length ? 0 : undefined }}>
+        <div className="ie-wrap">
+          <div className="ie-section-head">
+            <div>
+              <div className="ie-eyebrow">Досье застройщиков</div>
+              <h2>Кто строит</h2>
+            </div>
+            <p>
+              У каждого застройщика собраны проекты, сданные объекты, юридические данные и статус
+              проверки: решение начинается с того, кому вы доверяете деньги.
+            </p>
+            <Link href="/developers" className="ie-btn ie-btn--ghost">
+              Все застройщики →
+            </Link>
+          </div>
+          <div className="ie-devs">
+            {devs.slice(0, 8).map((d) => (
+              <Link key={d.slug} href={`/developers/${developerSlug(d.code)}`} className="ie-dev">
+                <span className="ie-dev-mono">{d.name.charAt(0)}</span>
+                <h3>{d.name}</h3>
+                <p>{d.zones.slice(0, 3).join(" · ")}</p>
+                <div className="ie-dev-meta">
+                  <span>{d.projects.length} проект.</span>
+                  {d.completed ? <span>{d.completed} сдано</span> : null}
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-      }
-    >
-      <CatalogueShell
-        projects={projects}
-        meta={meta}
-        zones={zones}
-        htmlTabs={htmlTabs}
-        methodologyRu={methodology?.ru}
-        methodologyEn={methodology?.en}
-      />
-    </Suspense>
+      </section>
+
+      <section className="ie-section">
+        <div className="ie-wrap">
+          <div className="ie-section-head">
+            <div>
+              <div className="ie-eyebrow">Знания</div>
+              <h2>Прежде чем покупать</h2>
+            </div>
+            <p>Страна, районы, сделка и безопасность: короткие материалы для тех, кто покупает впервые.</p>
+            <Link href="/guide" className="ie-btn ie-btn--line">
+              Все материалы →
+            </Link>
+          </div>
+          <div className="ie-know">
+            {GUIDE.slice(0, 3).map((a) => (
+              <Link key={a.slug} href={`/guide/${a.slug}`}>
+                <span className="k">{a.group}</span>
+                <h3>{a.title}</h3>
+                <p>{a.lead}</p>
+                <span className="more">Читать →</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+      <SiteFooter />
+    </div>
   );
 }
