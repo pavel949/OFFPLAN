@@ -145,9 +145,10 @@ describe("applyUnitPlan", () => {
           const rec: { patch: Record<string, unknown>; id?: unknown } = { patch };
           calls.updates.push(rec);
           const chain = {
+            select: async () => ({ error: null, data: [{ id: rec.id }] }),
             eq: (col: string, v: unknown) => {
               if (col === "id") rec.id = v;
-              return col === "project_id" ? Promise.resolve({ error: null }) : chain;
+              return chain;
             },
           };
           return chain;

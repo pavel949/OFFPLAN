@@ -58,12 +58,12 @@ export function planUnitImport(existing: ExistingUnit[], rows: ParsedUnit[]): Un
     };
     if (normalizeKey(hit.label) !== normalizeKey(r.label)) changes.label = [hit.label, r.label];
     if (r.externalKey) cmp("external_key", hit.external_key, r.externalKey);
-    cmp("bedrooms", num(hit.bedrooms), r.bedrooms);
-    cmp("floor", num(hit.floor), r.floor);
-    cmp("sqm", num(hit.sqm), r.sqm);
+    if (!r.providedFields || r.providedFields.includes("bedrooms")) cmp("bedrooms", num(hit.bedrooms), r.bedrooms);
+    if (!r.providedFields || r.providedFields.includes("floor")) cmp("floor", num(hit.floor), r.floor);
+    if (!r.providedFields || r.providedFields.includes("sqm")) cmp("sqm", num(hit.sqm), r.sqm);
     cmp("price_thb", num(hit.price_thb), r.price);
-    cmp("currency", hit.currency, r.currency);
-    cmp("status", hit.status, r.status);
+    if (!r.providedFields || r.providedFields.includes("currency")) cmp("currency", hit.currency, r.currency);
+    if (!r.providedFields || r.providedFields.includes("status")) cmp("status", hit.status, r.status);
     if (Object.keys(changes).length) plan.updates.push({ id: hit.id, label: r.label, row: r, changes });
     else plan.unchanged += 1;
   }
@@ -72,12 +72,28 @@ export function planUnitImport(existing: ExistingUnit[], rows: ParsedUnit[]): Un
 }
 
 export async function loadExistingUnits(db: SupabaseClient, projectId: string): Promise<ExistingUnit[]> {
-  const { data, error } = await db
-    .from("project_units")
-    .select("id, label, external_key, bedrooms, floor, sqm, price_thb, currency, status, sort_order")
-    .eq("project_id", projectId);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ExistingUnit[];
+  const rows: ExistingUnit[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await db
+      .from("project_units")
+      .select("id, label, external_key, bedrooms, floor, sqm, price_thb, currency, status, sort_order")
+      .eq("project_id", projectId)
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as ExistingUnit[];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}
+
+/** Counts only acknowledged writes; a network failure can still have committed remotely. */
+export class UnitImportError extends Error {
+  constructor(message: string, public readonly applied: { inserted: number; updated: number }) {
+    super(`${message}. Импорт мог выполниться частично. Нажмите «Проверить» повторно: план будет рассчитан по текущей базе.`);
+    this.name = "UnitImportError";
+  }
 }
 
 export type ImportSource = "import" | "operator";
@@ -89,6 +105,7 @@ export async function applyUnitPlan(
   plan: UnitPlan,
   opts: { source: ImportSource; actorId: string | null },
 ): Promise<{ inserted: number; updated: number }> {
+  const applied = { inserted: 0, updated: 0 };
   const now = new Date().toISOString();
   const base = existing.reduce((m, u) => Math.max(m, u.sort_order ?? 0), 0) + 1;
 
@@ -107,36 +124,40 @@ export async function applyUnitPlan(
     sort_order: base + i,
     updated_at: now,
   }));
-  for (let i = 0; i < insertRows.length; i += 200) {
-    const { error } = await db.from("project_units").insert(insertRows.slice(i, i + 200));
-    if (error) throw new Error(`Вставка: ${error.message}`);
-  }
+  try {
+    for (let i = 0; i < insertRows.length; i += 200) {
+      const { error } = await db.from("project_units").insert(insertRows.slice(i, i + 200));
+      if (error) throw new UnitImportError(`Вставка: ${error.message}`, { ...applied });
+      applied.inserted += insertRows.slice(i, i + 200).length;
+    }
 
-  for (let i = 0; i < plan.updates.length; i += 20) {
-    const chunk = plan.updates.slice(i, i + 20);
-    const results = await Promise.all(
-      chunk.map((u) =>
-        db
-          .from("project_units")
-          .update({
-            label: u.row.label,
-            ...(u.row.externalKey ? { external_key: u.row.externalKey } : {}),
-            bedrooms: u.row.bedrooms,
-            floor: u.row.floor,
-            sqm: u.row.sqm,
-            price_thb: u.row.price,
-            currency: u.row.currency,
-            status: u.row.status,
-            source: opts.source,
-            entered_by: opts.actorId,
-            updated_at: now,
-          })
-          .eq("id", u.id)
-          .eq("project_id", projectId),
-      ),
-    );
-    const failed = results.find((r) => r.error);
-    if (failed?.error) throw new Error(`Обновление: ${failed.error.message}`);
+    for (let i = 0; i < plan.updates.length; i += 20) {
+      const chunk = plan.updates.slice(i, i + 20);
+      const settled = await Promise.allSettled(
+        chunk.map((u) =>
+          db
+            .from("project_units")
+            .update({
+              ...Object.fromEntries(Object.entries(u.changes).map(([field, [, value]]) => [field, value])),
+              source: opts.source,
+              entered_by: opts.actorId,
+              updated_at: now,
+            })
+            .eq("id", u.id)
+            .eq("project_id", projectId)
+            .select("id"),
+        ),
+      );
+      const results = settled.map((result) => result.status === "fulfilled"
+        ? result.value
+        : { data: null, error: { message: result.reason instanceof Error ? result.reason.message : "Ошибка соединения" } });
+      applied.updated += results.filter((r) => !r.error && r.data?.length === 1).length;
+      const failed = results.find((r) => r.error || r.data?.length !== 1);
+      if (failed) throw new UnitImportError(`Обновление: ${failed.error?.message ?? "лот недоступен или был удалён"}`, { ...applied });
+    }
+    return applied;
+  } catch (error) {
+    if (error instanceof UnitImportError) throw error;
+    throw new UnitImportError(error instanceof Error ? error.message : "Ошибка соединения", { ...applied });
   }
-  return { inserted: insertRows.length, updated: plan.updates.length };
 }

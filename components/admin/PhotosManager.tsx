@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { LocalPhotoPreview } from "@/components/shared/LocalPhotoPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   adminStudioPhotoDecision, adminStudioRegisterPhotos, adminStudioSignUploads, type PhotoRow,
@@ -37,21 +38,27 @@ export function PhotosManager({ projectId, photos }: { projectId: string; photos
     if (!sb) return setMsg({ ok: false, text: "Нет подключения к хранилищу" });
     setBusy(true);
     setMsg(null);
-    const slots = await adminStudioSignUploads(projectId, picks.length, picks.map((p) => EXT[p.file.type]));
-    if (!slots.ok || !slots.slots) { setBusy(false); return setMsg({ ok: false, text: slots.error ?? "Ошибка" }); }
-    const done: { path: string; caption: string }[] = [];
-    for (let i = 0; i < picks.length; i++) {
-      const s = slots.slots[i];
-      const { error } = await sb.storage.from("project-photos").uploadToSignedUrl(s.path, s.token, picks[i].file, { contentType: picks[i].file.type });
-      if (error) { setBusy(false); return setMsg({ ok: false, text: `«${picks[i].file.name}»: ${error.message}` }); }
-      done.push({ path: s.path, caption: picks[i].caption });
+    try {
+      const slots = await adminStudioSignUploads(projectId, picks.length, picks.map((p) => EXT[p.file.type]));
+      if (!slots.ok || !slots.slots) { setBusy(false); return setMsg({ ok: false, text: slots.error ?? "Ошибка" }); }
+      const done: { path: string; caption: string }[] = [];
+      for (let i = 0; i < picks.length; i++) {
+        const s = slots.slots[i];
+        const { error } = await sb.storage.from("project-photos").uploadToSignedUrl(s.path, s.token, picks[i].file, { contentType: picks[i].file.type });
+        if (error) { setBusy(false); return setMsg({ ok: false, text: `«${picks[i].file.name}»: ${error.message}` }); }
+        done.push({ path: s.path, caption: picks[i].caption });
+      }
+      const r = await adminStudioRegisterPhotos(projectId, done, date);
+      setBusy(false);
+      if (!r.ok) return setMsg({ ok: false, text: r.error ?? "Ошибка" });
+      setPicks([]);
+      setMsg({ ok: true, text: `Опубликовано фото: ${r.saved}` });
+      router.refresh();
+    } catch {
+      setMsg({ ok: false, text: "Соединение прервано. Некоторые фотографии могли сохраниться. Проверьте список материалов перед повторной загрузкой." });
+    } finally {
+      setBusy(false);
     }
-    const r = await adminStudioRegisterPhotos(projectId, done, date);
-    setBusy(false);
-    if (!r.ok) return setMsg({ ok: false, text: r.error ?? "Ошибка" });
-    setPicks([]);
-    setMsg({ ok: true, text: `Опубликовано фото: ${r.saved}` });
-    router.refresh();
   }
 
   function decide(id: string, action: "approve" | "reject" | "remove") {
@@ -67,23 +74,22 @@ export function PhotosManager({ projectId, photos }: { projectId: string; photos
     <>
       <section className="adm-card">
         <h3>Загрузить фотографии</h3>
-        <p className="adm-lead">Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз), добавьте подписи и дату съёмки. Фото публикуются сразу. Самое свежее фото становится обложкой проекта.</p>
+        <p className="adm-lead">Фотографии доступны по ссылке сразу после загрузки. Документы для проверки размещайте в разделе документов. Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз), добавьте подписи и дату съёмки. Фото публикуются сразу. Самое свежее фото становится обложкой проекта.</p>
         <div className="adm-drop">
-          <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+          <input type="file" multiple disabled={busy} accept="image/jpeg,image/png,image/webp" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
         </div>
         {picks.length ? (
           <>
             <div className="adm-grid" style={{ marginTop: 14 }}>
-              <div className="adm-field c3"><label>Дата съёмки</label><input type="date" value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} /></div>
+              <div className="adm-field c3"><label>Дата съёмки</label><input type="date" disabled={busy} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} /></div>
             </div>
             <div className="adm-photos" style={{ marginTop: 14 }}>
               {picks.map((p, i) => (
                 <div className="adm-photo" key={i}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={URL.createObjectURL(p.file)} alt="" />
+                  <LocalPhotoPreview file={p.file} />
                   <div>
-                    <input className="adm-cell" placeholder="Подпись, например: Фасад, блок A" value={p.caption} onChange={(e) => setPicks((c) => c.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))} />
-                    <button type="button" className="adm-btn adm-btn--line adm-btn--sm" onClick={() => setPicks((c) => c.filter((_, j) => j !== i))}>Убрать</button>
+                    <input className="adm-cell" disabled={busy} placeholder="Подпись, например: Фасад, блок A" value={p.caption} onChange={(e) => setPicks((c) => c.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))} />
+                    <button type="button" disabled={busy} className="adm-btn adm-btn--line adm-btn--sm" onClick={() => setPicks((c) => c.filter((_, j) => j !== i))}>Убрать</button>
                   </div>
                 </div>
               ))}

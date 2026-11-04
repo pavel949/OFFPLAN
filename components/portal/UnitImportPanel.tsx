@@ -140,9 +140,9 @@ export function UnitImportPanel({
         </div>
       ) : null}
 
-      {state.ok && state.mode === "apply" && state.applied ? (
+      {state.mode === "apply" && state.applied ? (
         <p className="text-sm text-[var(--grn)]">
-          Готово: добавлено {state.applied.inserted}, обновлено {state.applied.updated}.
+          {state.ok ? "Готово" : "Подтверждено сохранение"}: добавлено {state.applied.inserted}, обновлено {state.applied.updated}.
         </p>
       ) : null}
     </section>
