@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HomeExperience } from "@/components/ie/HomeExperience";
 import { SiteFooter } from "@/components/ie/SiteFooter";
+import { StatusCard } from "@/components/ie/StatusCard";
 import { SiteHeader } from "@/components/ie/SiteHeader";
 import { getCatalogMeta, getProjects } from "@/lib/catalog";
 import { developerSlug, summarizeDevelopers } from "@/lib/developers";
@@ -51,6 +52,7 @@ export default async function Home() {
               <div><b>Выбирайте с проверкой</b><span>Уровни проверки реестра и досье каждого застройщика.</span></div>
               <div><b>Связывайтесь с нами</b><span>Вопросы до сделки и помощь при конфликтах и просрочках.</span></div>
             </div>
+            <StatusCard />
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link href="/protection" className="ie-btn ie-btn--gold">Как мы защищаем инвесторов</Link>
               <Link href="/protection/contact" className="ie-btn ie-btn--ghost">Обратиться за помощью</Link>
