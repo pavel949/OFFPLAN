@@ -56,6 +56,28 @@ export default async function PartnerProjectEditPage({
     .eq("entity_id", projectId)
     .eq("status", "pending");
 
+  const cnt = async (table: string, extra?: (q: any) => any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    let q = supabase.from(table).select("id", { count: "exact", head: true }).eq("project_id", projectId);
+    if (extra) q = extra(q);
+    const { count } = await q;
+    return count ?? 0;
+  };
+  const [units, photosPub, photosPend, news, links, promos] = await Promise.all([
+    cnt("project_units"),
+    cnt("project_evidence", (q) => q.eq("kind", "photo").eq("status", "published")),
+    cnt("project_evidence", (q) => q.eq("kind", "photo").eq("status", "pending")),
+    cnt("project_updates"),
+    cnt("project_sources"),
+    cnt("sales_campaigns"),
+  ]);
+  const checklist = [
+    { done: units > 0, label: `Инвентарь и цены: ${units} лот.`, href: "inventory", hint: "Вставьте таблицу из Excel: проверка до записи" },
+    { done: photosPub > 0, label: `Фото: ${photosPub} опубл.${photosPend ? `, ${photosPend} на проверке` : ""}`, href: "facts", hint: "Загрузите файлы с подписью и датой съёмки" },
+    { done: links > 0, label: `Ссылки и материалы: ${links}`, href: "materials", hint: "Сайт проекта, прайс-лист, брошюра, рендеры" },
+    { done: news > 0, label: `Новости со стройки: ${news}`, href: "updates", hint: "Хотя бы одна запись о ходе работ" },
+    { done: promos > 0, label: `Акции: ${promos}`, href: "campaigns", hint: "Необязательно, но повышает интерес" },
+  ];
+  const doneCount = checklist.filter((c) => c.done).length;
   const moderationLocked = (pendingCount ?? 0) > 0;
   const canEditDraft = prof?.partner_role !== "sales";
 
@@ -108,6 +130,24 @@ export default async function PartnerProjectEditPage({
           Кампании
         </Link>
       </div>
+      <section className="rounded-lg border border-[var(--bdr)] p-4 mb-6">
+        <h2 className="text-sm font-bold uppercase tracking-wide mb-2">
+          Заполненность проекта: {doneCount} из {checklist.length}
+        </h2>
+        <ul className="space-y-1.5 text-sm">
+          {checklist.map((c) => (
+            <li key={c.href} className="flex gap-2">
+              <span aria-hidden>{c.done ? "✅" : "⬜"}</span>
+              <span>
+                <Link className="underline font-semibold" href={`/partner/projects/${projectId}/${c.href}`}>
+                  {c.label}
+                </Link>
+                {!c.done ? <span className="text-[var(--muted)]"> · {c.hint}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
       <p className="text-[var(--muted)] text-sm mb-4">
         Статус: <strong>{row.moderation_status}</strong>
       </p>

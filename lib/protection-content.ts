@@ -17,7 +17,7 @@ export const PROTECTION_NAV = [
  * Official appointment, source: Order of the Moscow City Business Ombudsman No. 320-П of 10 July 2025
  * (owner's copy). Wording follows the order. The order concerns the protection of Russian and foreign
  * BUSINESS ENTITIES; it does not by itself extend to private disputes of individual buyers, and the page
- * says so. Do not use the Ombudsman's coat of arms or letterhead on the site.
+ * says so. The Ombudsman's logo (public/brand/ombudsman-moscow.svg, supplied by the owner) is shown only as the representative's affiliation, always next to the order reference and never as the platform's own mark; confirm with the Ombudsman's office that this use is permitted.
  */
 export const APPOINTMENT = {
   title: "Общественный представитель Уполномоченного по защите прав предпринимателей в городе Москве в Королевстве Таиланд",

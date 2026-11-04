@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { OmbudsmanLogo } from "@/components/ie/OmbudsmanLogo";
 import { ProtectionShell } from "@/components/ie/ProtectionShell";
 import { APPOINTMENT as A, DISCLAIMER, REPRESENTATIVE as R } from "@/lib/protection-content";
 
@@ -35,6 +36,7 @@ export default function RepresentativePage() {
               {R.photo ? <Image src={R.photo} alt={R.name} fill sizes="220px" style={{ objectFit: "cover" }} /> : "ПИ"}
             </div>
             <div>
+              <OmbudsmanLogo height={64} className="ie-oplate--block" />
               <div className="ie-badges-row" style={{ margin: "0 0 14px" }}>
                 <span className="ie-badge ie-badge--dark">Приказ {A.order} · {A.orderDate}</span>
                 <span className="ie-badge ie-badge--dark">{A.territory}</span>

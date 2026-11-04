@@ -16,6 +16,7 @@ import type { HomeFeed } from "@/lib/home-feed";
 import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import { ProjectTile } from "./ProjectTile";
+import { OmbudsmanLogo } from "./OmbudsmanLogo";
 
 const STAGES: [string, string][] = [
   ["", "Все"],
@@ -197,6 +198,10 @@ export function HomeExperience({
 
       <div className="ie-strip">
         <div className="ie-wrap">
+          <Link href="/protection/representative" className="ie-strip-cred" aria-label="Официальный статус: общественный представитель Уполномоченного в Таиланде">
+            <OmbudsmanLogo height={38} />
+            <em>Общественный представитель в Таиланде · приказ № 320-П</em>
+          </Link>
           <span>Смотрите и выбирайте проекты здесь. Если нужно уточнить детали или возник конфликт с застройщиком:</span>
           <Link href="/protection">Защита прав инвесторов →</Link>
           <Link href="/protection/contact">Обратиться за помощью</Link>
