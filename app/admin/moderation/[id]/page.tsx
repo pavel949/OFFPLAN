@@ -1,3 +1,4 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { diffJsonObjects } from "@/lib/json-diff";
@@ -12,6 +13,7 @@ export default async function AdminModerationDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!(await getAdminSessionOk())) return null;
   const { id } = await params;
 
   if (!hasSupabaseServiceConfig()) {
@@ -24,12 +26,13 @@ export default async function AdminModerationDetailPage({
   }
 
   const supabase = createServiceRoleClient();
-  const { data: sub } = await supabase
+  const { data: sub, error: subError } = await supabase
     .from("moderation_submissions")
     .select("*")
     .eq("id", id)
     .maybeSingle();
 
+  if (subError) throw new Error("Не удалось загрузить заявку на модерацию");
   if (!sub) {
     notFound();
   }
