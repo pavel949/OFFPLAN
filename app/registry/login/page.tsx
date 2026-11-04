@@ -13,7 +13,7 @@ export default function RegistryLoginPage() {
     setErr(null);
     setMsg(null);
     const supabase = createSupabaseBrowserClient();
-    if (!supabase) return setErr("Supabase не настроен");
+    if (!supabase) return setErr("Вход временно недоступен. Напишите нам, мы поможем.");
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/registry/review`, shouldCreateUser: false },

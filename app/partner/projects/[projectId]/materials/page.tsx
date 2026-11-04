@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import {
   partnerAddSource,
@@ -38,10 +38,8 @@ export default async function MaterialsPage({
 
   return (
     <div className="space-y-4">
-      <Link href={`/partner/projects/${projectId}`} className="text-sm underline">
-        ← Проект
-      </Link>
-      <h1 className="serif text-2xl">Материалы проекта</h1>
+      <ProjectTabs projectId={projectId} active="/materials" />
+      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Материалы проекта</h2>
       {error ? <p role="alert">Не удалось загрузить: {error.message}</p> : null}
       <SourcesManager
         projectId={projectId}

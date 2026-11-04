@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EvidenceForm } from "@/components/portal/EvidenceForm";
@@ -27,26 +27,32 @@ export default async function FactsPage({
     .eq("project_id", projectId)
     .order("submitted_at", { ascending: false });
   return (
-    <div className="max-w-2xl space-y-5">
-      <Link href={`/partner/projects/${projectId}`}>← Проект</Link>
-      <h1 className="text-2xl">Фотографии, инфраструктура и расходы</h1>
+    <div className="space-y-5">
+      <ProjectTabs projectId={projectId} active="/facts" />
+      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Фотографии и сведения о проекте</h2>
       {error ? (
         <p role="alert">Не удалось загрузить сведения: {error.message}</p>
       ) : null}
       <PhotoUploader projectId={projectId} />
       <details className="rounded-lg border border-[var(--bdr)] p-4">
-        <summary className="cursor-pointer text-sm font-bold">Другие сведения: инфраструктура, расходы, стадия продаж, фото по ссылке</summary>
+        <summary className="cursor-pointer text-sm font-bold">Добавить сведения: инфраструктура, расходы на содержание, стадия продаж</summary>
         <div className="mt-3">
           <EvidenceForm projectId={projectId} />
         </div>
       </details>
-      <ul>
-        {data?.map((x) => (
-          <li key={x.id}>
-            {x.title} · {x.status}
-          </li>
-        ))}
-      </ul>
+      <section className="adm-card">
+        <h3>Отправленные сведения</h3>
+        {data?.length ? (
+          <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0", display: "grid", gap: 8 }}>
+            {data.map((x) => (
+              <li key={x.id} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                <span className={`adm-pill ${x.status === "published" ? "ok" : x.status === "rejected" ? "bad" : "warn"}`}>{({ published: "на сайте", pending: "на проверке", rejected: "отклонено", archived: "архив" } as Record<string, string>)[x.status] ?? x.status}</span>
+                <span>{x.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="adm-hint">Пока ничего не отправлено.</p>}
+      </section>
     </div>
   );
 }

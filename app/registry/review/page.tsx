@@ -23,7 +23,7 @@ type Row = {
 
 export default async function ReviewQueuePage() {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return <p style={{ padding: 24 }}>Supabase не настроен</p>;
+  if (!supabase) return <p style={{ padding: 24 }}>Раздел временно недоступен.</p>;
   const {
     data: { user },
   } = await supabase.auth.getUser();

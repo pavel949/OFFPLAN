@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -6,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export default async function PartnerLeadsPage() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
-    return <p className="text-[var(--muted)]">Настройте Supabase в .env.local</p>;
+    return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
   }
   const {
     data: { user },
@@ -21,12 +20,7 @@ export default async function PartnerLeadsPage() {
   if (!prof?.org_id || prof.role !== "partner") {
     return (
       <div>
-        <p className="mb-4">
-          <Link href="/partner" className="text-sm text-[var(--muted)] underline">
-            ← Кабинет
-          </Link>
-        </p>
-        <p className="text-[var(--muted)] text-sm">Нужна роль partner и организация.</p>
+        <p className="pt-warn">Ваша учётная запись ещё не привязана к компании. Напишите нам, и мы подключим вас.</p>
       </div>
     );
   }
@@ -38,19 +32,14 @@ export default async function PartnerLeadsPage() {
     .limit(200);
 
   return (
-    <div className="max-w-4xl">
-      <p className="mb-4">
-        <Link href="/partner" className="text-sm text-[var(--muted)] underline">
-          ← Кабинет
-        </Link>
-      </p>
-      <h1 className="serif text-2xl mb-4">Заявки по вашим проектам</h1>
+    <div>
+      <div className="pt-hero"><div><h1>Заявки покупателей</h1><p>Люди, которые оставили контакты на страницах ваших проектов. Свяжитесь с ними в день обращения.</p></div></div>
       {error ? <p className="text-[var(--red)] text-sm">{error.message}</p> : null}
       {!leads?.length ? (
-        <p className="text-sm text-[var(--muted)]">Пока заявок нет.</p>
+        <p className="adm-hint">Пока заявок нет. Они появятся здесь, как только покупатели оставят контакты на странице вашего проекта.</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
-          <table className="text-sm w-full" style={{ borderCollapse: "collapse" }}>
+          <table className="adm-table">
             <thead>
               <tr style={{ textAlign: "left" }}>
                 <th>Дата</th>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CampaignsClient } from "./campaigns-client";
@@ -13,8 +13,7 @@ export default async function PartnerCampaignsPage({
   if (!supabase) {
     return (
       <div>
-        <p className="text-[var(--muted)]">Настройте Supabase в .env.local</p>
-        <Link href="/partner">Назад</Link>
+        <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>
       </div>
     );
   }
@@ -50,17 +49,10 @@ export default async function PartnerCampaignsPage({
 
   return (
     <div className="max-w-3xl">
-      <p className="mb-4">
-        <Link
-          href={`/partner/projects/${projectId}`}
-          className="text-sm text-[var(--muted)] underline"
-        >
-          ← Проект {row.slug}
-        </Link>
-      </p>
-      <h1 className="serif text-2xl mb-2">Кампании и старты</h1>
+      <ProjectTabs projectId={projectId} active="/campaigns" />
+      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Акции и старты продаж</h2>
       <p className="text-sm text-[var(--muted)] mb-6">
-        Launch / sale — публичные бейджи на карточке проекта (дорожная карта фазы 4).
+        Акции и старты продаж показываются бейджем на карточке проекта, пока они действуют.
       </p>
       <CampaignsClient
         projectId={projectId}

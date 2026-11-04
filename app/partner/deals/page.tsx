@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DEAL_STATUS_RU, ENTRY_STATUS_RU, fmtMoney } from "@/lib/commission/format";
 import { MILESTONE_RU, type Milestone } from "@/lib/commission/terms";
@@ -9,7 +8,7 @@ export const dynamic = "force-dynamic";
 /** Developer cabinet: deals on its projects and the commission it pays (nothing about the broker's side). */
 export default async function PartnerDealsPage() {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return <p className="text-[var(--muted)]">Настройте Supabase</p>;
+  if (!supabase) return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -26,11 +25,10 @@ export default async function PartnerDealsPage() {
   const pname = new Map((projs ?? []).map((p) => [p.id as string, ((p.payload as { n?: string } | null)?.n ?? p.slug) as string]));
 
   return (
-    <div className="max-w-4xl">
-      <p className="mb-4"><Link href="/partner" className="text-sm text-[var(--muted)] underline">← Кабинет</Link></p>
-      <h1 className="serif text-2xl mb-4">Сделки по вашим проектам</h1>
-      <div className="overflow-x-auto mb-8">
-        <table className="admin-table text-sm">
+    <div>
+      <div className="pt-hero"><div><h1>Сделки и комиссии</h1><p>Сделки по вашим проектам и комиссия к оплате по этапам.</p></div></div>
+      <div className="adm-scroll" style={{ marginBottom: 28 }}>
+        <table className="adm-table">
           <thead><tr><th>Дата</th><th>Проект</th><th>Цена</th><th>Комиссия</th><th>Статус</th></tr></thead>
           <tbody>
             {(deals.data ?? []).map((d) => (
@@ -42,12 +40,12 @@ export default async function PartnerDealsPage() {
                 <td>{DEAL_STATUS_RU[d.status as string]}</td>
               </tr>
             ))}
-            {(deals.data ?? []).length === 0 ? <tr><td colSpan={5}>Сделок пока нет.</td></tr> : null}
+            {(deals.data ?? []).length === 0 ? <tr><td colSpan={5} className="adm-hint">Сделок пока нет.</td></tr> : null}
           </tbody>
         </table>
       </div>
-      <h2 className="text-sm font-bold uppercase tracking-wide mb-2">Комиссия к оплате по этапам</h2>
-      <table className="admin-table text-sm">
+      <h2 style={{ fontSize: 13, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 800, margin: "0 0 10px" }}>Комиссия к оплате по этапам</h2>
+      <table className="adm-table">
         <thead><tr><th>Этап</th><th>Сумма</th><th>Оплачено</th><th>Статус</th><th>Срок</th></tr></thead>
         <tbody>
           {(entries.data ?? []).filter((e) => e.status !== "void").map((e) => (

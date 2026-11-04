@@ -1,106 +1,54 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ProjectsList } from "@/components/partner/ProjectsList";
+import { listOrgProjects } from "@/lib/partner-projects";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PartnerDashboardPage() {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
+  const db = await createSupabaseServerClient();
+  if (!db) return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
+  const { data: { user } } = await db.auth.getUser();
+  if (!user) redirect("/partner/login");
+
+  const { data: prof } = await db.from("profiles").select("role, org_id, full_name, partner_role").eq("id", user.id).maybeSingle();
+  if (!prof?.org_id) {
     return (
-      <div>
-        <h1 className="serif text-2xl mb-2">Кабинет застройщика</h1>
-        <p className="text-[var(--muted)] text-sm max-w-md">
-          Укажите в .env.local переменные NEXT_PUBLIC_SUPABASE_URL и
-          NEXT_PUBLIC_SUPABASE_ANON_KEY, затем войдите через{" "}
-          <Link href="/partner/login" className="underline font-semibold">
-            /partner/login
-          </Link>
-          .
-        </p>
-      </div>
+      <>
+        <div className="pt-hero"><div><h1>Добро пожаловать</h1><p>{user.email}</p></div></div>
+        <div className="pt-warn">Ваша учётная запись ещё не привязана к компании. Напишите нам, и мы подключим вас за один рабочий день.</div>
+        <Link className="adm-btn" href="/protection/contact">Написать команде</Link>
+      </>
     );
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/partner/login");
-  }
-
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("role, org_id, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  // Org-level inventory health (view respects RLS; missing before the migration is applied).
-  const { data: inv } = prof?.org_id
-    ? await supabase
-        .from("org_active_units")
-        .select("active_units, expired_units, last_price_update")
-        .eq("org_id", prof.org_id)
-        .maybeSingle()
-    : { data: null };
+  const projects = await listOrgProjects(db, prof.org_id);
+  const expired = projects.filter((p) => p.expiredPrices);
+  const isOwner = prof.partner_role !== "sales";
 
   return (
-    <div>
-      <h1 className="serif text-2xl mb-2">Кабинет застройщика</h1>
-      <p className="text-[var(--muted)] text-sm mb-4">
-        {prof?.full_name || user.email}
-      </p>
-      {inv ? (
-        <p
-          className="text-sm mb-4 rounded-lg border border-[var(--bdr)] p-3"
-          style={{ borderColor: Number(inv.expired_units) > 0 ? "var(--red)" : undefined }}
-        >
-          Активных лотов: <b>{Number(inv.active_units)}</b>
-          {Number(inv.expired_units) > 0 ? (
-            <>
-              {" "}
-              · <b style={{ color: "var(--red)" }}>{Number(inv.expired_units)}</b> с неподтверждёнными
-              ценами старше 30 дней (в каталоге цены скрыты) — откройте «Прайс-лист и инвентарь» в
-              проекте и подтвердите актуальность.
-            </>
-          ) : (
-            " · все цены актуальны."
-          )}
-        </p>
+    <>
+      <div className="pt-hero">
+        <div>
+          <h1>Здравствуйте{prof.full_name ? `, ${prof.full_name.split(" ")[0]}` : ""}</h1>
+          <p>Держите данные проектов актуальными: покупатели видят только подтверждённые цены и свежие фото.</p>
+        </div>
+        {isOwner ? <Link className="adm-btn" href="/partner/projects/new">+ Добавить проект</Link> : null}
+      </div>
+
+      {expired.length ? (
+        <div className="pt-warn">
+          <b>Цены устарели в проектах: {expired.map((p) => p.name).join(", ")}.</b> Цены старше 30 дней скрыты в каталоге. Откройте проект, вкладку «Лоты и цены», и подтвердите актуальность.
+        </div>
       ) : null}
-      <ul className="list-disc pl-5 text-sm space-y-2">
-        <li>
-          Роль: <strong>{prof?.role ?? "—"}</strong>
-        </li>
-        <li>
-          Организация:{" "}
-          <strong>{prof?.org_id ?? "не привязана (свяжитесь с IE)"}</strong>
-        </li>
-        <li>
-          <Link href="/partner/projects" className="underline font-semibold">
-            Мои проекты и черновики
-          </Link>
-        </li>
-        <li>
-          <Link href="/partner/deals" className="underline font-semibold">
-            Сделки и комиссии
-          </Link>{" "}
-          (для брокеров — <Link href="/broker" className="underline">кабинет брокера</Link>)
-        </li>
-        <li>
-          <Link href="/partner/leads" className="underline font-semibold">
-            Заявки по моим проектам
-          </Link>
-        </li>
-        <li>
-          <Link href="/partner/corrections" className="underline font-semibold">
-            Запрос правок по карточке IE
-          </Link>
-        </li>
-        <li>
-          <Link href="/" className="underline">
-            Публичный каталог
-          </Link>
-        </li>
-      </ul>
-    </div>
+
+      <ProjectsList projects={projects} isOwner={isOwner} />
+
+      <div className="pt-tiles">
+        <Link className="pt-tile" href="/partner/leads"><b>Заявки покупателей</b><span>Кто интересуется вашими проектами и что просит.</span></Link>
+        <Link className="pt-tile" href="/partner/deals"><b>Сделки и комиссии</b><span>Статус сделок по вашим проектам.</span></Link>
+        <Link className="pt-tile" href="/partner/corrections"><b>Попросить исправить карточку</b><span>Если на сайте неверные данные, сообщите команде.</span></Link>
+        <Link className="pt-tile" href="/protection/contact"><b>Связаться с командой</b><span>Вопросы по кабинету, данным и публикации.</span></Link>
+      </div>
+    </>
   );
 }

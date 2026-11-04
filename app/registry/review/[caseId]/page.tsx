@@ -35,7 +35,7 @@ type Item = {
 export default async function ReviewCasePage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = await params;
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return <p style={{ padding: 24 }}>Supabase не настроен</p>;
+  if (!supabase) return <p style={{ padding: 24 }}>Раздел временно недоступен.</p>;
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -6,20 +6,7 @@ import type { StudioProject } from "@/app/actions/admin-studio";
 import {
   BEACH_KEYS, FOCUS_KEYS, MANAGEMENT_KEYS, OWNERSHIP_KEYS, PROPERTY_TYPES, SEGMENTS, STATUS_KEYS, taxLabel,
 } from "@/lib/taxonomy";
-
-function Field({ label, hint, cls = "c4", required, children }: { label: string; hint?: string; cls?: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className={`adm-field ${cls}`}>
-      <label>{label}{required ? <em>*</em> : null}</label>
-      {children}
-      {hint ? <span className="adm-hint">{hint}</span> : null}
-    </div>
-  );
-}
-
-function Opts({ kind, keys }: { kind: "seg" | "type" | "stK" | "beach" | "own" | "mgmt" | "focus"; keys: readonly string[] }) {
-  return <>{keys.map((k) => <option key={k} value={k}>{taxLabel(kind, k, "ru")}</option>)}</>;
-}
+import { Field, Opts } from "./fields";
 
 export function InfoForm({
   project, developers, locations, regions,

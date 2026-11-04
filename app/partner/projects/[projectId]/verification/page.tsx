@@ -1,3 +1,4 @@
+import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EvidenceForm, MessageForm, StartCaseForm, SubmitCaseForm } from "@/components/registry/forms";
@@ -26,7 +27,7 @@ type Tpl = { key: string; title: { ru: string }; hint: { ru: string } };
 export default async function PartnerVerificationPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return <p className="text-[var(--muted)]">Настройте Supabase</p>;
+  if (!supabase) return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -74,10 +75,8 @@ export default async function PartnerVerificationPage({ params }: { params: Prom
 
   return (
     <div className="max-w-3xl">
-      <p className="mb-4">
-        <Link href={`/partner/projects/${projectId}`} className="text-sm text-[var(--muted)] underline">← Проект</Link>
-      </p>
-      <h1 className="serif text-2xl mb-2">Верификация проекта</h1>
+      <ProjectTabs projectId={projectId} active="/verification" />
+      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Проверка проекта независимым реестром</h2>
       <p className="text-sm mb-1">
         Текущий уровень: <b>{LEVEL_TEXT[level].ruShort}</b> — {LEVEL_TEXT[level].ru}
         {level > 0 && project.verification_expires_at
