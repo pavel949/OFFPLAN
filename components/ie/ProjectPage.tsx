@@ -1,6 +1,7 @@
 "use client";
 
 import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
+import { displayDate as fmtDate } from "@/lib/display-date";
 import { usePublicationExpired } from "./usePublicationExpired";
 import Image from "next/image";
 import Link from "next/link";
@@ -64,10 +65,6 @@ export type ProjectPageProps = {
   developer: { slug: string; name: string; website: string | null };
   legacyId: number;
 };
-
-function fmtDate(iso: string | null | undefined, ru: boolean) {
-  return iso ? new Date(iso).toLocaleDateString(ru ? "ru-RU" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—";
-}
 
 export function ProjectPage({ project, facts, extras, developer, legacyId,sales:initialSales }: ProjectPageProps) {
   const expired = usePublicationExpired(initialSales?.expiresAt);
