@@ -72,12 +72,20 @@ export function planUnitImport(existing: ExistingUnit[], rows: ParsedUnit[]): Un
 }
 
 export async function loadExistingUnits(db: SupabaseClient, projectId: string): Promise<ExistingUnit[]> {
-  const { data, error } = await db
-    .from("project_units")
-    .select("id, label, external_key, bedrooms, floor, sqm, price_thb, currency, status, sort_order")
-    .eq("project_id", projectId);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ExistingUnit[];
+  const rows: ExistingUnit[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await db
+      .from("project_units")
+      .select("id, label, external_key, bedrooms, floor, sqm, price_thb, currency, status, sort_order")
+      .eq("project_id", projectId)
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as ExistingUnit[];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
 }
 
 /** Counts only acknowledged writes; a network failure can still have committed remotely. */

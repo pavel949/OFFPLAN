@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { applyUnitPlan, planUnitImport, UnitImportError, type ExistingUnit } from "./apply";
+import { applyUnitPlan, loadExistingUnits, planUnitImport, UnitImportError, type ExistingUnit } from "./apply";
 import { parseInventoryText } from "./parse";
 import type { ParsedUnit } from "./parse";
 
@@ -9,6 +9,18 @@ const unit = (r: ParsedUnit): ExistingUnit => ({ id: r.label, label: r.label, ex
 const opts = { source: "import" as const, actorId: null };
 
 describe("inventory partial writes", () => {
+  it("loads beyond the API row limit before planning a retry", async () => {
+    const rows = Array.from({ length: 1001 }, (_, i) => unit(row(`U${i}`)));
+    const ranges: number[] = [];
+    const chain = { select: () => chain, eq: () => chain, order: () => chain,
+      range: async (from: number, to: number) => { ranges.push(from); return { data: rows.slice(from, to + 1), error: null }; } };
+    const db = { from: () => chain } as unknown as SupabaseClient;
+    const loaded = await loadExistingUnits(db, "project");
+    expect(ranges).toEqual([0, 1000]);
+    expect(loaded).toHaveLength(1001);
+    expect(planUnitImport(loaded, [row("U1000")]).inserts).toHaveLength(0);
+  });
+
   it("does not erase omitted fields when a price-only file updates an existing unit", () => {
     const existing = [{ ...unit(row("A")), bedrooms: 2, floor: 3, sqm: 70, currency: "USD", status: "sold" }];
     const parsed = parseInventoryText("label,price\nA,200");
