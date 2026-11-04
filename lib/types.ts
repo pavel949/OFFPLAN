@@ -49,7 +49,7 @@ export interface CatalogProject {
   i18n?: { ru?: ProjectTexts };
   /** Authoritative database confirmation date; never accepted from payload JSON. */
   dataConfirmedAt?: string | null;
-  sales?: {stage?:string; available?:number; recorded?:number};
+  sales?: {stage?:string; available?:number; recorded?:number; publication?:import("./published-availability").PublishedAvailability};
   /** Registry verification (attached at load time from catalog_projects; not part of the payload). */
   ver?: { level: 0 | 1 | 2; verifiedAt: string | null; expiresAt: string | null };
 }

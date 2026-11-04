@@ -1,5 +1,6 @@
 "use client";
 
+import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
 import { usePublicationExpired } from "./usePublicationExpired";
 import Image from "next/image";
 import Link from "next/link";
@@ -95,9 +96,20 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   }, [extras.catalogProjectId]);
   useEffect(() => {
     if (light == null) return;
-    const on = (e: KeyboardEvent) => e.key === "Escape" && setLight(null);
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>(".ie-lb-x")?.focus());
+    const on = (e: KeyboardEvent) => {
+      if(e.key === "Escape")setLight(null);
+      if(e.key === "Tab") {
+        const controls=[...document.querySelectorAll<HTMLElement>(".ie-lightbox button,.ie-lightbox a[href]")];
+        if(e.shiftKey&&document.activeElement===controls[0]){e.preventDefault();controls.at(-1)?.focus();}
+        else if(!e.shiftKey&&document.activeElement===controls.at(-1)){e.preventDefault();controls[0]?.focus();}
+      }
+    };
     window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
+    return () => {cancelAnimationFrame(frame);document.body.style.overflow=overflow;window.removeEventListener("keydown", on);previous?.focus();};
   }, [light]);
 
   const ru = lang === "ru";
@@ -117,24 +129,25 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   const mapHref = extras.lat != null && extras.lng != null ? `https://www.google.com/maps?q=${extras.lat},${extras.lng}` : null;
   const inv = facts.inventory;
   const publishedCurrencies = new Set(unitSales?.offers.map(o=>o.currency));
-  const displayPrice = unitSales ? unitSales.offers.length && publishedCurrencies.size===1 ? `${t("от","from")} ${formatPrice(Math.min(...unitSales.offers.map(o=>o.price)),unitSales.offers[0].currency,lang)}` : t("Уточняется по юниту","Ask for unit pricing") : p.pT;
+  const displayPrice = unitSales ? unitSales.offers.length && publishedCurrencies.size===1 ? formatPrice(Math.min(...unitSales.offers.map(o=>o.price)),unitSales.offers[0].currency,lang) : t("Уточняется по юниту","Ask for unit pricing") : p.pT;
   const showRec = process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true";
   const kindSeed = p.type === "condo" ? "condo" : p.type === "house" ? "house" : "villa";
-  const heroPhoto = photos[0];
+  const heroPhoto = photos.find(f=>f.details.cover===true) ?? photos[0];
   const salesStageLabel = sales ? SALES_STAGE[String(sales.details.stage)]?.[lang] : null;
 
+  const publishedOwnerships = [...new Set(unitSales?.offers.map(o=>o.ownership) ?? [])];
+  const completion = completionLabel(p.compQ || p.compY,lang);
   const facts6: [string, string][] = [
     [t("Район", "Area"), zoneLabel(p.zone, lang)],
     [t("Тип", "Type"), taxLabel("type", p.type, lang)],
     [t("Сегмент", "Segment"), taxLabel("seg", p.seg, lang, true)],
-    [t("Владение", "Ownership"), taxLabel("own", p.own, lang)],
+    [t("Владение", "Ownership"), publishedOwnerships.length ? publishedOwnerships.map(v=>ownershipLabel(v,lang)).join(" / ") + t(" · по предложениям ниже"," · see unit offers") : unitSales ? t("Уточняется по юниту","Confirm per unit") : taxLabel("own", p.own, lang)],
     [t("Управление", "Management"), taxLabel("mgmt", p.mgmt, lang)],
     [t("До пляжа", "To beach"), taxLabel("beach", p.beach, lang)],
     [t("Фокус", "Focus"), taxLabel("focus", p.focus, lang)],
     [t("Лотов в проекте", "Units"), p.units || "—"],
     [t("Размеры, м²", "Sizes, sqm"), p.unitSzM2 || "—"],
     [t("Цена за м²", "Price per sqm"), p.sqmP || "—"],
-    [t("Доходность (заявлена)", "Yield (declared)"), p.yield || "—"],
     [t("Спальни", "Bedrooms"), p.minBR === 0 ? t("от студии", "from studio") : t(`от ${p.minBR}`, `from ${p.minBR}`)],
   ];
 
@@ -174,12 +187,12 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
               <small>{t("Цена от", "From")}</small>
               <b>{displayPrice}</b>
               <span>
-                {t("Сдача", "Handover")}: {p.compQ && p.compQ !== String(p.compY) ? p.compQ : p.compY}
+                {t("Сдача", "Handover")}: {completion}
               </span>
             </div>
             <div className="ie-pcta">
               <button type="button" className="ie-btn ie-btn--gold" onClick={() => setLeadOpen(true)}>
-                {t("Оставить заявку", "Send inquiry")}
+                {t("Задать вопрос по проекту", "Ask about the project")}
               </button>
               {site ? (
                 <a className="ie-btn ie-btn--ghost" href={site.url} target="_blank" rel="noopener noreferrer nofollow">
@@ -221,6 +234,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             </p>
           </section>
 
+          {unitSales?.offers.length ? <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}><a className="ie-btn ie-btn--gold" href="#unit-offers">{t("Выбрать из опубликованных юнитов","Choose a published unit")}</a><a href="#project-photos">{t("Фото и визуализации","Photos and renders")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav> : null}
           {/* TIMELINE */}
           <section className="ie-card">
             <h2 className="ie-h2">{t("Этапы проекта", "Project stages")}</h2>
@@ -230,7 +244,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
                   <span className="ie-step-dot" />
                   <b>{s[lang]}</b>
                   <small>
-                    {i === 0 ? (salesStageLabel ?? t("статус продаж не подтверждён", "sales status unconfirmed")) : i === 1 ? (p.stT || "") : `${stepIdx === 2 ? t("сдан", "completed") : t("ожидается", "expected")}: ${p.compQ || p.compY}`}
+                    {i === 0 ? (salesStageLabel ?? t("статус продаж не подтверждён", "sales status unconfirmed")) : i === 1 ? (p.stT || "") : `${stepIdx === 2 ? t("сдан", "completed") : t("ожидается", "expected")}: ${completion}`}
                   </small>
                 </li>
               ))}
@@ -246,20 +260,21 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
 
           {/* PHOTOS */}
           <section className="ie-card">
-            <h2 className="ie-h2">{t("Фотоотчёт со стройки", "Construction photos")}</h2>
+            <h2 className="ie-h2" id="project-photos">{t("Фото и визуализации проекта", "Project photos and renders")}</h2>
+            <p className="ie-small">{t("Визуализации показывают замысел проекта и не подтверждают готовность. Дата материала или наблюдения указана отдельно от даты съёмки.","Renders illustrate the design and do not establish construction progress. Material observation dates are separate from capture dates.")}</p>
             {photos.length ? (
               <div className="ie-gallery">
                 {photos.map((f, i) => (
                   <button key={f.id} type="button" className="ie-shot" onClick={() => setLight(i)} aria-label={String(f.details.caption ?? f.title)}>
                     <Image src={String(f.details.url)} alt={String(f.details.caption ?? "")} fill sizes="(max-width: 700px) 50vw, 300px" unoptimized referrerPolicy="no-referrer" />
-                    <span>{fmtDate(f.observed_at, ru)}{f.details.render ? ` · ${t("визуализация", "render")}` : ""}</span>
+                    <span>{t("Источник проверен ","Source observed ")}{fmtDate(f.observed_at, ru)}{f.details.render ? ` · ${t("визуализация", "render")}` : ""}</span>
                   </button>
                 ))}
               </div>
             ) : (
               <div className="ie-empty-card">
                 <div className="ie-empty-scene"><Scene seed={p.id + 1} kind={kindSeed} /></div>
-                <p>{t("Застройщик ещё не опубликовал фотоотчёт. Фото со стройки с датами съёмки появятся здесь.", "The developer has not yet published a photo report. Dated site photos will appear here.")}</p>
+                <p>{t("Материалы ещё не добавлены в эту карточку. Это не означает, что у застройщика их нет.", "Materials have not been added to this card yet. This does not mean the developer has none.")}</p>
               </div>
             )}
           </section>
@@ -344,7 +359,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
 
           {/* MATERIALS */}
           <section className="ie-card">
-            <h2 className="ie-h2">{t("Материалы застройщика", "Developer materials")}</h2>
+            <h2 className="ie-h2" id="project-materials">{t("Материалы застройщика", "Developer materials")}</h2>
             {site || otherMaterials.length || devSite ? (
               <ul className="ie-links">
                 {[...(site ? [site] : []), ...otherMaterials].map((s) => {
@@ -462,13 +477,13 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
       </div>
 
       {light != null && photos[light] ? (
-        <div className="ie-lightbox" role="dialog" aria-modal="true" onClick={() => setLight(null)}>
+        <div className="ie-lightbox" role="dialog" aria-modal="true" aria-labelledby="project-photo-caption" onClick={() => setLight(null)}>
           <button type="button" className="ie-lb-x" aria-label={t("Закрыть", "Close")}>✕</button>
           <figure onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={String(photos[light].details.url)} alt={String(photos[light].details.caption ?? "")} referrerPolicy="no-referrer" />
-            <figcaption>
-              {String(photos[light].details.caption ?? photos[light].title)} · {fmtDate(photos[light].observed_at, ru)} ·{" "}
+            <figcaption id="project-photo-caption">
+              {String(photos[light].details.caption ?? photos[light].title)} · {t("наблюдение источника ","source observed ")}{fmtDate(photos[light].observed_at, ru)} ·{" "}
               <a href={photos[light].source_url} target="_blank" rel="noopener noreferrer nofollow">{t("источник", "source")}</a>
             </figcaption>
           </figure>

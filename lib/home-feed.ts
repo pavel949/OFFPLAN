@@ -10,7 +10,7 @@ import type { PublicSource } from "./sources";
  * Every part fails soft: a missing table or a slow query never blocks the catalogue.
  */
 export type HomeFeed = {
-  covers: Record<number, { url: string; caption: string; at: string }>;
+  covers: Record<number, { url: string; caption: string; at: string; render?:boolean; mediaType?:string }>;
   updates: {
     id: string;
     projectId: number;
@@ -58,9 +58,9 @@ export async function getHomeFeed(): Promise<HomeFeed> {
         const feed: HomeFeed = { covers: {}, updates: [], campaigns: {}, availability: {}, sources: {} };
         for (const r of photos.data ?? []) {
           const id = legacy.get(r.project_id as string);
-          const d = r.details as { url?: string; caption?: string } | null;
-          if (id == null || !d?.url || feed.covers[id]) continue;
-          feed.covers[id] = { url: d.url, caption: d.caption ?? "", at: r.observed_at as string };
+          const d = r.details as { url?: string; caption?: string; render?:boolean; cover?:boolean; media_type?:string } | null;
+          if (id == null || !d?.url || (feed.covers[id] && !d.cover)) continue;
+          feed.covers[id] = { url: d.url, caption: d.caption ?? "", at: r.observed_at as string, render:d.render === true, mediaType:d.media_type };
         }
         for (const r of upd.data ?? []) {
           const id = legacy.get(r.project_id as string);

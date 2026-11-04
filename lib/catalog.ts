@@ -113,7 +113,7 @@ async function loadSales(
         .eq("status", "published"),
     ]);
     for (const [id, summary] of Object.entries(inventory)) {
-      out.set(Number(id), { available: summary.available });
+      out.set(Number(id), { available: summary.available, publication: summary });
     }
     for (const row of facts.data ?? []) {
       const id = idMap.get(row.project_id);
