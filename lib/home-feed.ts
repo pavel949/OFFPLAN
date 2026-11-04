@@ -1,5 +1,7 @@
 import { createAnonClient, hasSupabasePublicConfig } from "./supabase/anon";
 import { withTimeout } from "./with-timeout";
+import { getPublishedAvailability } from "./published-availability-query";
+import type { PublishedAvailability } from "./published-availability";
 import type { PublicSource } from "./sources";
 
 /**
@@ -19,7 +21,7 @@ export type HomeFeed = {
     at: string;
   }[];
   campaigns: Record<number, { labelRu: string; endsAt: string | null }>;
-  availability: Record<number, { available: number | null; recorded: number | null }>;
+  availability: Record<number, PublishedAvailability>;
   sources: Record<number, PublicSource[]>;
 };
 
@@ -46,7 +48,7 @@ export async function getHomeFeed(): Promise<HomeFeed> {
             .order("published_at", { ascending: false })
             .limit(24),
           db.from("sales_campaigns").select("project_id, label_ru, ends_at, starts_at").limit(200),
-          db.from("public_project_inventory").select("project_id, available, recorded"),
+          getPublishedAvailability(),
           db.from("public_project_sources").select("id, project_id, kind, title, url, cadence, confirmed_at"),
         ]);
         const legacy = new Map<string, number>();
@@ -83,14 +85,7 @@ export async function getHomeFeed(): Promise<HomeFeed> {
           if (starts && new Date(starts).getTime() > now) continue;
           feed.campaigns[id] = { labelRu: (r.label_ru as string) || "", endsAt: ends };
         }
-        for (const r of inv.data ?? []) {
-          const id = legacy.get(r.project_id as string);
-          if (id != null)
-            feed.availability[id] = {
-              available: (r.available as number | null) ?? null,
-              recorded: (r.recorded as number | null) ?? null,
-            };
-        }
+        feed.availability = inv;
         for (const r of src.data ?? []) {
           const id = legacy.get(r.project_id as string);
           if (id == null) continue;

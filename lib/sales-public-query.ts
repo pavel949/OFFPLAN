@@ -1,6 +1,7 @@
 import "server-only";
 import {createServiceRoleClient,hasSupabaseServiceConfig} from "./supabase/service";
 import {salesModelSchema} from "./sales-model";
+import {publishedAvailability} from "./published-availability";
 import {publicSalesProjection} from "./sales-public";
 
 export async function getPublicSales(projectId:string) {
@@ -13,7 +14,7 @@ export async function getPublicSales(projectId:string) {
   if(project.error||published.error) throw new Error("Sales publication unavailable");
   if(!project.data||!published.data) return null;
   const revision=published.data.revision as number;
-  if(new Date(published.data.expires_at).getTime()<=Date.now()) return {revision,offers:[]};
+  if(!Number.isFinite(Date.parse(published.data.expires_at))||Date.parse(published.data.expires_at)<=Date.now()) return {revision,offers:[],expiresAt:published.data.expires_at as string};
   const {data,error}=await db.from("project_sales_models").select("model").eq("project_id",projectId).eq("revision",revision).single();
   if(error) throw new Error("Sales model unavailable");
   const model=salesModelSchema.parse(data.model);
@@ -23,7 +24,8 @@ export async function getPublicSales(projectId:string) {
     if(r.error) throw new Error("Unit identities unavailable");
     units.push(...r.data);if(r.data.length<500) break;
   }
-  return publicSalesProjection(model,revision,units,new Date().toISOString().slice(0,10));
+  const summary=publishedAvailability(model,{revision,expires_at:published.data.expires_at},units);
+  return {...publicSalesProjection(model,revision,units,new Date().toISOString().slice(0,10)),expiresAt:summary?.expiresAt ?? published.data.expires_at as string};
 }
 
 export async function resolveSalesSelection(legacyId:number,offerId:string,revision:number) {

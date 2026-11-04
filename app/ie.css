@@ -581,3 +581,12 @@
 .cv-dual em.up { color: #1f7a45; } .cv-dual em.down { color: #a52a2a; }
 .cv-bar { height: 7px; border-radius: 99px; background: rgba(11,27,52,.08); overflow: hidden; margin: 2px 0; }
 .cv-bar b { display: block; height: 100%; border-radius: 99px; }
+
+/* One internal destination across the whole project card, including touch/keyboard. */
+.ie-tile-link { display: flex; flex-direction: column; height: 100%; color: inherit; text-decoration: none; }
+.ie-tile-link:focus-visible { outline: 3px solid var(--ie-gold-deep); outline-offset: -3px; }
+.ie-availability { display: grid; gap: 4px; padding: 10px 0; overflow-wrap: anywhere; }
+.ie-availability strong { font-size: 15px; color: var(--ie-ink); }
+.ie-availability small { font-size: 11px; line-height: 1.45; color: var(--ie-muted); }
+.ie-tile-foot { flex-wrap: wrap; }
+.ie-tile-foot b { color: var(--ie-ink); }

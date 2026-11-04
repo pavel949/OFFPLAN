@@ -1,10 +1,13 @@
 "use client";
+import {usePublicationExpired} from "../ie/usePublicationExpired";
 import {useState} from "react";
 import type {PublicSales,PublicOffer} from "@/lib/sales-public";
 import {optionLabels} from "@/lib/sales-form";
 import {LeadModal} from "./LeadModal";
 
-export function SalesOffers({sales,projectId,projectName,lang}:{sales:PublicSales;projectId:number;projectName:string;lang:"ru"|"en"}) {
+export function SalesOffers({sales:initialSales,projectId,projectName,lang}:{sales:PublicSales;projectId:number;projectName:string;lang:"ru"|"en"}) {
+  const expired=usePublicationExpired(initialSales.expiresAt);
+  const sales=expired?{...initialSales,offers:[]}:initialSales;
   const ru=lang==="ru",t=(r:string,e:string)=>ru?r:e;
   const label=(v:string)=>ru?(optionLabels[v]??v):v.replaceAll("_"," ");
   const [phase,setPhase]=useState(""),[building,setBuilding]=useState(""),[floor,setFloor]=useState("");
@@ -12,6 +15,7 @@ export function SalesOffers({sales,projectId,projectName,lang}:{sales:PublicSale
   const visible=sales.offers.filter(o=>(!phase||o.phase===phase)&&(!building||o.building===building)&&(!floor||o.floor===floor));
   const money=(v:number|null,c:string)=>v===null?t("Уточняется","To be confirmed"):`${v.toLocaleString(ru?"ru-RU":"en-GB",{maximumFractionDigits:2})} ${c}`;
   return <section className="ie-card" id="unit-offers"><h2 className="ie-h2">{t("Выбрать юнит и условия покупки","Choose a unit and purchase terms")}</h2>
+    {sales.offers.length ? <p className="ie-small">{new Set(sales.offers.map(o=>o.unitId)).size} {t("лотов в опубликованном прайсе. Набор может быть неполным.","units in the published price list. Coverage may be partial.")} {t("Наличие по данным на","Availability observed on")} {sales.offers.map(o=>o.availabilityDate).sort()[0]}.</p> : null}
     <p className="ie-small">{t("Наличие и цена указаны по датам источников. Отправка запроса не является бронированием и не требует платежа.","Availability and prices are dated. Sending an inquiry does not reserve the unit or require a payment.")}</p>
     {sales.offers.length?<div style={{display:"flex",gap:12,flexWrap:"wrap",margin:"16px 0"}}>{([['phase',phase,setPhase],['building',building,setBuilding],['floor',floor,setFloor]] as const).map(([key,value,set])=><label key={key}>{key==="phase"?t("Очередь","Phase"):key==="building"?t("Корпус","Building"):t("Этаж","Floor")} <select value={value} onChange={e=>{set(e.target.value);setLimit(30);}}><option value="">{t("Все","All")}</option>{[...new Set(sales.offers.map(o=>o[key]).filter(Boolean))].sort().map(v=><option key={v} value={v}>{v}</option>)}</select></label>)}</div>:null}
     {!visible.length?<p>{t("Сейчас нет опубликованных актуальных предложений. Запросите наличие у команды проекта.","No current published offers. Ask the project team for availability.")}</p>:null}
@@ -29,6 +33,6 @@ export function SalesOffers({sales,projectId,projectName,lang}:{sales:PublicSale
       <button className="ie-btn ie-btn-primary" type="button" onClick={()=>setSelected(o)}>{t("Запросить этот юнит","Enquire about this unit")}</button>
     </details>)}
     {visible.length>limit?<button type="button" className="ie-btn" onClick={()=>setLimit(v=>v+30)}>{t("Показать ещё","Show more")}</button>:null}
-    {selected?<LeadModal key={`${selected.id}:${selected.revision}`} open onClose={()=>setSelected(null)} lang={lang} projectId={projectId} projectName={projectName} offerId={selected.id} salesRevision={selected.revision} unitLabel={selected.label}/>:null}
+    {selected && !expired?<LeadModal key={`${selected.id}:${selected.revision}`} open onClose={()=>setSelected(null)} lang={lang} projectId={projectId} projectName={projectName} offerId={selected.id} salesRevision={selected.revision} unitLabel={selected.label}/>:null}
   </section>;
 }

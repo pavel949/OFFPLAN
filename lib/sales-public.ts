@@ -24,5 +24,5 @@ export function publicSalesProjection(model:SalesModel,revision:number,units:Pub
   });
   return {revision,offers};
 }
-export type PublicSales=ReturnType<typeof publicSalesProjection>;
+export type PublicSales=ReturnType<typeof publicSalesProjection> & {expiresAt?:string};
 export type PublicOffer=PublicSales["offers"][number];
