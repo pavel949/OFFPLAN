@@ -1,6 +1,6 @@
 -- ClearView methodology versions: private content, two-reviewer publication, immutability.
 grant all on all tables in schema public to anon, authenticated, service_role;
-\i supabase/migrations/20261104140000_cv_methodology.sql
+\i supabase/migrations/20261104093648_cv_methodology.sql
 
 create or replace function pg_temp.as_user(uid uuid, r text) returns void language plpgsql as $$
 begin

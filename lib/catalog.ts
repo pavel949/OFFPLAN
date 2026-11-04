@@ -134,11 +134,11 @@ export async function getProjects(): Promise<CatalogProject[]> {
   return rows.map((p) => toPublicProject(p));
 }
 
-/** Thrown in production when the database is configured but unreachable and nothing safe can be served. */
+/** Thrown in production when the database is unavailable; cached rows may have been unpublished. */
 export class CatalogUnavailableError extends Error {
   constructor(cause?: unknown) {
     super(
-      "Catalogue database is unavailable and no last-known-good copy exists",
+      "Catalogue database is unavailable",
     );
     this.name = "CatalogUnavailableError";
     this.cause = cause;
@@ -155,9 +155,9 @@ export function __resetCatalogCacheForTests() {
 /**
  * Where rows come from.
  *  - Supabase not configured at all  -> bundled seed (local development / demo).
- *  - DB read OK                      -> DB rows (also remembered as last-known-good).
- *  - DB read failed                  -> last-known-good; else seed in development;
- *                                       in production a hard error (never silently serve seed data:
+ *  - DB read OK                      -> current published DB rows.
+ *  - DB read failed                  -> last-known-good/seed in development only;
+ *                                       in production a hard error (never silently serve seed or cached data:
  *                                       it would resurrect unpublished / rejected projects and stale prices).
  */
 async function loadProjects(): Promise<CatalogProject[]> {
@@ -172,8 +172,8 @@ async function loadProjects(): Promise<CatalogProject[]> {
   const dev = process.env.NODE_ENV !== "production";
   try {
     const rows = await withTimeoutOrThrow(readPublishedFromDb(), DB_TIMEOUT_MS);
-    if (rows.length > 0) lastKnownGood = rows;
-    else if (dev) {
+    lastKnownGood = rows;
+    if (rows.length === 0 && dev) {
       console.error(
         "[catalog] DB has no published projects, serving seed (development only)",
       );
@@ -185,7 +185,8 @@ async function loadProjects(): Promise<CatalogProject[]> {
       "[catalog] DB read failed:",
       e instanceof Error ? e.message : e,
     );
-    if (lastKnownGood) return lastKnownGood;
+    // A cached row may have been unpublished since the last successful read.
+    if (dev && lastKnownGood) return lastKnownGood;
     if (dev) return parseSeedProjects();
     throw new CatalogUnavailableError(e);
   }
@@ -195,19 +196,19 @@ async function readPublishedFromDb(): Promise<CatalogProject[]> {
   // Editorial labels (rec/recText) are only read when publishing them is explicitly enabled,
   // and then only by trusted server code. Everything else goes through the public view,
   // which has them neutralised and never exposes draft_payload.
-  let data: { id?: string; legacy_id?: number; payload: unknown }[] | null;
+  let data: { id?: string; legacy_id?: number; data_confirmed_at?: string | null; payload: unknown }[] | null;
   let error: { message: string } | null;
   if (showRecLabels() && hasSupabaseServiceConfig()) {
     ({ data, error } = await createServiceRoleClient()
       .from("catalog_projects")
-      .select("id, legacy_id, payload")
+      .select("id, legacy_id, payload, data_confirmed_at")
       .eq("is_published", true)
       .eq("moderation_status", "published")
       .order("legacy_id", { ascending: true }));
   } else {
     ({ data, error } = await createAnonClient()
       .from("public_catalog_projects")
-      .select("id, legacy_id, payload")
+      .select("id, legacy_id, payload, data_confirmed_at")
       .order("legacy_id", { ascending: true }));
   }
   if (error) throw new Error(error.message);
@@ -231,8 +232,10 @@ async function readPublishedFromDb(): Promise<CatalogProject[]> {
     loadVerification(client),
     loadSales(client, idMap),
   ]);
+  const confirmed = new Map((data ?? []).map((r) => [r.legacy_id, r.data_confirmed_at ?? null]));
   return attachRu(rows, texts).map((p) => ({
     ...p,
+    dataConfirmedAt: confirmed.get(p.id) ?? null,
     ...(ver?.has(p.id) ? { ver: ver.get(p.id) } : {}),
     ...(sales.has(p.id) ? { sales: sales.get(p.id) } : {}),
   }));

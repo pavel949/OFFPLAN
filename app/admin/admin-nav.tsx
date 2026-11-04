@@ -10,6 +10,7 @@ const items = [
   { href: "/admin/projects", label: "Проекты" },
   { href: "/admin/developers", label: "Застройщики" },
   { href: "/admin/methodology", label: "Методология" },
+  { href: "/admin/readiness", label: "Готовность к работе" },
   { href: "/admin/settings", label: "Настройки" },
   { href: "/admin/leads", label: "Лиды" },
   { href: "/admin/moderation", label: "Модерация" },

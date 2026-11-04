@@ -11,6 +11,8 @@ psql -q -v ON_ERROR_STOP=1 -f supabase/tests/00_supabase_stub.sql
 for f in supabase/migrations/*.sql; do
   psql -q -v ON_ERROR_STOP=1 -f "$f" || { echo "migration failed: $f"; exit 1; }
 done
+# Assert deployed limiter privileges before legacy tests deliberately re-grant all tables.
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/100_rate_limits.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/10_rls_hardening.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/20_registry.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/30_deals.sql | sed "/^$/d"

@@ -1,3 +1,4 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import { adminCreateProjectFromWizard } from "@/app/actions/project-evidence";
 import { getRegionMeta } from "@/lib/locations";
@@ -5,6 +6,7 @@ import { ProjectWizardForm } from "@/components/portal/ProjectWizardForm";
 import { hasSupabaseServiceConfig, createServiceRoleClient } from "@/lib/supabase/service";
 
 export default async function AdminNewProjectPage() {
+  if (!(await getAdminSessionOk())) return null;
   if (!hasSupabaseServiceConfig()) {
     return <p className="text-[var(--red)] text-sm">Задайте SUPABASE_SERVICE_ROLE_KEY.</p>;
   }

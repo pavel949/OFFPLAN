@@ -1,7 +1,9 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { createServiceRoleClient, hasSupabaseServiceConfig } from "@/lib/supabase/service";
 import { InviteForm } from "./invite-form";
 
 export default async function AdminDevelopersPage() {
+  if (!(await getAdminSessionOk())) return null;
   if (!hasSupabaseServiceConfig()) {
     return (
       <div>

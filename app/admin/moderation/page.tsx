@@ -1,7 +1,9 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import { hasSupabaseServiceConfig, createServiceRoleClient } from "@/lib/supabase/service";
 
 export default async function AdminModerationPage() {
+  if (!(await getAdminSessionOk())) return null;
   let rows: {
     id: string;
     entity_type: string;
@@ -12,17 +14,14 @@ export default async function AdminModerationPage() {
   }[] = [];
 
   if (hasSupabaseServiceConfig()) {
-    try {
       const supabase = createServiceRoleClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("moderation_submissions")
         .select("id, entity_type, entity_id, status, created_at, reviewer_note")
         .order("created_at", { ascending: false })
         .limit(100);
+      if (error) throw new Error("Не удалось загрузить очередь");
       rows = (data ?? []) as typeof rows;
-    } catch {
-      rows = [];
-    }
   }
 
   return (

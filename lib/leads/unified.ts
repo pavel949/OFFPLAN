@@ -13,6 +13,17 @@ import {
   updateLead,
 } from "./store";
 
+export class LeadStoreUnavailableError extends Error {
+  constructor() {
+    super("Не удалось загрузить или сохранить заявки. Повторите попытку позже.");
+    this.name = "LeadStoreUnavailableError";
+  }
+}
+
+function requireDevelopmentStore() {
+  if (process.env.NODE_ENV === "production") throw new LeadStoreUnavailableError();
+}
+
 function mapDbRow(row: {
   id: string;
   created_at: string;
@@ -70,11 +81,12 @@ export async function appendLeadUnified(
   let project_uuid: string | null = null;
   let org_id: string | null = null;
   if (input.projectId != null) {
-    const { data } = await supabase
+    const { data, error: projectError } = await supabase
       .from("catalog_projects")
       .select("id, org_id")
       .eq("legacy_id", input.projectId)
       .maybeSingle();
+    if (projectError) throw new LeadStoreUnavailableError();
     project_uuid = data?.id ?? null;
     org_id = (data as { org_id?: string | null } | null)?.org_id ?? null;
   }
@@ -145,10 +157,10 @@ export async function listLeadsUnified(): Promise<LeadRecord[]> {
       .from("leads")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data?.length) {
-      return data.map((r) => mapDbRow(r as Parameters<typeof mapDbRow>[0]));
-    }
+    if (error) throw new LeadStoreUnavailableError();
+    return (data ?? []).map((r) => mapDbRow(r as Parameters<typeof mapDbRow>[0]));
   }
+  requireDevelopmentStore();
   return listLeads();
 }
 
@@ -160,10 +172,10 @@ export async function getLeadUnified(id: string): Promise<LeadRecord | undefined
       .select("*")
       .eq("id", id)
       .maybeSingle();
-    if (!error && data) {
-      return mapDbRow(data as Parameters<typeof mapDbRow>[0]);
-    }
+    if (error) throw new LeadStoreUnavailableError();
+    return data ? mapDbRow(data as Parameters<typeof mapDbRow>[0]) : undefined;
   }
+  requireDevelopmentStore();
   return getLead(id);
 }
 
@@ -182,12 +194,11 @@ export async function updateLeadUnified(
       })
       .eq("id", id)
       .select()
-      .single();
-    if (!error && data) {
-      return mapDbRow(data as Parameters<typeof mapDbRow>[0]);
-    }
-    return undefined;
+      .maybeSingle();
+    if (error) throw new LeadStoreUnavailableError();
+    return data ? mapDbRow(data as Parameters<typeof mapDbRow>[0]) : undefined;
   }
+  requireDevelopmentStore();
   return updateLead(id, patch);
 }
 

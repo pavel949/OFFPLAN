@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OFFPLAN — Ignatev Estate
 
-## Getting Started
+Каталог новостроек и рабочие кабинеты покупателей, застройщиков, брокеров и команды Ignatev Estate. Это отдельный репозиторий **pavel949/OFFPLAN**, не myuno и не myUNO-final.
 
-First, run the development server:
+Production: https://offplan-mu.vercel.app · Supabase: `mfwbdfrrlckarktpwykf` · Vercel project: `offplan`.
 
-```bash
+## Что реализовано
+
+- Публичный каталог, поиск, фильтры, страницы проекта/застройщика/локации, RU/EN, заявки и избранное.
+- Админка: проекты, мастер создания, материалы, инвентарь/импорт, модерация, заявки, справочники, сделки и комиссии.
+- Кабинет застройщика: проекты, лоты, материалы, акции, обновления и подача на проверку.
+- Реестр проверки и ClearView: роли проверяющих, решения, версии методологии, публичная методология и быстрая проверка.
+- Защита публичного чтения через специальные views и RLS; серверная запись заявок с согласием и общими лимитами запросов.
+
+Наличие кода не означает, что внешние сервисы настроены или каждый сценарий проверен в production. Платежи, SMTP, уведомления Resend и Google Drive требуют отдельных настроек и сквозной проверки.
+
+## Локальный запуск
+
+Node.js 24 (как в Vercel), npm, PostgreSQL 16+ для SQL-тестов.
+
+```sh
+npm ci
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Адрес разработки: http://localhost:3030. Без Supabase в development используется демонстрационный каталог; production требует базу и не подставляет seed при ошибке. Локальные файлы заявок допустимы только в development.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Настройки
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Назначение | Переменные |
+|---|---|
+| Публичное чтение базы | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| Заявки, админка и общий лимит запросов | `SUPABASE_SERVICE_ROLE_KEY` (только сервер) |
+| Вход администратора | `ADMIN_SECRET` — не менее 16 символов; общий пароль, не персональная MFA |
+| Публичный адрес | `NEXT_PUBLIC_SITE_URL` — HTTPS |
+| Уведомления менеджерам | `RESEND_API_KEY`, `NOTIFY_FROM`, `LEAD_NOTIFY_EMAIL` |
+| CAPTCHA (дополнительная защита) | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — оба ключа |
+| Импорт Google Drive | `GOOGLE_SERVICE_ACCOUNT_JSON` и доступ сервисному аккаунту к папке |
+| Автоматические миграции GitHub | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`; ref фиксирован на OFFPLAN |
 
-## Learn More
+Не помещайте секреты в Git, `NEXT_PUBLIC_*`, скриншоты или сообщения. Ключ Resend — API key; пароль от аккаунта для интеграции не нужен. В `/admin/readiness` показано наличие настроек без значений. Этот экран не доказывает доставку почты или доступность интеграций. Пока почта не подключена, заявки проверяются в `/admin/leads` вручную.
 
-To learn more about Next.js, take a look at the following resources:
+## Проверки и выпуск
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```sh
+npm test
+npm run lint
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+SQL-проверки на **изолированном тестовом Postgres**:
 
-## Deploy on Vercel
+```sh
+PGHOST=localhost PGUSER=postgres PGDATABASE=offplan_test supabase/tests/run.sh
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Внимание:** скрипт удаляет и заново создаёт указанную тестовую базу. Не направлять на рабочую БД.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Пройти CI: модульные тесты, lint, сборка, миграции на чистой БД и SQL-проверки прав.
+2. Сверить историю миграций с рабочей базой (`supabase migration list`). Не менять записи истории вручную и не повторять уже применённые миграции под другим номером.
+3. До изменения схемы подтвердить доступную резервную копию и план восстановления. Применить миграции до выпуска зависимого кода.
+4. Vercel публикует `main`. Проверить SHA production и основные пути после выпуска.
+5. Пройти сценарии: вход партнёра → проект → модерация → публикация; покупатель → заявка → список менеджера → обновление статуса; изоляция чужих организаций; загрузка/чтение материалов. Проверка уведомлений отдельно после подключения почты.
+
+GitHub migration workflow требует свои credentials. Наличие ключей Vercel или работающего Supabase MCP не настраивает GitHub Actions автоматически.
+
+## Поведение при ошибках
+
+- Production-каталог при ошибке чтения не показывает старую копию: проект мог быть снят с публикации.
+- В карточке количество внесённых лотов не выдаётся за полный инвентарь проекта; процент продаж из неполных данных не рассчитывается.
+- Ценовые поля без корректной даты подтверждения или старше 30 дней скрываются на сервере. Такие проекты не проходят фильтр по бюджету; при сортировке по цене идут после проектов с известной ценой. Редакционные описания требуют отдельной проверки: это не актуальный прайс-лист.
+- Ошибки чтения заявок показываются как ошибки, а не пустая CRM. Сохранение не переключается на временный диск сервера.
+- Общий лимит запросов для заявок и входа админа хранится в Supabase; при недоступности счётчика запрос отклоняется. В buckets нет исходных IP/email, только SHA-256. CAPTCHA остаётся дополнительной защитой, WAF — отдельным уровнем защиты от массовых атак.
+- Отсутствие почтовых настроек явно видно в админке. Отправка через Resend пока без постоянной очереди повторной доставки; проверьте заявки вручную при сбое почтового сервиса.
+
+## Ограничения и оставшаяся настройка
+
+- Общий пароль администратора: переход к персональным учётным записям и MFA ещё нужен.
+- Требуется настроить GitHub migration credentials, Resend и при необходимости Turnstile/Drive.
+- Сквозная проверка рабочих аккаунтов/организаций, восстановление полной базы и нагрузочные испытания не заменяются CI.
+- Исторический отчёт `docs/MIGRATION_STATUS.md` содержит устаревшие промежуточные состояния. Текущая история Supabase и статусы CI/Vercel имеют приоритет.
+
+Дополнительно: [карта приложения](docs/APP_MAP.md), [архитектура](docs/ARCHITECTURE.md), [безопасность](docs/SECURITY.md), [ClearView](docs/CLEARVIEW_INTEGRATION.md).

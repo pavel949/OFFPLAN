@@ -32,7 +32,10 @@ export async function notifyNewLead(lead: {
   projectName: string | null;
 }): Promise<void> {
   const to = process.env.LEAD_NOTIFY_EMAIL;
-  if (!to) return;
+  if (!to) {
+    console.error("[notify] lead email is not configured; review new leads in admin", lead.id);
+    return;
+  }
   const ok = await sendEmail({
     to: to.split(",").map((s) => s.trim()).filter(Boolean),
     subject: `New lead: ${lead.name}${lead.projectName ? ` — ${lead.projectName}` : ""}`,

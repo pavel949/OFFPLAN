@@ -1,3 +1,5 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { productionReadiness } from "@/lib/production-readiness";
 import Link from "next/link";
 import { leadStatsUnified, listLeadsUnified } from "@/lib/leads/unified";
 
@@ -10,6 +12,7 @@ const statusRu: Record<string, string> = {
 };
 
 export default async function AdminDashboardPage() {
+  if (!(await getAdminSessionOk())) return null;
   const stats = await leadStatsUnified();
   const recent = (await listLeadsUnified()).slice(0, 8);
 
@@ -28,10 +31,12 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
       <p className="text-[var(--txt2)] text-sm mb-6">
-        Лиды с сайта и статусы обработки. При Supabase — лиды в БД; иначе{" "}
-        <code>data/leads.json</code>.
+        Заявки с сайта и статусы обработки. Новые заявки требуют ответа менеджера.
       </p>
 
+      {!productionReadiness().find(c => c.id === "email")?.ready && (
+        <p role="status" className="admin-err mb-4">Уведомления по email ещё не подключены. Проверяйте новые заявки здесь вручную. <Link href="/admin/readiness">Проверить настройки</Link></p>
+      )}
       <div className="admin-stat-grid">
         <div className="admin-stat">
           <div className="admin-stat-v">{stats.total}</div>
