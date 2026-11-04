@@ -17,6 +17,13 @@ import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import { ProjectTile } from "./ProjectTile";
 
+const STAGES: [string, string][] = [
+  ["", "Все"],
+  ["offplan", "Старт продаж"],
+  ["building", "Строится"],
+  ["ready", "Сдан"],
+];
+
 const QUICK = [
   "вилла до 30 млн",
   "кондо у пляжа",
@@ -80,6 +87,16 @@ export function HomeExperience({
   const years = useMemo(() => [...new Set(projects.map((p) => p.compY))].sort(), [projects]);
   const list = useMemo(() => filterProjects(projects, filters), [projects, filters]);
   const active = hasActiveFilters(filters);
+  // Stage tab counts reflect every other active filter, so the numbers always add up.
+  const stageCounts = useMemo(() => {
+    const base = filterProjects(projects, { ...filters, stage: "" });
+    return {
+      "": base.length,
+      offplan: base.filter((p) => p.stK === "offplan").length,
+      building: base.filter((p) => p.stK === "building").length,
+      ready: base.filter((p) => p.stK === "ready").length,
+    } as Record<string, number>;
+  }, [projects, filters]);
 
   return (
     <>
@@ -93,8 +110,7 @@ export function HomeExperience({
               Новостройки, которым можно <em>доверять</em>
             </h1>
             <p className="ie-hero-sub">
-              Проверенные проекты, живые прайс-листы и наличие лотов, фотоотчёты со строек и акции:
-              всё от самих застройщиков и под контролем независимого реестра проверки.
+              Живые прайс-листы, наличие лотов и фотоотчёты со строек: всё от застройщиков, под контролем независимого реестра проверки.
             </p>
           </div>
 
@@ -142,12 +158,6 @@ export function HomeExperience({
                   </option>
                 ))}
               </Select>
-              <Select id="f-stage" label="Стадия" value={filters.stage} onChange={set("stage")}>
-                <option value="">Любая</option>
-                <option value="offplan">Старт продаж</option>
-                <option value="building">Строится</option>
-                <option value="ready">Сдан</option>
-              </Select>
               <Select id="f-budget" label="Бюджет" value={filters.budget} onChange={set("budget")}>
                 <option value="">Любой</option>
                 {BUDGET_STEPS.map((b) => (
@@ -163,12 +173,6 @@ export function HomeExperience({
                     {y}
                   </option>
                 ))}
-              </Select>
-              <Select id="f-sort" label="Порядок" value={filters.sort} onChange={set("sort")}>
-                <option value="rating">Рекомендуем</option>
-                <option value="price-asc">Сначала дешевле</option>
-                <option value="price-desc">Сначала дороже</option>
-                <option value="year">Скорее сдача</option>
               </Select>
             </div>
             <div className="ie-hints">
@@ -188,34 +192,6 @@ export function HomeExperience({
               ))}
             </div>
           </form>
-
-          <div className="ie-trust">
-            <div>
-              <b>{stats.projects}</b>
-              <small>проектов в каталоге</small>
-            </div>
-            <div>
-              <b>{stats.developers}</b>
-              <small>застройщиков с досье</small>
-            </div>
-            <div>
-              {stats.verified > 0 ? (
-                <>
-                  <b>{stats.verified}</b>
-                  <small>проектов прошли проверку реестра</small>
-                </>
-              ) : (
-                <>
-                  <b>3 уровня</b>
-                  <small>проверки: заявлено, документы, независимая проверка</small>
-                </>
-              )}
-            </div>
-            <div>
-              <b>30 дней</b>
-              <small>цены без подтверждения старше этого срока скрываются</small>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -229,6 +205,33 @@ export function HomeExperience({
 
       <section className="ie-section" id="ie-results" aria-live="polite">
         <div className="ie-wrap">
+          <div className="ie-toolbar">
+            <div className="ie-tabs" role="tablist" aria-label="Стадия проекта">
+              {STAGES.map(([k, label]) => (
+                <button
+                  key={k || "all"}
+                  type="button"
+                  role="tab"
+                  aria-selected={filters.stage === k}
+                  className={`ie-tab${filters.stage === k ? " is-on" : ""}`}
+                  onClick={() => apply({ ...filters, stage: k })}
+                >
+                  {label} <i>{stageCounts[k]}</i>
+                </button>
+              ))}
+            </div>
+            <div className="ie-toolbar-right">
+              <label className="ie-sort">
+                <span>Порядок</span>
+                <select value={filters.sort} onChange={(e) => set("sort")(e.target.value)} aria-label="Порядок сортировки">
+                  <option value="rating">Рекомендуем</option>
+                  <option value="price-asc">Сначала дешевле</option>
+                  <option value="price-desc">Сначала дороже</option>
+                  <option value="year">Скорее сдача</option>
+                </select>
+              </label>
+            </div>
+          </div>
           <div className="ie-resultbar">
             <div>
               <b>{list.length}</b>{" "}
@@ -285,6 +288,38 @@ export function HomeExperience({
               </p>
             </div>
           ) : null}
+        </div>
+      </section>
+
+      <section className="ie-trustband" aria-label="О каталоге">
+        <div className="ie-wrap">
+          <div className="ie-trust">
+            <div>
+              <b>{stats.projects}</b>
+              <small>проектов в каталоге</small>
+            </div>
+            <div>
+              <b>{stats.developers}</b>
+              <small>застройщиков с досье</small>
+            </div>
+            <div>
+              {stats.verified > 0 ? (
+                <>
+                  <b>{stats.verified}</b>
+                  <small>проектов прошли проверку реестра</small>
+                </>
+              ) : (
+                <>
+                  <b>3 уровня</b>
+                  <small>проверки: заявлено, документы, независимая проверка</small>
+                </>
+              )}
+            </div>
+            <div>
+              <b>30 дней</b>
+              <small>цены без подтверждения старше этого срока скрываются</small>
+            </div>
+          </div>
         </div>
       </section>
     </>
