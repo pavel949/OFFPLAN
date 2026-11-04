@@ -14,9 +14,9 @@ const toRow = (u: OperatorUnitRow): Row => ({
   key: u.id, id: u.id, label: u.label, bedrooms: u.bedrooms?.toString() ?? "", floor: u.floor?.toString() ?? "",
   sqm: u.sqm?.toString() ?? "", price: u.price_thb?.toString() ?? "", status: u.status as UnitInput["status"], dirty: false, at: u.price_updated_at,
 });
-const blank = (): Row => ({ key: `n-${Math.random().toString(36).slice(2)}`, label: "", bedrooms: "", floor: "", sqm: "", price: "", status: "available", dirty: true, at: null });
+const blank = (): Row => ({ key: `n-${Math.random().toString(36).slice(2)}`, label: "", bedrooms: "", floor: "", sqm: "", price: "", status: "unknown", dirty: true, at: null });
 const num = (s: string) => { const v = s.replace(/[\s,]/g, ""); return v === "" ? null : Number(v); };
-const STATUS: Record<string, string> = { available: "Свободен", reserved: "Бронь", sold: "Продан" };
+const STATUS: Record<string, string> = { unknown: "Уточняется", available: "Свободен", reserved: "Бронь", sold: "Продан" };
 
 export function UnitsEditor({ projectId, initial }: { projectId: string; initial: OperatorUnitRow[] }) {
   const router = useRouter();

@@ -14,6 +14,7 @@ import {
   updateLeadUnified,
 } from "@/lib/leads/unified";
 import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
+import {resolveSalesSelection} from "@/lib/sales-public-query";
 
 async function assertAdmin(): Promise<boolean> {
   return getAdminSessionOk();
@@ -88,6 +89,8 @@ export async function submitLead(
     message: formData.get("message"),
     projectId,
     projectName: pn === "" ? null : pn,
+    offerId: formData.get("offerId") || undefined,
+    salesRevision: formData.get("salesRevision") ? Number(formData.get("salesRevision")) : undefined,
     locale: formData.get("locale"),
     consent: formData.get("consent") === "on" ? true : undefined,
   };
@@ -102,6 +105,11 @@ export async function submitLead(
   const emailLimit = await serverRateLimit(`lead:email:${parsed.data.email.toLowerCase()}`, 3, 60 * 60 * 1000);
   if (!emailLimit.ok) return { ok: false, error: emailLimit.unavailable ? E.unavailable : E.tooMany };
   const utm = parseUtmJson(String(formData.get("utm_json") ?? ""));
+  let selection: Awaited<ReturnType<typeof resolveSalesSelection>> | null=null;
+  if(parsed.data.offerId && parsed.data.salesRevision && parsed.data.projectId!=null) {
+    try {selection=await resolveSalesSelection(parsed.data.projectId,parsed.data.offerId,parsed.data.salesRevision);}
+    catch {return {ok:false,error:loc==="ru"?"Условия предложения изменились или юнит недоступен. Обновите страницу и выберите предложение заново.":"The offer changed or is unavailable. Refresh the page and select an offer again."};}
+  }
   try {
     await appendLeadUnified({
       name: parsed.data.name,
@@ -109,7 +117,8 @@ export async function submitLead(
       phone: parsed.data.phone ?? "",
       message: parsed.data.message ?? "",
       projectId: parsed.data.projectId ?? null,
-      projectName: parsed.data.projectName ?? null,
+      projectName: selection?.projectName ?? parsed.data.projectName ?? null,
+      ...(selection?{salesSelection:selection.offer}:{}),
       locale: parsed.data.locale,
       utm,
       consentVersion: CONSENT_VERSION,

@@ -10,6 +10,7 @@ import { getDevelopers } from "@/lib/home-feed";
 import { getProjectByLegacyId } from "@/lib/catalog";
 import { getProjectExtrasByLegacyId } from "@/lib/project-queries";
 import { parseLegacyIdFromSlug, projectSlug } from "@/lib/slug";
+import { getPublicSales } from "@/lib/sales-public-query";
 
 export async function generateMetadata({
   params,
@@ -51,6 +52,7 @@ export default async function ProjectPage({
   }
 
   const extras = await getProjectExtrasByLegacyId(legacyId);
+  const sales = extras.catalogProjectId ? await getPublicSales(extras.catalogProjectId) : null;
 
   const { data: identity } =
     extras.catalogProjectId && hasSupabasePublicConfig()
@@ -79,6 +81,7 @@ export default async function ProjectPage({
         facts={facts}
         developer={developer}
         legacyId={legacyId}
+        sales={sales}
       />
       <SiteFooter />
     </>

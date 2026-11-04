@@ -53,12 +53,18 @@ export function LeadModal({
   lang,
   projectId,
   projectName,
+  offerId,
+  salesRevision,
+  unitLabel,
 }: {
   open: boolean;
   onClose: () => void;
   lang: "en" | "ru";
   projectId: number | null;
   projectName: string | null;
+  offerId?: string;
+  salesRevision?: number;
+  unitLabel?: string;
 }) {
   const ru = lang === "ru";
   const [utmJson, setUtmJson] = useState("");
@@ -129,6 +135,7 @@ export function LeadModal({
             <strong>{projectName}</strong>
           </p>
         ) : null}
+        {unitLabel ? <p>{ru?"Выбранный юнит":"Selected unit"}: <strong>{unitLabel}</strong></p>:null}
 
         {state.ok ? (
           <p className="lead-modal-ok">
@@ -145,6 +152,7 @@ export function LeadModal({
               value={projectId ?? ""}
             />
             <input type="hidden" name="projectName" value={projectName ?? ""} />
+            {offerId ? <><input type="hidden" name="offerId" value={offerId}/><input type="hidden" name="salesRevision" value={salesRevision ?? ""}/></>:null}
             <input type="hidden" name="utm_json" value={utmJson} />
             <input
               type="text"

@@ -294,7 +294,7 @@ export type UnitInput = {
   floor: number | null;
   sqm: number | null;
   price: number | null;
-  status: "available" | "reserved" | "sold";
+  status: "unknown" | "available" | "reserved" | "sold";
 };
 
 export async function adminStudioSaveUnit(projectId: string, u: UnitInput): Promise<Res & { id?: string }> {
@@ -302,7 +302,7 @@ export async function adminStudioSaveUnit(projectId: string, u: UnitInput): Prom
     const db = await admin();
     const label = u.label.trim();
     if (!label) return { ok: false, error: "Укажите номер лота" };
-    if (!["available", "reserved", "sold"].includes(u.status)) return { ok: false, error: "Некорректный статус" };
+    if (!["unknown", "available", "reserved", "sold"].includes(u.status)) return { ok: false, error: "Некорректный статус" };
     const nn = (v: number | null, max: number) => (v == null || !Number.isFinite(v) || v < 0 || v > max ? null : v);
     const row = {
       label: label.slice(0, 80),

@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
+import { SalesOffers } from "@/components/catalogue/SalesOffers";
+import type { PublicSales } from "@/lib/sales-public";
 import { Scene } from "@/components/ie/Scene";
 import { ProjectSubscribeBlock } from "@/app/project/[slug]/project-subscribe";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
@@ -33,6 +35,7 @@ const SALES_STAGE: Record<string, { ru: string; en: string }> = {
   sold_out: { ru: "Продано", en: "Sold out" },
 };
 const UNIT_STATUS: Record<string, { ru: string; en: string }> = {
+  unknown: {ru:"Уточняется",en:"To be confirmed"},
   available: { ru: "Свободен", en: "Available" },
   reserved: { ru: "Бронь", en: "Reserved" },
   sold: { ru: "Продан", en: "Sold" },
@@ -44,6 +47,7 @@ const STEPS = [
 ] as const;
 
 export type ProjectPageProps = {
+  sales?: PublicSales | null;
   project: CatalogProject;
   facts: PublicProjectFacts;
   extras: {
@@ -63,7 +67,7 @@ function fmtDate(iso: string | null | undefined, ru: boolean) {
   return iso ? new Date(iso).toLocaleDateString(ru ? "ru-RU" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—";
 }
 
-export function ProjectPage({ project, facts, extras, developer, legacyId }: ProjectPageProps) {
+export function ProjectPage({ project, facts, extras, developer, legacyId,sales:unitSales }: ProjectPageProps) {
   const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
   const [leadOpen, setLeadOpen] = useState(false);
   const [light, setLight] = useState<number | null>(null);
@@ -109,6 +113,8 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
   const devSite = developer.website && /^https:\/\//.test(developer.website) ? developer.website : null;
   const mapHref = extras.lat != null && extras.lng != null ? `https://www.google.com/maps?q=${extras.lat},${extras.lng}` : null;
   const inv = facts.inventory;
+  const publishedCurrencies = new Set(unitSales?.offers.map(o=>o.currency));
+  const displayPrice = unitSales ? unitSales.offers.length && publishedCurrencies.size===1 ? `${t("от","from")} ${formatPrice(Math.min(...unitSales.offers.map(o=>o.price)),unitSales.offers[0].currency,lang)}` : t("Уточняется по юниту","Ask for unit pricing") : p.pT;
   const showRec = process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true";
   const kindSeed = p.type === "condo" ? "condo" : p.type === "house" ? "house" : "villa";
   const heroPhoto = photos[0];
@@ -163,7 +169,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
           <div className="ie-phero-row">
             <div className="ie-pprice">
               <small>{t("Цена от", "From")}</small>
-              <b>{p.pT}</b>
+              <b>{displayPrice}</b>
               <span>
                 {t("Сдача", "Handover")}: {p.compQ && p.compQ !== String(p.compY) ? p.compQ : p.compY}
               </span>
@@ -271,7 +277,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
           ) : null}
 
           {/* UNITS */}
-          <section className="ie-card">
+          {unitSales ? <SalesOffers sales={unitSales} projectId={p.id} projectName={p.n} lang={lang} /> : <section className="ie-card">
             <h2 className="ie-h2">{t("Лоты и цены", "Units and prices")}</h2>
             {extras.units.length ? (
               <div className="ie-table-wrap">
@@ -316,6 +322,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
             )}
           </section>
 
+          }
           {/* NEWS */}
           {extras.updates.length ? (
             <section className="ie-card">
@@ -376,7 +383,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
             ) : (
               <p className="ie-small">{t("Подтверждённая спецификация пока не предоставлена.", "A confirmed specification has not been supplied.")}</p>
             )}
-            {costs.length ? (
+            {unitSales ? <p className="ie-small"><a href="#unit-offers">{t("Расходы и график оплаты указаны в условиях выбранного юнита выше.","Costs and payment schedules are shown with the selected unit above.")}</a></p> : costs.length ? (
               <>
                 <label className="ie-field">
                   {t("Площадь выбранного лота, м²", "Selected unit area, sqm")}
@@ -423,11 +430,11 @@ export function ProjectPage({ project, facts, extras, developer, legacyId }: Pro
           <div className="ie-sticky">
             <div className="ie-card ie-pbox">
               <small>{t("Цена от", "From")}</small>
-              <b>{p.pT}</b>
+              <b>{displayPrice}</b>
               <ul>
                 <li><span>{t("Сдача", "Handover")}</span><i>{p.compQ || p.compY}</i></li>
                 <li><span>{t("Стадия", "Stage")}</span><i>{STEPS[stepIdx][lang]}</i></li>
-                <li><span>{t("В продаже", "On sale")}</span><i>{inv ? `${inv.available} ${t("лот.", "units")}` : t("нет данных", "no data")}</i></li>
+                <li><span>{t("В продаже", "On sale")}</span><i>{unitSales ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот.","units")}` : inv ? `${inv.available} ${t("лот.", "units")}` : t("нет данных", "no data")}</i></li>
                 <li><span>{t("Проверка", "Verification")}</span><i>L{level}</i></li>
               </ul>
               <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => setLeadOpen(true)}>
