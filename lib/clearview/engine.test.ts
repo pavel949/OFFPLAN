@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ATLAS_V21, CLEARVIEW_V22 } from "./config";
 import { adjustWeights, assess, fromState, tierOf, whatIf, type AssessmentInput, type EvidenceClass } from "./engine";
 import { DOMAINS, GATE_TEXT, ITEMS, type Gate } from "./registry";
 
@@ -38,20 +39,21 @@ describe("registry integrity (Atlas v2.1 appendix)", () => {
 describe("dynamic weights", () => {
   it("every stage and type modifier nets to zero, as the Atlas claims", () => {
     for (const stage of ["prelaunch", "early", "mid", "late", "completed"] as const) {
-      const { weights } = adjustWeights({ stage }, { weightFloorShare: 0 });
+      const { weights } = adjustWeights({ stage });
       expect(Object.values(weights).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 10);
     }
   });
   it("stacked modifiers drive a weight negative in the Atlas; the floor keeps weights positive", () => {
     // Atlas arithmetic: villa on a company structure (-3 D6), pre-launch (-3 D6), personal-use buyer (-5 D6): 7 - 11 = -4
     const stacked = { stage: "prelaunch" as const, kinds: ["villa_company" as const], buyerProfile: "personal" as const };
-    const { weights, floored } = adjustWeights(stacked);
+    expect(Math.min(...Object.values(adjustWeights(stacked, {}, ATLAS_V21).weights))).toBeLessThan(0);
+    const { weights, floored } = adjustWeights(stacked, {}, CLEARVIEW_V22);
     expect(floored).toContain("D6");
     expect(Math.min(...Object.values(weights))).toBeGreaterThan(0);
     expect(Object.values(weights).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 10);
   });
   it("pre-launch branded residence also hits the floor on D7", () => {
-    expect(adjustWeights({ stage: "prelaunch", kinds: ["branded"] }).floored).toContain("D7");
+    expect(adjustWeights({ stage: "prelaunch", kinds: ["branded"] }, {}, CLEARVIEW_V22).floored).toContain("D7");
   });
 });
 
@@ -136,7 +138,7 @@ describe("incomplete data", () => {
     expect(["SILVER", "BRONZE", "CAUTION"]).toContain(r.tier);
   });
   it("maps scores to tiers on the Atlas boundaries", () => {
-    expect([100, 92, 91.9, 80, 79.9, 70, 69.9, 60, 59.9, 40, 39.9].map(tierOf)).toEqual([
+    expect([100, 92, 91.9, 80, 79.9, 70, 69.9, 60, 59.9, 40, 39.9].map((x) => tierOf(x))).toEqual([
       "PLATINUM", "PLATINUM", "GOLD", "GOLD", "SILVER", "SILVER", "BRONZE", "BRONZE", "CAUTION", "CAUTION", "REJECT",
     ]);
   });

@@ -24,6 +24,8 @@ export interface RiskItem {
   cap?: { domain: DomainCode; max: number };
   weight: number;
   branded?: boolean;
+  /** Applies only when the project has this feature (rental thesis). */
+  needs?: "str" | "ltr" | "rental";
   auto: Auto;
 }
 
@@ -85,9 +87,9 @@ export const ITEMS: RiskItem[] = [
   i("6.1", "D6", 3, 3, 3, 1.0, "data", "Exit liquidity score below 3: illiquid micro-market"),
   i("6.2", "D6", 2, 3, 2, 0.8, "data", "Supply pipeline above 500 competing units within 5 km"),
   i("6.3", "D6", 2, 3, 3, 0.8, "data", "Distance to beach above 5 km for an explicit beachfront rental thesis"),
-  i("6.4", "D6", 3, 4, 3, 1.2, "manual", "STR rental pool thesis without verified hotel license", { gate: "G10" }),
-  i("6.5", "D6", 3, 4, 4, 1.0, "ai", "LTR pool managed by developer SPV without independent financial backing"),
-  i("6.6", "D6", 3, 4, 5, 1.0, "data", "Nominal LTR with structural STR patterns (platform listings, rotations under 30 days)"),
+  i("6.4", "D6", 3, 4, 3, 1.2, "manual", "STR rental pool thesis without verified hotel license", { needs: "str", gate: "G10" }),
+  i("6.5", "D6", 3, 4, 4, 1.0, "ai", "LTR pool managed by developer SPV without independent financial backing", { needs: "ltr" }),
+  i("6.6", "D6", 3, 4, 5, 1.0, "data", "Nominal LTR with structural STR patterns (platform listings, rotations under 30 days)", { needs: "ltr" }),
 
   i("7.1", "D7", 2, 3, 3, 1.0, "data", "Price per sqm more than 20% above verified Land Dept zone comparables"),
   i("7.2", "D7", 2, 3, 4, 0.8, "ai", "Hidden costs not disclosed in headline price"),
@@ -97,12 +99,12 @@ export const ITEMS: RiskItem[] = [
   i("8.2", "D8", 2, 3, 2, 0.8, "manual", "Water supply: tanker or private well only, no PWA main grid"),
   i("8.3", "D8", 2, 4, 4, 0.8, "manual", "No geotechnical survey for coastal or lagoon-adjacent site"),
 
-  i("9.1", "D9", 3, 3, 4, 1.0, "data", "Rental pool management company unverifiable: no DBD registration or track record"),
+  i("9.1", "D9", 3, 3, 4, 1.0, "data", "Rental pool management company unverifiable: no DBD registration or track record", { needs: "rental" }),
   i("9.2", "D9", 2, 3, 3, 0.8, "manual", "Juristic person not established at time of transfer (Condo Act B.E. 2522)"),
-  i("9.3", "D9", 2, 4, 4, 1.0, "ai", "Rental pool exit: owner cannot exit without financial penalty"),
-  i("9.4", "D9", 3, 4, 4, 1.0, "ai", "Management fees: owner net yield under 4% after all operator deductions"),
-  i("9.5", "D9", 2, 3, 4, 0.8, "ai", "Revenue reporting: owner has no audit rights on rental pool statements"),
-  i("9.6", "D9", 3, 3, 4, 0.8, "ai", "FF&E reserve under 3% of revenue or under developer sole control"),
+  i("9.3", "D9", 2, 4, 4, 1.0, "ai", "Rental pool exit: owner cannot exit without financial penalty", { needs: "rental" }),
+  i("9.4", "D9", 3, 4, 4, 1.0, "ai", "Management fees: owner net yield under 4% after all operator deductions", { needs: "rental" }),
+  i("9.5", "D9", 2, 3, 4, 0.8, "ai", "Revenue reporting: owner has no audit rights on rental pool statements", { needs: "rental" }),
+  i("9.6", "D9", 3, 3, 4, 0.8, "ai", "FF&E reserve under 3% of revenue or under developer sole control", { needs: "rental" }),
   i("9.7", "D9", 2, 3, 3, 0.8, "manual", "Juristic person governance: weak committee, non-compliant with Condo Act"),
   i("9.8", "D9", 1, 5, 1, 1.2, "data", "Brand operator unverifiable: local brand claiming premium without international standard", { branded: true }),
   i("9.9", "D9", 2, 5, 3, 1.2, "ai", "HMA term under 10 years or renewal conditions unfavourable to unit owners", { branded: true }),
