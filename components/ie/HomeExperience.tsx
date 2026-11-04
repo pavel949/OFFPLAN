@@ -24,6 +24,7 @@ const STAGES: [string, string][] = [
   ["offplan", "Старт продаж"],
   ["building", "Строится"],
   ["ready", "Построенные"],
+  ["unknown", "Стадия уточняется"],
 ];
 
 const QUICK = [
@@ -93,7 +94,7 @@ export function HomeExperience({
   const set = (k: keyof HomeFilters) => (v: string) => apply({ ...(pendingFilters.current ?? filters), [k]: v });
 
   const zones = useMemo(() => [...new Set(projects.map((p) => p.zone))].sort(), [projects]);
-  const years = useMemo(() => [...new Set(projects.map((p) => p.compY))].sort(), [projects]);
+  const years = useMemo(() => [...new Set(projects.map((p) => p.compY).filter((y): y is number => y != null))].sort(), [projects]);
   const list = filterProjects(projects, filters);
   void expired; // The publication clock also re-evaluates budget filtering at expiry.
   const active = hasActiveFilters(filters);
@@ -105,6 +106,7 @@ export function HomeExperience({
       offplan: base.filter((p) => p.stK === "offplan").length,
       building: base.filter((p) => p.stK === "building").length,
       ready: base.filter((p) => p.stK === "ready").length,
+      unknown: base.filter((p) => p.stK === "unknown").length,
     } as Record<string, number>;
   })();
 
@@ -228,7 +230,7 @@ export function HomeExperience({
         <div className="ie-wrap">
           <div className="ie-toolbar">
             <div className="ie-tabs" role="tablist" aria-label="Стадия проекта">
-              {STAGES.map(([k, label]) => (
+              {STAGES.filter(([k]) => k !== "unknown" || stageCounts.unknown > 0).map(([k, label]) => (
                 <button
                   key={k || "all"}
                   type="button"
@@ -273,7 +275,7 @@ export function HomeExperience({
               </button>
             ) : null}
           </div>
-          {list.some(p=>p.stK==="ready" && p.compY<new Date().getFullYear()-5) ? <p className="ie-small">Здесь также есть ранее построенные проекты для изучения истории застройщиков. Год постройки не означает, что в проекте сейчас продаются юниты. Для новых строек выберите соответствующую стадию.</p> : null}
+          {list.some(p=>p.stK==="ready" && p.compY!=null && p.compY<new Date().getFullYear()-5) ? <p className="ie-small">Здесь также есть ранее построенные проекты для изучения истории застройщиков. Год постройки не означает, что в проекте сейчас продаются юниты. Для новых строек выберите соответствующую стадию.</p> : null}
           {list.length ? (
             <div className="ie-grid">
               {list.slice(0, limit).map((p) => (

@@ -34,10 +34,10 @@ const RT_CLS: Record<string, string> = {
 };
 
 function compBanner(p: CatalogProject) {
-  const q = p.compQ || String(p.compY);
+  const q = p.compQ || (p.compY == null ? "Срок не подтверждён" : String(p.compY));
   const s = p.stK;
-  const y = p.compY;
-  const lbl = s === "ready" ? "✓ " : s === "building" ? "🔜 " : "📋 ";
+  const y = p.compY ?? Infinity;
+  const lbl = s === "unknown" ? "" : s === "ready" ? "✓ " : s === "building" ? "🔜 " : "📋 ";
   const cls =
     s === "ready"
       ? "cdone"
@@ -123,7 +123,7 @@ export function ProjectCard({
     <article className={`pc${showRec && p.rec === "AVOID" ? " avoid" : ""}`}>
       <div className={`pc-stripe ${SC[p.seg] || "s-offplan-new"}`} />
       <div className="pc-head">
-        <div className="pc-rat">{p.rat > 0 ? p.rat : "—"}</div>
+        <div className="pc-rat">{p.rat != null && p.rat > 0 ? p.rat : "—"}</div>
         <div className="pc-num">#{p.id}</div>
         <div className="pc-name">
           <Link href={`/project/${projectSlug(p)}`} className="pc-name-link">
@@ -134,8 +134,8 @@ export function ProjectCard({
         <div style={{ margin: "2px 0 4px" }}>
           <VerificationBadge ver={p.ver} lang={lang} />
         </div>
-        <span className={`pc-risk ${RISK_CLS[p.risk] || "r2"}`}>
-          {RISK_EMOJI[p.risk] || "⬜"} {tl("risk", p.risk)}
+        <span className={`pc-risk ${(p.risk == null ? "" : RISK_CLS[p.risk]) || ""}`}>
+          {(p.risk == null ? "⬜" : RISK_EMOJI[p.risk]) || "⬜"} {p.risk == null ? (ru ? "Риск не оценён" : "Risk not assessed") : tl("risk", p.risk)}
         </span>
         {compBanner(p)}
         {renderBadges(p.bdg, ru)}
@@ -170,7 +170,7 @@ export function ProjectCard({
         {p.focus ? (
           <span className="pl pf">💡 {tl("focus", p.focus)}</span>
         ) : null}
-        {p.minBR !== undefined ? (
+        {p.minBR != null ? (
           <span className="pl pd">
             🛏{" "}
             {p.minBR === 0

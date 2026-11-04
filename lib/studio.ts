@@ -18,20 +18,22 @@ const str = (max: number) => z.string().trim().max(max);
 const optNum = (min: number, max: number) =>
   z.preprocess((v) => (v === "" || v == null ? undefined : v), z.coerce.number().finite().min(min).max(max).optional());
 
+const nullableNumber = (schema: z.ZodType<number, unknown>) => z.preprocess(v => v === "" || v == null ? null : v, schema.nullable());
+
 /** Fields of the operator "Основное" form. Editorial fields (rat/risk/rec/recText) are included: the operator is the editor. */
 export const studioFieldsSchema = z.object({
   n: z.string().trim().min(2, "Укажите название проекта").max(200),
   stK: z.enum(STATUS_KEYS),
   seg: z.enum(SEGMENTS),
   type: z.enum(PROPERTY_TYPES),
-  compY: z.coerce.number().int().min(1990, "Год сдачи: 1990–2100").max(2100, "Год сдачи: 1990–2100"),
+  compY: nullableNumber(z.coerce.number().int().min(1990, "Год сдачи: 1990–2100").max(2100, "Год сдачи: 1990–2100")),
   compQ: str(60),
   priceFromM: optNum(0, 100_000),
   pU: str(60),
   sqmP: str(80),
   units: str(120),
   unitSzM2: str(80),
-  minBR: z.coerce.number().int().min(0).max(20),
+  minBR: nullableNumber(z.coerce.number().int().min(0).max(20)),
   beach: z.enum(BEACH_KEYS),
   own: z.enum(OWNERSHIP_KEYS),
   mgmt: z.enum(MANAGEMENT_KEYS),
@@ -40,8 +42,8 @@ export const studioFieldsSchema = z.object({
   desc: str(4000),
   src: str(1000),
   tags: str(600),
-  rat: z.coerce.number().min(0).max(10),
-  risk: z.coerce.number().int().min(1).max(3),
+  rat: nullableNumber(z.coerce.number().min(0).max(10)),
+  risk: nullableNumber(z.coerce.number().int().min(1).max(3)),
   rec: z.enum(["BUY", "WATCH", "AVOID"]),
   recText: str(4000),
 });
@@ -85,7 +87,7 @@ export function mergeStudioFields(
     stK: f.stK,
     stT: f.stK === existing.stK ? existing.stT : taxLabel("stK", f.stK, "ru"),
     compY: f.compY,
-    compQ: f.compQ || String(f.compY),
+    compQ: f.compQ || (f.compY == null ? "" : String(f.compY)),
     pN: f.priceFromM != null ? f.priceFromM : existing.pN,
     pT: priceChanged ? priceLabel(f.priceFromM as number) : existing.pT,
     pU: f.pU,

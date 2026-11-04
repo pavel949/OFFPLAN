@@ -59,7 +59,7 @@ export function ProjectTile({
         <div className="ie-facts">
           <span className="ie-fact">📍 {zoneLabel(p.zone, "ru")}</span>
           <span className="ie-fact">{taxLabel("type", p.type, "ru")}</span>
-          <span className="ie-fact">{p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
+          <span className="ie-fact">{p.minBR == null ? "Спальни уточняются" : p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
         </div>
         <AvailabilityBadge value={avail} type={p.type} />
         <div className="ie-tile-foot">

@@ -46,7 +46,7 @@ export async function adminStudioReference(): Promise<{
   return {
     developers: (d.data ?? []).map((x) => ({ id: x.id as string, code: x.code as string, name: (x.name_ru || x.name_en) as string })),
     locations: regs
-      .filter((x) => x.level === "district")
+      .filter((x) => x.level === "district" || x.level === "region")
       .map((x) => ({
         id: x.id,
         name_en: x.name?.en ?? "",

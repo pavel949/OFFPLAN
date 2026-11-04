@@ -26,10 +26,10 @@ export interface CatalogProject {
   sqmP: string;
   units: string;
   unitSzM2: string;
-  minBR: number;
+  minBR: number | null;
   stK: string;
   stT: string;
-  compY: number;
+  compY: number | null;
   compQ: string;
   beach: string;
   own: string;
@@ -37,8 +37,8 @@ export interface CatalogProject {
   focus: string;
   yield: string;
   yN: number;
-  rat: number;
-  risk: number;
+  rat: number | null;
+  risk: number | null;
   desc: string;
   tags: string[];
   bdg: string[];
