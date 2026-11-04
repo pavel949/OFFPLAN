@@ -4,18 +4,9 @@
 --    ALL privileges on new relations by default => anyone holding the public key could UPDATE or
 --    DELETE published catalogue rows through it (RLS is bypassed by the view owner), e.g. forge
 --    verification_level. Same for the deals views with authenticated.
--- 2. Five first-iteration policies were still present in the live database
---    (anonymous INSERT into leads, anonymous SELECT on catalog_snapshots, ...).
+-- 2. (stale policies are dropped separately in 20261104015930_drop_stale_policies.sql)
 -- 3. Privileges the API never needs (TRUNCATE, REFERENCES, TRIGGER, anon DML) are revoked and
 --    default privileges are tightened so new tables do not repeat the problem.
--- Idempotent: safe to run more than once.
-
--- 1/2. stale permissive policies ------------------------------------------------------------
-drop policy if exists "leads_insert_anon" on public.leads;
-drop policy if exists "leads_read_editor" on public.leads;
-drop policy if exists "leads_update_editor" on public.leads;
-drop policy if exists "catalog_snapshots_read_anon" on public.catalog_snapshots;
-drop policy if exists "catalog_snapshots_write_editor" on public.catalog_snapshots;
 
 -- 3. privileges ------------------------------------------------------------------------------
 -- anon: read-only API role. Lead capture, analytics and all writes go through server code.
