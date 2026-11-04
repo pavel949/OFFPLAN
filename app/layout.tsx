@@ -1,35 +1,27 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import "@fontsource/manrope/cyrillic-400.css";
+import "@fontsource/manrope/cyrillic-500.css";
+import "@fontsource/manrope/cyrillic-600.css";
+import "@fontsource/manrope/cyrillic-700.css";
+import "@fontsource/manrope/cyrillic-800.css";
+import "@fontsource/manrope/latin-400.css";
+import "@fontsource/manrope/latin-500.css";
+import "@fontsource/manrope/latin-600.css";
+import "@fontsource/manrope/latin-700.css";
+import "@fontsource/manrope/latin-800.css";
+import "@fontsource/cormorant-garamond/cyrillic-400.css";
+import "@fontsource/cormorant-garamond/cyrillic-500.css";
+import "@fontsource/cormorant-garamond/cyrillic-600.css";
+import "@fontsource/cormorant-garamond/cyrillic-400-italic.css";
+import "@fontsource/cormorant-garamond/latin-400.css";
+import "@fontsource/cormorant-garamond/latin-500.css";
+import "@fontsource/cormorant-garamond/latin-600.css";
+import "@fontsource/cormorant-garamond/latin-400-italic.css";
 import "./globals.css";
 
-// Self-hosted (npm @fontsource, latin subset): the build must not depend on fetching fonts from
-// Google at build time - that intermittently failed on Vercel and would block production deploys.
-const josefin = localFont({
-  src: [
-    { path: "../node_modules/@fontsource/josefin-sans/files/josefin-sans-latin-300-normal.woff2", weight: "300", style: "normal" },
-    { path: "../node_modules/@fontsource/josefin-sans/files/josefin-sans-latin-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "../node_modules/@fontsource/josefin-sans/files/josefin-sans-latin-500-normal.woff2", weight: "500", style: "normal" },
-    { path: "../node_modules/@fontsource/josefin-sans/files/josefin-sans-latin-600-normal.woff2", weight: "600", style: "normal" },
-    { path: "../node_modules/@fontsource/josefin-sans/files/josefin-sans-latin-700-normal.woff2", weight: "700", style: "normal" },
-  ],
-  variable: "--font-josefin",
-  display: "swap",
-});
-
-const cormorant = localFont({
-  src: [
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-400-italic.woff2", weight: "400", style: "italic" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2", weight: "500", style: "normal" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2", weight: "500", style: "italic" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2", weight: "600", style: "normal" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-italic.woff2", weight: "600", style: "italic" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-normal.woff2", weight: "700", style: "normal" },
-    { path: "../node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-700-italic.woff2", weight: "700", style: "italic" },
-  ],
-  variable: "--font-cormorant",
-  display: "swap",
-});
+// Fonts are self-hosted from npm (@fontsource): the build must not fetch fonts from Google.
+// Both families ship a Cyrillic subset: the site is Russian-first. Variables below are defined in
+// app/ie.css (:root --font-josefin / --font-cormorant keep every legacy rule working).
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
@@ -55,13 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body
-        className={`${josefin.variable} ${cormorant.variable}`}
-        style={{
-          fontFamily: "var(--font-josefin), 'Josefin Sans', sans-serif",
-        }}
-        suppressHydrationWarning
-      >
+      <body suppressHydrationWarning>
         {children}
       </body>
     </html>

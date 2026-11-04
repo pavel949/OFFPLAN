@@ -4,3 +4,4 @@
 @import "tailwindcss";
 @import "./design-system.css";
 @import "./catalogue.css";
+@import "./ie.css";
