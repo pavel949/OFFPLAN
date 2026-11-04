@@ -13,6 +13,7 @@ for f in supabase/migrations/*.sql; do
 done
 # Assert deployed limiter privileges before legacy tests deliberately re-grant all tables.
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/100_rate_limits.sql | sed "/^$/d"
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/110_developer_import.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/10_rls_hardening.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/20_registry.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/30_deals.sql | sed "/^$/d"

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
 import {
   adminListInterests, adminListProjectDocuments, adminListProjectUnits, adminGetProjectPayload,
@@ -37,6 +39,7 @@ export default async function AdminProjectEditPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  if (!(await getAdminSessionOk())) return null;
   const { id } = await params;
   const wanted = (await searchParams).tab;
   const tab = TABS.some(([k]) => k === wanted) ? wanted! : "info";
@@ -142,11 +145,14 @@ async function NewsTab({ id }: { id: string }) {
 }
 
 async function MaterialsTab({ id }: { id: string }) {
+  const { data: imports, error } = await createServiceRoleClient().from("developer_import_projects").select("external_id,name").eq("catalog_project_id",id);
+  if (error) throw new Error("Не удалось загрузить материалы мастер-каталога");
   const [sources, docs] = await Promise.all([adminListSources(id).catch(() => []), adminListProjectDocuments(id).catch(() => [])]);
   return (
     <>
       <section className="adm-card">
         <h3>Материалы застройщика (ссылки)</h3>
+        {imports?.map(p => <p key={p.external_id}><Link href={`/admin/imports/${p.external_id}`}>Паспорт, исторические цены, лоты и документы {p.name} →</Link></p>)}
         <p className="adm-lead">Сайт проекта, папка с брошюрой и рендерами, прайс-лист, Telegram-канал. Файлы копировать не нужно: достаточно ссылки с доступом по ссылке.</p>
         <SourcesManager
           projectId={id}
