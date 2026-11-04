@@ -1,3 +1,4 @@
+import { leadSalesSummary } from "./sales-summary";
 import { after } from "next/server";
 import { resolveLeadBroker } from "@/lib/commission/service";
 import { notifyNewLead } from "@/lib/notify";
@@ -137,9 +138,11 @@ export async function appendLeadUnified(
         phone: created.phone,
         message: created.message,
         projectName: created.projectName,
+        salesSelection: created.salesSelection,
       }),
       dispatchLeadWebhooks({
         event: "lead.created",
+        ...(leadSalesSummary(created.salesSelection)?{sales_selection:leadSalesSummary(created.salesSelection)!}:{}),
         lead_id: created.id,
         project_uuid,
         org_id,

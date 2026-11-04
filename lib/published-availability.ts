@@ -7,6 +7,8 @@ export type PublishedAvailability = {
   observedAt: string;
   expiresAt: string;
   coverage: "published-offers";
+  fromPrice?: { amount: number; currency: string; ownership: string; priceDate: string };
+  pricing?: { currency: string; ownership: string; bedrooms: number | null; from: number }[];
 };
 
 export function publishedAvailability(
@@ -26,7 +28,18 @@ export function publishedAvailability(
     Date.parse(`${o.priceDate}T00:00:00Z`) + 31 * 86400000,
     ...(o.validUntil ? [Date.parse(`${o.validUntil}T00:00:00Z`) + 86400000] : []),
   ]);
+  const thb = offers.filter(o=>o.currency === "THB").sort((a,b)=>a.price-b.price);
+  const cheapest = thb[0];
+  const grouped = new Map<string,{currency:string;ownership:string;bedrooms:number|null;from:number}>();
+  for (const o of offers) {
+    const bedrooms = o.bedrooms ?? null;
+    const key = `${o.currency}:${o.ownership}:${bedrooms}`;
+    const previous = grouped.get(key);
+    if (!previous || o.price < previous.from) grouped.set(key,{currency:o.currency,ownership:o.ownership,bedrooms,from:o.price});
+  }
   return {
+    ...(cheapest ? {fromPrice:{amount:cheapest.price,currency:cheapest.currency,ownership:cheapest.ownership,priceDate:cheapest.priceDate}} : {}),
+    pricing:[...grouped.values()],
     available: new Set(offers.map(o => o.unitId)).size,
     observedAt,
     expiresAt: new Date(Math.min(deadline, ...expiries)).toISOString(),

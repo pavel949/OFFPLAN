@@ -1,7 +1,7 @@
 import { applicableFees,feePreview,paymentPreview,scopeApplies,type SalesModel } from "./sales-model";
 import { freshnessOf } from "./inventory/freshness";
 
-export type PublicUnitIdentity={id:string;label:string;status:string};
+export type PublicUnitIdentity={id:string;label:string;status:string;bedrooms?:number|null};
 export function publicSalesProjection(model:SalesModel,revision:number,units:PublicUnitIdentity[],today:string) {
   const valid=(r:{validFrom:string;validUntil:string})=>(!r.validFrom||r.validFrom<=today)&&(!r.validUntil||r.validUntil>=today);
   const recent=(d:string)=>freshnessOf(d,Date.parse(`${today}T00:00:00Z`))!=="expired";
@@ -14,7 +14,7 @@ export function publicSalesProjection(model:SalesModel,revision:number,units:Pub
     const schedule=plan?paymentPreview(plan,o.price,o.currency,today):null;
     return [{
       id:o.id,unitId:u.id,revision,name:o.name,label:identity.label,kind:u.kind,phase:phase?.name??"",building:building?.name??"",floor:u.floorLabel,plot:u.plotNumber,
-      totalArea:u.totalArea,internalArea:u.internalArea,landArea:u.landArea,areaUnit:model.areaUnit,
+      bedrooms:identity.bedrooms??null,totalArea:u.totalArea,internalArea:u.internalArea,landArea:u.landArea,areaUnit:model.areaUnit,
       price:o.price,currency:o.currency,priceDate:o.sourceDate,availabilityDate:u.sourceDate,validUntil:o.validUntil,
       ownership:o.ownership,ownershipDetail:o.ownershipDetail,tenureYears:o.tenureYears,fitout:o.fitout,furniture:o.furniture,priceTaxTreatment:o.priceTaxTreatment,
       fees:applicableFees(model,o).map(f=>({id:f.id,name:f.name,period:f.period,currency:f.currency,mandatory:f.mandatory,treatment:f.treatment,advanceMonths:f.advanceMonths,payableWhen:f.payableWhen,amount:feePreview(f,u,o.price,o.currency,today),sourceDate:f.sourceDate})),

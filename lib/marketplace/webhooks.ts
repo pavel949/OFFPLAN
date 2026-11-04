@@ -1,8 +1,10 @@
+import type { LeadSalesSummary } from "@/lib/leads/sales-summary";
 import { createHmac } from "crypto";
 import { createServiceRoleClient, hasSupabaseServiceConfig } from "@/lib/supabase/service";
 
 export type LeadWebhookPayload = {
   event: "lead.created";
+  sales_selection?:LeadSalesSummary;
   lead_id: string;
   project_uuid: string | null;
   org_id: string | null;

@@ -1,3 +1,4 @@
+import { currentAvailability } from "./published-availability";
 import { freshnessOf } from "./inventory/freshness";
 import type { CatalogProject } from "./types";
 
@@ -12,6 +13,9 @@ export function showRecLabels(): boolean {
  */
 export function toPublicProject(p: CatalogProject, show = showRecLabels()): CatalogProject {
   const out: CatalogProject = show ? { ...p } : { ...p, rec: "WATCH", recText: "" };
+  // Legacy yield estimates have no attributable current forecast model. Preserve them in storage only.
+  out.yN = 0;
+  out.yield = "";
   // Strip at the server boundary, not just in CSS: stale values must not reach
   // client-side filters, analytics or serialized React props.
   if (freshnessOf(p.dataConfirmedAt) === "expired") {
@@ -19,6 +23,11 @@ export function toPublicProject(p: CatalogProject, show = showRecLabels()): Cata
     out.pT = "POA";
     out.pU = "";
     out.sqmP = "";
+  }
+  const published = currentAvailability(p.sales?.publication);
+  if (published?.fromPrice?.currency === "THB") {
+    out.pN = published.fromPrice.amount / 1e6;
+    out.pT = new Intl.NumberFormat("ru-RU", {style:"currency",currency:"THB",maximumFractionDigits:0}).format(published.fromPrice.amount);
   }
   return out;
 }

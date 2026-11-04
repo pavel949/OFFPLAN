@@ -590,3 +590,21 @@
 .ie-availability small { font-size: 11px; line-height: 1.45; color: var(--ie-muted); }
 .ie-tile-foot { flex-wrap: wrap; }
 .ie-tile-foot b { color: var(--ie-ink); }
+
+/* Price and source milestones use normal flow, so long/missing prices never cover dates. */
+.ie-tile-summary { display: grid; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(11,27,52,.1); }
+.ie-tile-price, .ie-tile-year { position: static; color: var(--ie-ink); text-align: left; opacity: 1; overflow-wrap: anywhere; }
+.ie-tile-price b { display: block; font-size: clamp(23px, 5vw, 29px); line-height: 1.15; }
+.ie-tile-price small, .ie-tile-year small { display: block; font-size: 11px; line-height: 1.4; letter-spacing: 0; text-transform: none; color: var(--ie-muted); }
+.ie-tile-year span { display: block; font-size: 12px; font-weight: 500; line-height: 1.55; }
+.ie-media-placeholder { position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 2; color: white; font-size: 11px; line-height: 1.4; }
+.ie-filter-help { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,.8); }
+.ie-unit-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 12px; margin: 18px 0; }
+.ie-unit-filters label { display: grid; gap: 6px; font-size: 13px; }
+.ie-unit-filters input, .ie-unit-filters select { width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ie-ink); }
+.ie-unit-group { margin: 20px 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; overflow-wrap: anywhere; }
+.ie-unit-group summary { line-height: 1.8; }
+.ie-project-jump { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ie-grid { grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); }
+@media (max-width: 760px) { .ie-hero-sub { display: block; font-size: 14px; line-height: 1.6; } }
+.ie-tile-media::after { background: linear-gradient(180deg, rgba(6,15,30,.18), transparent 65%, rgba(6,15,30,.06)); }

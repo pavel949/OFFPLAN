@@ -1,3 +1,4 @@
+import { leadSalesSummary } from "@/lib/leads/sales-summary";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -27,7 +28,7 @@ export default async function PartnerLeadsPage() {
 
   const { data: leads, error } = await supabase
     .from("leads")
-    .select("id, created_at, name, email, phone, message, project_name, status")
+    .select("id, created_at, name, email, phone, message, project_name, status, sales_selection")
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -44,6 +45,7 @@ export default async function PartnerLeadsPage() {
               <tr style={{ textAlign: "left" }}>
                 <th>Дата</th>
                 <th>Проект</th>
+                <th>Выбранные условия</th>
                 <th>Имя</th>
                 <th>Email</th>
                 <th>Телефон</th>
@@ -55,6 +57,7 @@ export default async function PartnerLeadsPage() {
                 <tr key={l.id as string} style={{ borderTop: "1px solid var(--line)" }}>
                   <td>{new Date(l.created_at as string).toLocaleDateString("ru-RU")}</td>
                   <td>{l.project_name}</td>
+                  <td>{(()=>{const s=leadSalesSummary(l.sales_selection);return s?<><b>{s.unit_label} · {s.ownership}</b><br/>{s.price.toLocaleString("ru-RU")} {s.currency}<br/><small>Цена {s.price_date}; наличие {s.availability_date}; версия {s.sales_revision}</small></>:l.sales_selection?"Условия выбранного юнита требуют уточнения":"Запрос по проекту";})()}</td>
                   <td>{l.name}</td>
                   <td>
                     <a href={`mailto:${l.email}`}>{l.email}</a>

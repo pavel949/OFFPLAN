@@ -24,9 +24,9 @@ export const getPublishedAvailability = cache(async (): Promise<Record<number, P
         const batch = active.slice(start, start + 50);
         const models = await db.from("project_sales_models").select("project_id,revision,model").or(batch.map(p => `and(project_id.eq.${p.project_id},revision.eq.${p.revision})`).join(","));
         if (models.error) return {};
-        const units: { project_id: string; id: string; label: string; status: string }[] = [];
+        const units: { project_id: string; id: string; label: string; status: string; bedrooms: number | null }[] = [];
         for (let offset = 0;; offset += 500) {
-          const r = await db.from("project_units").select("project_id,id,label,status").in("project_id", batch.map(p => p.project_id)).order("id").range(offset, offset + 499);
+          const r = await db.from("project_units").select("project_id,id,label,status,bedrooms").in("project_id", batch.map(p => p.project_id)).order("id").range(offset, offset + 499);
           if (r.error) return {};
           units.push(...r.data);
           if (r.data.length < 500) break;

@@ -1,3 +1,6 @@
+import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
+import { currentAvailability } from "@/lib/published-availability";
+import { usePublicationExpired } from "./usePublicationExpired";
 import Image from "next/image";
 import Link from "next/link";
 import { effectiveLevel, LEVEL_TEXT } from "@/lib/registry/levels";
@@ -9,7 +12,7 @@ import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import { Scene } from "./Scene";
 
-const STAGE_RU: Record<string, string> = { offplan: "Старт продаж", building: "Строится", ready: "Сдан" };
+const STAGE_RU: Record<string, string> = { offplan: "Старт продаж", building: "Строится", ready: "Построен · данные каталога" };
 
 export function ProjectTile({
   p,
@@ -22,6 +25,8 @@ export function ProjectTile({
   const cover = feed.covers[p.id];
   const promo = feed.campaigns[p.id];
   const avail = feed.availability[p.id];
+  usePublicationExpired(avail?.expiresAt);
+  const publishedPrice = currentAvailability(avail)?.fromPrice;
   const level = effectiveLevel(p.ver);
 
   return (
@@ -34,21 +39,18 @@ export function ProjectTile({
           <Scene seed={p.id} kind={p.type === "condo" ? "condo" : p.type === "house" ? "house" : "villa"} />
         )}
         <div className="ie-badges">
+          {cover?.render ? <span className="ie-badge">Визуализация</span> : cover ? <span className="ie-badge">Материал застройщика</span> : null}
           <span className="ie-badge">{STAGE_RU[p.stK] ?? taxLabel("stK", p.stK, "ru", true)}</span>
           {promo ? <span className="ie-badge ie-badge--gold">Акция{promo.labelRu ? `: ${promo.labelRu}` : ""}</span> : null}
           {level > 0 ? <span className="ie-badge ie-badge--ver">🛡 {LEVEL_TEXT[level].ruShort}</span> : null}
         </div>
-        <div className="ie-tile-price">
-          <small>Цена от</small>
-          <b>{priceFromLabel(p)}</b>
-        </div>
-        <div className="ie-tile-year">
-          Сдача
-          <br />
-          {p.compQ && p.compQ !== String(p.compY) ? p.compQ : p.compY}
-        </div>
+        {!cover ? <span className="ie-media-placeholder">Иллюстрация · материалы ещё не добавлены</span> : null}
       </div>
       <div className="ie-tile-body">
+        <div className="ie-tile-summary">
+          <div className="ie-tile-price"><small>{publishedPrice ? "Цена от по прайсу" : "Цена от"}</small><b>{priceFromLabel(p)}</b>{publishedPrice ? <small>{ownershipLabel(publishedPrice.ownership)} · {publishedPrice.priceDate.split("-").reverse().join(".")}</small> : null}</div>
+          <div className="ie-tile-year"><small>Сроки по данным источника</small><span>{completionLabel(p.compQ || p.compY)}</span></div>
+        </div>
         <h3 id={`project-title-${p.id}`}>{p.n}</h3>
         <div className="ie-tile-dev">
           Застройщик:{" "}
@@ -58,7 +60,6 @@ export function ProjectTile({
           <span className="ie-fact">📍 {zoneLabel(p.zone, "ru")}</span>
           <span className="ie-fact">{taxLabel("type", p.type, "ru")}</span>
           <span className="ie-fact">{p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
-          {p.yN > 0 ? <span className="ie-fact">доходность ~{p.yN}%</span> : null}
         </div>
         <AvailabilityBadge value={avail} type={p.type} />
         <div className="ie-tile-foot">

@@ -1,6 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { ownershipLabel } from "@/lib/buyer-display";
+import { formatPrice } from "@/lib/inventory/freshness";
+import type { PublicOffer } from "@/lib/sales-public";
 import Link from "next/link";
 import { submitLead, type SubmitLeadState } from "@/app/actions/leads";
 import "./lead-modal.css";
@@ -56,6 +59,7 @@ export function LeadModal({
   offerId,
   salesRevision,
   unitLabel,
+  selection,
 }: {
   open: boolean;
   onClose: () => void;
@@ -65,19 +69,12 @@ export function LeadModal({
   offerId?: string;
   salesRevision?: number;
   unitLabel?: string;
+  selection?: Pick<PublicOffer,"label"|"ownership"|"price"|"currency"|"priceDate"|"availabilityDate"|"revision">;
 }) {
   const ru = lang === "ru";
   const [utmJson, setUtmJson] = useState("");
-  const [state, formAction] = useActionState(submitLead, initial);
-
-  useEffect(() => {
-    if (state.ok) {
-      const t = window.setTimeout(() => {
-        onClose();
-      }, 1600);
-      return () => window.clearTimeout(t);
-    }
-  }, [state.ok, onClose]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [state, formAction, pending] = useActionState(submitLead, initial);
 
   useEffect(() => {
     if (!open) return;
@@ -88,11 +85,21 @@ export function LeadModal({
       if (v) o[k] = v;
     }
     setUtmJson(Object.keys(o).length ? JSON.stringify(o) : "");
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = requestAnimationFrame(()=>panelRef.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus());
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") { e.preventDefault(); onClose(); }
+      if (e.key === "Tab") {
+        const controls = [...(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([type="hidden"]):not([tabindex="-1"]),textarea,a[href],select') ?? [])].filter(el=>el.offsetParent!==null);
+        const first=controls[0],last=controls.at(-1);
+        if (e.shiftKey && document.activeElement===first) {e.preventDefault();last?.focus();}
+        else if (!e.shiftKey && document.activeElement===last) {e.preventDefault();first?.focus();}
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {cancelAnimationFrame(frame);document.body.style.overflow=overflow;window.removeEventListener("keydown",onKey);previous?.focus();};
   }, [open, onClose]);
 
   if (!open) return null;
@@ -106,6 +113,7 @@ export function LeadModal({
       }}
     >
       <div
+        ref={panelRef}
         className="lead-modal"
         role="dialog"
         aria-modal
@@ -120,12 +128,12 @@ export function LeadModal({
           ✕
         </button>
         <h2 id="lead-modal-title" className="lead-modal-title">
-          {ru ? "Заявка на новостройку" : "Off-plan inquiry"}
+          {selection ? (ru ? "Запрос на выбранный юнит" : "Selected unit inquiry") : (ru ? "Запрос по проекту" : "Project inquiry")}
         </h2>
         <p className="lead-modal-sub">
           {ru
-            ? "Оставьте контакты — мы свяжемся и подберём варианты под ваш запрос."
-            : "Leave your details — we will contact you with tailored options."}
+            ? "Оставьте контакты для уточнения условий. Это не бронирование и не обязательство платить."
+            : "Leave your details to clarify the terms. This is not a reservation or an obligation to pay."}
         </p>
         {projectName ? (
           <p className="lead-modal-proj">
@@ -135,13 +143,14 @@ export function LeadModal({
             <strong>{projectName}</strong>
           </p>
         ) : null}
-        {unitLabel ? <p>{ru?"Выбранный юнит":"Selected unit"}: <strong>{unitLabel}</strong></p>:null}
+        {selection ? <div className="lead-modal-selection"><strong>{selection.label} · {ownershipLabel(selection.ownership,lang)}</strong><br/>{formatPrice(selection.price,selection.currency,lang)}<br/><small>{ru?"Цена по данным на":"Price dated"} {selection.priceDate} · {ru?"наличие":"availability"} {selection.availabilityDate} · {ru?"версия":"revision"} {selection.revision}</small></div> : null}
+        {!selection && unitLabel ? <p>{ru?"Выбранный юнит":"Selected unit"}: <strong>{unitLabel}</strong></p>:null}
 
         {state.ok ? (
-          <p className="lead-modal-ok">
+          <p className="lead-modal-ok" role="status">
             {ru
-              ? "✓ Заявка отправлена. Мы свяжемся с вами в ближайшее время."
-              : "✓ Thank you. We will reach out shortly."}
+              ? "✓ Заявка отправлена. Команда проекта уточнит условия по указанным контактам."
+              : "✓ Thank you. The project team will clarify the terms using your contact details."}
           </p>
         ) : (
           <form action={formAction} className="lead-modal-form">
@@ -206,15 +215,15 @@ export function LeadModal({
             <TurnstileWidget />
 
             {state.error ? (
-              <p className="lead-modal-err">{state.error}</p>
+              <p className="lead-modal-err" role="alert">{state.error}</p>
             ) : null}
 
             <div className="lead-modal-actions">
               <button type="button" className="lead-modal-btn ghost" onClick={onClose}>
                 {ru ? "Отмена" : "Cancel"}
               </button>
-              <button type="submit" className="lead-modal-btn primary">
-                {ru ? "Отправить" : "Send"}
+              <button type="submit" disabled={pending} className="lead-modal-btn primary">
+                {pending ? (ru?"Отправляем…":"Sending…") : (ru ? "Отправить запрос" : "Send inquiry")}
               </button>
             </div>
           </form>

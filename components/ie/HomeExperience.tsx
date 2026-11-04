@@ -1,8 +1,9 @@
 "use client";
+import { usePublicationExpired } from "./usePublicationExpired";
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BUDGET_STEPS,
   EMPTY_FILTERS,
@@ -22,7 +23,7 @@ const STAGES: [string, string][] = [
   ["", "Все"],
   ["offplan", "Старт продаж"],
   ["building", "Строится"],
-  ["ready", "Сдан"],
+  ["ready", "Построенные"],
 ];
 
 const QUICK = [
@@ -66,30 +67,38 @@ export function HomeExperience({
   feed: HomeFeed;
   stats: { projects: number; developers: number; verified: number; updatedLabel: string };
 }) {
+  const expiry = Object.values(feed.availability).map(v=>v.expiresAt).filter(v=>Date.parse(v)>Date.now()).sort()[0];
+  const expired = usePublicationExpired(expiry);
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(sp.toString())), [sp]);
+  const pendingFilters = useRef<HomeFilters | null>(null);
+  useEffect(()=>{if(pendingFilters.current && filtersToParams(pendingFilters.current).toString()===sp.toString()) pendingFilters.current=null;},[sp]);
+  useEffect(()=>{const clear=()=>{pendingFilters.current=null;};window.addEventListener("popstate",clear);return()=>window.removeEventListener("popstate",clear);},[]);
   const [draft, setDraft] = useState(filters.q);
+  useEffect(()=>setDraft(filters.q),[filters.q]);
   const [limit, setLimit] = useState(24);
   const filterKey = sp.toString();
   useEffect(() => setLimit(24), [filterKey]);
 
   const apply = useCallback(
     (next: HomeFilters) => {
+      pendingFilters.current = next;
       const qs = filtersToParams(next).toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname],
   );
-  const set = (k: keyof HomeFilters) => (v: string) => apply({ ...filters, [k]: v });
+  const set = (k: keyof HomeFilters) => (v: string) => apply({ ...(pendingFilters.current ?? filters), [k]: v });
 
   const zones = useMemo(() => [...new Set(projects.map((p) => p.zone))].sort(), [projects]);
   const years = useMemo(() => [...new Set(projects.map((p) => p.compY))].sort(), [projects]);
-  const list = useMemo(() => filterProjects(projects, filters), [projects, filters]);
+  const list = filterProjects(projects, filters);
+  void expired; // The publication clock also re-evaluates budget filtering at expiry.
   const active = hasActiveFilters(filters);
   // Stage tab counts reflect every other active filter, so the numbers always add up.
-  const stageCounts = useMemo(() => {
+  const stageCounts = (() => {
     const base = filterProjects(projects, { ...filters, stage: "" });
     return {
       "": base.length,
@@ -97,7 +106,7 @@ export function HomeExperience({
       building: base.filter((p) => p.stK === "building").length,
       ready: base.filter((p) => p.stK === "ready").length,
     } as Record<string, number>;
-  }, [projects, filters]);
+  })();
 
   return (
     <>
@@ -106,12 +115,12 @@ export function HomeExperience({
         <div className="ie-horizon" />
         <div className="ie-wrap">
           <div className="ie-hero-copy">
-            <div className="ie-eyebrow">Пхукет · Юго-Восточная Азия · {stats.updatedLabel}</div>
+            <div className="ie-eyebrow">Пхукет · Каталог новостроек</div>
             <h1 id="ie-h1">
-              Новостройки, которым можно <em>доверять</em>
+              Выберите новостройку. <em>Проверьте детали.</em>
             </h1>
             <p className="ie-hero-sub">
-              Живые прайс-листы, наличие лотов и фотоотчёты со строек: всё от застройщиков, под контролем независимого реестра проверки.
+              Сравните проекты, бюджет и условия покупки. У опубликованных предложений указаны даты и источники; неизвестные сведения отмечены отдельно. Уровень проверки виден в каждой карточке.
             </p>
           </div>
 
@@ -120,7 +129,7 @@ export function HomeExperience({
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
-              apply({ ...filters, q: draft.trim() });
+              apply({ ...(pendingFilters.current ?? filters), q: draft.trim() });
               document.getElementById("ie-results")?.scrollIntoView({ behavior: "smooth" });
             }}
           >
@@ -167,6 +176,12 @@ export function HomeExperience({
                   </option>
                 ))}
               </Select>
+              <Select id="f-bedrooms" label="Спальни в прайсе" value={filters.bedrooms} onChange={set("bedrooms")}>
+                <option value="">Любые</option>{[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?"Студия":`${n} спал.`}</option>)}
+              </Select>
+              <Select id="f-ownership" label="Владение в прайсе" value={filters.ownership} onChange={set("ownership")}>
+                <option value="">Любое</option><option value="leasehold">Leasehold</option><option value="freehold">Freehold</option>
+              </Select>
               <Select id="f-year" label="Сдача" value={filters.year} onChange={set("year")}>
                 <option value="">Любой год</option>
                 {years.map((y) => (
@@ -176,6 +191,7 @@ export function HomeExperience({
                 ))}
               </Select>
             </div>
+            <p className="ie-filter-help">Бюджет — в тайских батах, по действующим опубликованным ценам. Спальни и владение уточняют предложения прайса. Проекты без подтверждённых условий в эти результаты не входят.</p>
             <div className="ie-hints">
               <span>Попробуйте:</span>
               {QUICK.map((q) => (
@@ -219,7 +235,7 @@ export function HomeExperience({
                   role="tab"
                   aria-selected={filters.stage === k}
                   className={`ie-tab${filters.stage === k ? " is-on" : ""}`}
-                  onClick={() => apply({ ...filters, stage: k })}
+                  onClick={() => apply({ ...(pendingFilters.current ?? filters), stage: k })}
                 >
                   {label} <i>{stageCounts[k]}</i>
                 </button>
@@ -229,7 +245,7 @@ export function HomeExperience({
               <label className="ie-sort">
                 <span>Порядок</span>
                 <select value={filters.sort} onChange={(e) => set("sort")(e.target.value)} aria-label="Порядок сортировки">
-                  <option value="rating">Рекомендуем</option>
+                  <option value="rating">Порядок каталога</option>
                   <option value="price-asc">Сначала дешевле</option>
                   <option value="price-desc">Сначала дороже</option>
                   <option value="year">Скорее сдача</option>
@@ -257,6 +273,7 @@ export function HomeExperience({
               </button>
             ) : null}
           </div>
+          {list.some(p=>p.stK==="ready" && p.compY<new Date().getFullYear()-5) ? <p className="ie-small">Здесь также есть ранее построенные проекты для изучения истории застройщиков. Год постройки не означает, что в проекте сейчас продаются юниты. Для новых строек выберите соответствующую стадию.</p> : null}
           {list.length ? (
             <div className="ie-grid">
               {list.slice(0, limit).map((p) => (
@@ -274,7 +291,7 @@ export function HomeExperience({
           {list.length === 0 ? (
             <div className="ie-empty">
               <h3>Ничего не нашлось</h3>
-              <p>Попробуйте убрать часть условий или расширить бюджет.</p>
+              <p>{filters.budget || filters.ownership || filters.bedrooms ? "Нет опубликованных предложений с подтверждёнными условиями под этот запрос. У части проектов цены или параметры пока неизвестны; это не означает, что они дороже бюджета или распроданы. Уберите ограничение, чтобы посмотреть их отдельно." : "Попробуйте другое название, район или снимите часть условий."}</p>
               <button
                 type="button"
                 className="ie-btn ie-btn--ink"
@@ -288,7 +305,7 @@ export function HomeExperience({
               <p style={{ marginTop: 16 }}>
                 Не нашли подходящий?{" "}
                 <Link href="/market" style={{ textDecoration: "underline" }}>
-                  Откройте расширенный каталог с аналитикой
+                  Посмотрите весь каталог
                 </Link>
               </p>
             </div>

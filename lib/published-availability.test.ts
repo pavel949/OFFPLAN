@@ -14,7 +14,7 @@ function fixture(){
 describe("published availability on project cards",()=>{
   it("counts physical units once across ownership offers and labels partial coverage",()=>{
     const {model,units}=fixture();model.offers.push({...model.offers[0],id:id(3),ownership:"freehold"});
-    expect(publishedAvailability(model,publication,units,now)).toEqual({available:1,observedAt:"2026-11-04",expiresAt:publication.expires_at.replace("Z",".000Z"),coverage:"published-offers"});
+    expect(publishedAvailability(model,publication,units,now)).toMatchObject({available:1,observedAt:"2026-11-04",expiresAt:publication.expires_at.replace("Z",".000Z"),coverage:"published-offers"});
   });
   it("treats expired/invalid publication as unknown",()=>{
     const {model,units}=fixture();
