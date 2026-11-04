@@ -1,3 +1,4 @@
+import { getPublishedAvailability } from "./published-availability-query";
 import rawProjects from "@/data/seed/projects.json";
 import ruSeedTexts from "@/data/i18n/projects.ru.json";
 import { countByRec } from "./filters";
@@ -104,19 +105,15 @@ async function loadSales(
   const out = new Map<number, NonNullable<CatalogProject["sales"]>>();
   try {
     const [inventory, facts] = await Promise.all([
-      client
-        .from("public_project_inventory")
-        .select("project_id,recorded,available"),
+      getPublishedAvailability(),
       client
         .from("project_evidence")
         .select("project_id,details")
         .eq("kind", "sales")
         .eq("status", "published"),
     ]);
-    for (const row of inventory.data ?? []) {
-      const id = idMap.get(row.project_id);
-      if (id != null)
-        out.set(id, { available: row.available, recorded: row.recorded });
+    for (const [id, summary] of Object.entries(inventory)) {
+      out.set(Number(id), { available: summary.available });
     }
     for (const row of facts.data ?? []) {
       const id = idMap.get(row.project_id);

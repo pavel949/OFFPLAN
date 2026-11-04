@@ -1,11 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { effectiveLevel, LEVEL_TEXT } from "@/lib/registry/levels";
-import { developerSlug } from "@/lib/developers";
 import type { HomeFeed } from "@/lib/home-feed";
 import { priceFromLabel } from "@/lib/home-search";
-import { locationSlug, projectSlug } from "@/lib/slug";
-import { SOURCE_KIND_LABEL_RU } from "@/lib/sources";
+import { projectSlug } from "@/lib/slug";
+import { AvailabilityBadge } from "./AvailabilityBadge";
 import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import { Scene } from "./Scene";
@@ -24,11 +23,11 @@ export function ProjectTile({
   const promo = feed.campaigns[p.id];
   const avail = feed.availability[p.id];
   const level = effectiveLevel(p.ver);
-  const material = (feed.sources[p.id] ?? [])[0];
 
   return (
     <article className="ie-tile">
-      <Link href={href} className="ie-tile-media" tabIndex={-1} aria-hidden="true">
+      <Link href={href} className="ie-tile-link" aria-labelledby={`project-title-${p.id}`}>
+      <div className="ie-tile-media">
         {cover ? (
           <Image src={cover.url} alt="" fill sizes="(max-width: 700px) 100vw, 380px" unoptimized referrerPolicy="no-referrer" />
         ) : (
@@ -48,38 +47,26 @@ export function ProjectTile({
           <br />
           {p.compQ && p.compQ !== String(p.compY) ? p.compQ : p.compY}
         </div>
-      </Link>
+      </div>
       <div className="ie-tile-body">
-        <h3>
-          <Link href={href}>{p.n}</Link>
-        </h3>
+        <h3 id={`project-title-${p.id}`}>{p.n}</h3>
         <div className="ie-tile-dev">
           Застройщик:{" "}
-          <Link href={`/developers/${developerSlug(p.dt)}`}>{p.dev}</Link>
+          <span>{p.dev}</span>
         </div>
         <div className="ie-facts">
-          <Link href={`/locations/${locationSlug(p.zone)}`} className="ie-fact" style={{ position: "relative", zIndex: 2, textDecoration: "none" }}>📍 {zoneLabel(p.zone, "ru")}</Link>
+          <span className="ie-fact">📍 {zoneLabel(p.zone, "ru")}</span>
           <span className="ie-fact">{taxLabel("type", p.type, "ru")}</span>
           <span className="ie-fact">{p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
           {p.yN > 0 ? <span className="ie-fact">доходность ~{p.yN}%</span> : null}
         </div>
+        <AvailabilityBadge value={avail} type={p.type} />
         <div className="ie-tile-foot">
-          <span>
-            {avail?.available != null
-              ? `Доступны: ${avail.available} из ${avail.recorded ?? "—"} внесённых лотов`
-              : level > 0
-                ? "Проверено реестром"
-                : "Данные заявлены застройщиком"}
-          </span>
-          {material ? (
-            <a href={material.url} target="_blank" rel="noopener noreferrer nofollow">
-              {SOURCE_KIND_LABEL_RU[material.kind]} ↗
-            </a>
-          ) : (
-            <Link href={href}>Досье →</Link>
-          )}
+          <span>{level > 0 ? "Проверено реестром" : "Данные заявлены застройщиком"}</span>
+          <b>Проект и лоты →</b>
         </div>
       </div>
+      </Link>
     </article>
   );
 }

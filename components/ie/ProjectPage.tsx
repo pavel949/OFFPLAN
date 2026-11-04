@@ -1,5 +1,6 @@
 "use client";
 
+import { usePublicationExpired } from "./usePublicationExpired";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -67,7 +68,9 @@ function fmtDate(iso: string | null | undefined, ru: boolean) {
   return iso ? new Date(iso).toLocaleDateString(ru ? "ru-RU" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—";
 }
 
-export function ProjectPage({ project, facts, extras, developer, legacyId,sales:unitSales }: ProjectPageProps) {
+export function ProjectPage({ project, facts, extras, developer, legacyId,sales:initialSales }: ProjectPageProps) {
+  const expired = usePublicationExpired(initialSales?.expiresAt);
+  const unitSales = expired && initialSales ? { ...initialSales, offers: [] } : initialSales;
   const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
   const [leadOpen, setLeadOpen] = useState(false);
   const [light, setLight] = useState<number | null>(null);
@@ -434,7 +437,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
               <ul>
                 <li><span>{t("Сдача", "Handover")}</span><i>{p.compQ || p.compY}</i></li>
                 <li><span>{t("Стадия", "Stage")}</span><i>{STEPS[stepIdx][lang]}</i></li>
-                <li><span>{t("В продаже", "On sale")}</span><i>{unitSales ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот.","units")}` : inv ? `${inv.available} ${t("лот.", "units")}` : t("нет данных", "no data")}</i></li>
+                <li><span>{t("В продаже", "On sale")}</span><i>{unitSales?.offers.length ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот. в прайсе","units in price list")}` : t("уточняется", "unconfirmed")}</i></li>
                 <li><span>{t("Проверка", "Verification")}</span><i>L{level}</i></li>
               </ul>
               <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => setLeadOpen(true)}>

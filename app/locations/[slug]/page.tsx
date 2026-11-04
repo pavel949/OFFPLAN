@@ -83,7 +83,7 @@ export default async function LocationPage({ params }: Params) {
           <div className="ie-kpi"><small>Цена от — до</small><b>{fmtM(s.price.min)}–{fmtM(s.price.max)}</b><span>медиана {fmtM(s.price.median)} (по {s.price.n} проект.)</span></div>
           <div className="ie-kpi"><small>Доходность (заявл.)</small><b>{fmtPct(s.yield.avg)}</b><span>среднее по {s.yield.n} проект.</span></div>
           <div className="ie-kpi"><small>Лотов в проектах</small><b>{fmtInt(s.units.total)}</b><span>данные по {s.units.coveredProjects} из {s.projects} проект.</span></div>
-          <div className="ie-kpi"><small>Застройщиков</small><b>{s.developers}</b><span>{hasSale ? `${onSale} лотов в продаже` : "наличие лотов не внесено"}</span></div>
+          <div className="ie-kpi"><small>Застройщиков</small><b>{s.developers}</b><span>{hasSale ? `${onSale} лотов в опубликованных прайсах (неполный набор)` : "наличие лотов не внесено"}</span></div>
           <div className="ie-kpi"><small>Цена за м²</small><b>{s.perSqm.median ? `฿${fmtInt(s.perSqm.median)}` : "—"}</b><span>{s.perSqm.n ? `медиана по ${s.perSqm.n} проект.` : "в проектах не указана"}</span></div>
         </div>}
 
