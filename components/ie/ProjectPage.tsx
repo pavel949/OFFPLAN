@@ -119,7 +119,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   const sales = facts.facts.find((f) => f.kind === "sales");
   const totals = operatingCostTotals(costs, sqm.trim() ? Number(sqm) : null);
   const level = effectiveLevel(p.ver);
-  const stepIdx = Math.max(0, STEPS.findIndex((s) => s.key === p.stK));
+  const stepIdx = STEPS.findIndex((s) => s.key === p.stK);
   const site = facts.sources.find((s) => s.kind === "website");
   const otherMaterials = facts.sources.filter((s) => s.kind !== "website");
   const devSite = developer.website && /^https:\/\//.test(developer.website) ? developer.website : null;
@@ -145,7 +145,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
     [t("Лотов в проекте", "Units"), p.units || "—"],
     [t("Размеры, м²", "Sizes, sqm"), p.unitSzM2 || "—"],
     [t("Цена за м²", "Price per sqm"), p.sqmP || "—"],
-    [t("Спальни", "Bedrooms"), p.minBR === 0 ? t("от студии", "from studio") : t(`от ${p.minBR}`, `from ${p.minBR}`)],
+    [t("Спальни", "Bedrooms"), p.minBR == null ? t("Уточняется", "Not confirmed") : p.minBR === 0 ? t("от студии", "from studio") : t(`от ${p.minBR}`, `from ${p.minBR}`)],
   ];
 
   return (
@@ -167,7 +167,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             <Link href="/">{t("Каталог", "Catalogue")}</Link> / <Link href={`/developers/${developer.slug}`}>{developer.name}</Link>
           </div>
           <div className="ie-badges-row">
-            <span className="ie-badge">{STEPS[stepIdx][lang]}</span>
+            <span className="ie-badge">{(STEPS[stepIdx]?.[lang] ?? t("Стадия не подтверждена", "Stage not confirmed"))}</span>
             {salesStageLabel ? <span className="ie-badge">{salesStageLabel}</span> : null}
             {extras.campaigns.length ? <span className="ie-badge ie-badge--gold">{t("Акция", "Promo")}</span> : null}
             <span className={`ie-badge ${level > 0 ? "ie-badge--ver" : ""}`}>
@@ -241,7 +241,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
                   <span className="ie-step-dot" />
                   <b>{s[lang]}</b>
                   <small>
-                    {i === 0 ? (salesStageLabel ?? t("статус продаж не подтверждён", "sales status unconfirmed")) : i === 1 ? (p.stT || "") : `${stepIdx === 2 ? t("сдан", "completed") : t("ожидается", "expected")}: ${completion}`}
+                    {i === 0 ? (salesStageLabel ?? t("статус продаж не подтверждён", "sales status unconfirmed")) : i === 1 ? (p.stT || "") : stepIdx < 0 ? completion : `${stepIdx === 2 ? t("сдан", "completed") : t("ожидается", "expected")}: ${completion}`}
                   </small>
                 </li>
               ))}
@@ -333,7 +333,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
                 {t("Это только внесённые в систему лоты, а не весь объём проекта.", "Counts cover recorded units only, not necessarily the entire project.")}
               </p>
             ) : (
-              <p className="ie-small">{t("Остатки неизвестны: застройщик ещё не предоставил инвентарь.", "Availability is unknown: the developer has not supplied inventory.")}</p>
+              <p className="ie-small">{t("Актуальные остатки не подтверждены. Исторические прайсы не используются как текущее наличие.", "Current availability is not confirmed. Historical price lists are not treated as current inventory.")}</p>
             )}
           </section>
 
@@ -447,8 +447,8 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
               <small>{t("Цена от", "From")}</small>
               <b>{displayPrice}</b>
               <ul>
-                <li><span>{t("Сдача", "Handover")}</span><i>{p.compQ || p.compY}</i></li>
-                <li><span>{t("Стадия", "Stage")}</span><i>{STEPS[stepIdx][lang]}</i></li>
+                <li><span>{t("Сдача", "Handover")}</span><i>{completion}</i></li>
+                <li><span>{t("Стадия", "Stage")}</span><i>{(STEPS[stepIdx]?.[lang] ?? t("Стадия не подтверждена", "Stage not confirmed"))}</i></li>
                 <li><span>{t("В продаже", "On sale")}</span><i>{unitSales?.offers.length ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот. в прайсе","units in price list")}` : t("уточняется", "unconfirmed")}</i></li>
                 <li><span>{t("Проверка", "Verification")}</span><i>L{level}</i></li>
               </ul>

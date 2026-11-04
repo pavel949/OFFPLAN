@@ -7,6 +7,7 @@
 export const REC_LABELS = ["BUY", "WATCH", "AVOID"] as const;
 
 export const SEGMENTS = [
+  "unknown",
   "offplan-new",
   "condo",
   "villa-entry",
@@ -16,20 +17,20 @@ export const SEGMENTS = [
   "completed",
 ] as const;
 
-export const PROPERTY_TYPES = ["condo", "villa", "house"] as const;
+export const PROPERTY_TYPES = ["unknown", "condo", "villa", "house"] as const;
 
 /** Construction status key. */
-export const STATUS_KEYS = ["offplan", "building", "ready"] as const;
+export const STATUS_KEYS = ["unknown", "offplan", "building", "ready"] as const;
 
 /** Distance to beach: beachfront, ≤500m, ≤1km, inland. */
-export const BEACH_KEYS = ["bf", "500", "1k", "inl"] as const;
+export const BEACH_KEYS = ["unknown", "bf", "500", "1k", "inl"] as const;
 
 /** Ownership: freehold, leasehold, both. */
-export const OWNERSHIP_KEYS = ["fh", "lh", "both"] as const;
+export const OWNERSHIP_KEYS = ["unknown", "fh", "lh", "both"] as const;
 
-export const MANAGEMENT_KEYS = ["pro", "hotel", "self"] as const;
+export const MANAGEMENT_KEYS = ["unknown", "pro", "hotel", "self"] as const;
 
-export const FOCUS_KEYS = ["STR", "LTR", "lifestyle", "growth", "mixed"] as const;
+export const FOCUS_KEYS = ["unknown", "STR", "LTR", "lifestyle", "growth", "mixed"] as const;
 
 /** Risk tier: 1 low · 2 medium · 3 high (matches Risk tab and platform_settings). */
 export const RISK_MIN = 1;
@@ -91,6 +92,7 @@ export interface TermLabel {
 
 export const TAXONOMY_LABELS: Record<TaxonomyKind, Record<string, TermLabel>> = {
   seg: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     "offplan-new": { ru: "Новые проекты (оффплан)", en: "New off-plan", ruShort: "Новый оффплан" },
     condo: { ru: "Инвестиционные кондо", en: "Investment condo", ruShort: "Инвест-кондо" },
     "villa-entry": { ru: "Виллы: входной сегмент", en: "Villa — entry", ruShort: "Виллы: вход" },
@@ -100,32 +102,38 @@ export const TAXONOMY_LABELS: Record<TaxonomyKind, Record<string, TermLabel>> = 
     completed: { ru: "Сданные в 2024–2025 гг.", en: "Completed 2024–25", ruShort: "Сданные 2024–25" },
   },
   type: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     condo: { ru: "Кондоминиум", en: "Condominium" },
     villa: { ru: "Вилла", en: "Villa" },
     house: { ru: "Дом / таунхаус", en: "House / townhouse" },
   },
   stK: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     offplan: { ru: "Оффплан (старт продаж)", en: "Off-plan (pre-launch)", ruShort: "Оффплан" },
     building: { ru: "Строится", en: "Under construction" },
     ready: { ru: "Сдан", en: "Completed" },
   },
   beach: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     bf: { ru: "Первая линия", en: "Beachfront" },
     "500": { ru: "До 500 м от пляжа", en: "Within 500 m", ruShort: "До 500 м" },
     "1k": { ru: "До 1 км от пляжа", en: "Within 1 km", ruShort: "До 1 км" },
     inl: { ru: "Вдали от пляжа", en: "Inland", ruShort: "Вдали от моря" },
   },
   own: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     fh: { ru: "Фрихолд (полная собственность)", en: "Freehold", ruShort: "Фрихолд" },
     lh: { ru: "Лизхолд (долгосрочная аренда)", en: "Leasehold", ruShort: "Лизхолд" },
     both: { ru: "Фрихолд и лизхолд", en: "Freehold & leasehold", ruShort: "Фрихолд / лизхолд" },
   },
   mgmt: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     pro: { ru: "Профессиональная управляющая компания", en: "Professional management", ruShort: "Управляющая компания" },
     hotel: { ru: "Под гостиничным брендом", en: "Hotel-brand managed", ruShort: "Гостиничный бренд" },
     self: { ru: "Самостоятельное управление", en: "Self-managed", ruShort: "Самоуправление" },
   },
   focus: {
+    unknown: { ru: "Не подтверждено", en: "Not confirmed" },
     STR: { ru: "Краткосрочная аренда (STR)", en: "Short-term rental (STR)", ruShort: "Краткосрочная аренда", enShort: "STR" },
     LTR: { ru: "Долгосрочная аренда (LTR)", en: "Long-term rental (LTR)", ruShort: "Долгосрочная аренда", enShort: "LTR" },
     lifestyle: { ru: "Для проживания (лайфстайл)", en: "Lifestyle", ruShort: "Для проживания" },
@@ -184,6 +192,7 @@ export function taxLabel(
 }
 
 export function zoneLabel(zone: string, lang: "ru" | "en"): string {
+  if (zone === "Phuket") return lang === "ru" ? "Пхукет · район уточняется" : "Phuket · district unconfirmed";
   const z = (ZONE_LABELS as Record<string, { ru: string; en: string }>)[zone];
   return z ? z[lang] : zone;
 }

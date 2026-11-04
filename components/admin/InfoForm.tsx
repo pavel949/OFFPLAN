@@ -76,7 +76,7 @@ export function InfoForm({
         <h3>2 · Стадия и сроки</h3>
         <div className="adm-grid">
           <Field label="Стадия" cls="c4"><select name="stK" defaultValue={p.stK}><Opts kind="stK" keys={STATUS_KEYS} /></select></Field>
-          <Field label="Год сдачи" cls="c4" required><input name="compY" type="number" min={1990} max={2100} defaultValue={p.compY} required /></Field>
+          <Field label="Год сдачи" cls="c4" hint="Пусто — срок неизвестен"><input name="compY" type="number" min={1990} max={2100} defaultValue={p.compY ?? ""} /></Field>
           <Field label="Срок сдачи (текстом)" cls="c4" hint="Например: Q4 2027"><input name="compQ" defaultValue={p.compQ} /></Field>
         </div>
       </section>
@@ -89,7 +89,7 @@ export function InfoForm({
           <Field label="Цена за м² (текстом)" cls="c3" hint="Например: 180,000–250,000"><input name="sqmP" defaultValue={p.sqmP} /></Field>
           <Field label="Всего лотов в проекте" cls="c3" hint="Например: 120"><input name="units" defaultValue={p.units} /></Field>
           <Field label="Площади лотов, м²" cls="c3" hint="Например: 35–120 sqm"><input name="unitSzM2" defaultValue={p.unitSzM2} /></Field>
-          <Field label="Мин. число спален" cls="c3"><input name="minBR" type="number" min={0} max={20} defaultValue={p.minBR} /></Field>
+          <Field label="Мин. число спален" cls="c3"><input name="minBR" type="number" min={0} max={20} defaultValue={p.minBR ?? ""} /></Field>
           <Field label="Единица цены" cls="c3" hint="Если нужна пометка"><input name="pU" defaultValue={p.pU} /></Field>
         </div>
       </section>
@@ -118,9 +118,10 @@ export function InfoForm({
         <summary style={{ cursor: "pointer", fontWeight: 800, fontSize: 13, letterSpacing: ".08em", textTransform: "uppercase" }}>6 · Оценка редакции (рейтинг, риск, рекомендация)</summary>
         <p className="adm-lead" style={{ marginTop: 10 }}>Заполняет редакция IE после проверки. Застройщики эти поля не видят и не меняют.</p>
         <div className="adm-grid">
-          <Field label="Рейтинг (0–10)" cls="c3"><input name="rat" type="number" step="0.1" min={0} max={10} defaultValue={p.rat} /></Field>
+          <Field label="Рейтинг (0–10)" cls="c3"><input name="rat" type="number" step="0.1" min={0} max={10} defaultValue={p.rat ?? ""} /></Field>
           <Field label="Уровень риска" cls="c3">
-            <select name="risk" defaultValue={String(p.risk)}>
+            <select name="risk" defaultValue={p.risk == null ? "" : String(p.risk)}>
+              <option value="">Не оценён</option>
               {[1, 2, 3].map((r) => <option key={r} value={r}>{taxLabel("risk", r, "ru")}</option>)}
             </select>
           </Field>

@@ -6,7 +6,8 @@ export function ownershipLabel(value: string, lang: "ru" | "en" = "ru") {
 }
 
 /** Translate only known milestone words; retain the source's distinct construction/handover dates. */
-export function completionLabel(value: string | number, lang: "ru" | "en" = "ru") {
+export function completionLabel(value: string | number | null, lang: "ru" | "en" = "ru") {
+  if (value == null || value === "") return lang === "ru" ? "Срок не подтверждён" : "Date not confirmed";
   const text = String(value);
   if (lang === "en") return text;
   return text.replace(/construction/gi, "Завершение строительства:").replace(/handover/gi, "Передача:")

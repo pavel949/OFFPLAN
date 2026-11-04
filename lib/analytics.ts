@@ -47,7 +47,7 @@ export type Summary = {
   price: { min: number | null; median: number | null; max: number | null; n: number };
   perSqm: { median: number | null; n: number };
   yield: { avg: number | null; n: number };
-  stage: { offplan: number; building: number; ready: number };
+  stage: { offplan: number; building: number; ready: number; unknown: number };
   byType: Record<string, number>;
   byYear: { year: number; projects: number; units: number }[];
   buckets: { key: string; label: string; projects: number }[];
@@ -60,10 +60,11 @@ export function summarize(ps: CatalogProject[]): Summary {
   const unitsArr = ps.map((p) => parseUnits(p.units)).filter((n): n is number => n != null);
   const byType: Record<string, number> = {};
   const years = new Map<number, { projects: number; units: number }>();
-  const stage = { offplan: 0, building: 0, ready: 0 };
+  const stage = { offplan: 0, building: 0, ready: 0, unknown: 0 };
   for (const p of ps) {
     byType[p.type] = (byType[p.type] ?? 0) + 1;
     if (p.stK in stage) stage[p.stK as keyof typeof stage] += 1;
+    if (p.compY == null) continue;
     const y = years.get(p.compY) ?? { projects: 0, units: 0 };
     y.projects += 1;
     y.units += parseUnits(p.units) ?? 0;
@@ -135,4 +136,5 @@ export function fmtPct(n: number | null | undefined): string {
 export function fmtInt(n: number | null | undefined): string {
   return n == null ? "—" : Math.round(n).toLocaleString("ru-RU");
 }
-export const TYPE_RU: Record<string, string> = { condo: "Кондо", villa: "Виллы", house: "Дома" };
+export const TYPE_RU: Record<string, string> = {
+  unknown: "Тип не подтверждён", condo: "Кондо", villa: "Виллы", house: "Дома" };

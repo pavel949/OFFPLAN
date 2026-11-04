@@ -103,6 +103,7 @@ function haystack(p: CatalogProject): string {
 }
 
 const STAGE_MATCH: Record<string, (p: CatalogProject) => boolean> = {
+  unknown: (p) => p.stK === "unknown",
   offplan: (p) => p.stK === "offplan",
   building: (p) => p.stK === "building",
   ready: (p) => p.stK === "ready",
@@ -137,7 +138,7 @@ export function filterProjects(all: CatalogProject[], f: HomeFilters): CatalogPr
     if ((by === "price-asc" || by === "price-desc") && (!(ap > 0) || !(bp > 0))) return Number(!(ap > 0)) - Number(!(bp > 0));
     if (by === "price-asc") return ap - bp;
     if (by === "price-desc") return bp - ap;
-    if (by === "year") return a.compY - b.compY || a.pN - b.pN;
+    if (by === "year") return (a.compY ?? Infinity) - (b.compY ?? Infinity) || a.pN - b.pN;
     // Keep the legacy URL sort key, but use a neutral catalogue order.
     return a.id - b.id;
   });
