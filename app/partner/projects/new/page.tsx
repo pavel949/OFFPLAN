@@ -1,32 +1,35 @@
-"use client";
-import { useActionState } from "react";
-import { createPartnerProject } from "@/app/actions/project-evidence";
-export default function NewProject() {
-  const [state, action, pending] = useActionState(createPartnerProject, {
-    ok: false,
-  });
+import { redirect } from "next/navigation";
+import { createPartnerProjectFromWizard } from "@/app/actions/project-evidence";
+import { ProjectWizardForm } from "@/components/portal/ProjectWizardForm";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export default async function NewProject() {
+  const db = await createSupabaseServerClient();
+  if (!db) redirect("/partner");
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) redirect("/partner/login");
+  const { data: prof } = await db
+    .from("profiles")
+    .select("org_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const { data: org } = prof?.org_id
+    ? await db.from("orgs").select("name_ru, name_en").eq("id", prof.org_id).maybeSingle()
+    : { data: null };
+
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl">Новый проект</h1>
-      <p>
-        Добавьте JSON по схеме каталога. ID при публикации назначит команда.
-        Проект остаётся черновиком до модерации.
+    <div>
+      <h1 className="serif text-2xl mb-1">Новый проект</h1>
+      <p className="text-sm text-[var(--muted,#666)] mb-6 max-w-2xl">
+        Заполните основные сведения за 2–3 минуты. Проект сохранится как черновик: потом вы добавите
+        ссылки на материалы, прайс-лист и отправите проект на проверку команде IE.
       </p>
-      <form action={action}>
-        <label className="block">
-          Данные проекта
-          <textarea
-            className="admin-inp"
-            name="draft_json"
-            required
-            rows={22}
-          />
-        </label>
-        <button className="admin-btn" disabled={pending}>
-          Создать черновик
-        </button>
-        <p role="status">{state.error}</p>
-      </form>
+      <ProjectWizardForm
+        action={createPartnerProjectFromWizard}
+        developerName={org?.name_ru || org?.name_en || ""}
+      />
     </div>
   );
 }

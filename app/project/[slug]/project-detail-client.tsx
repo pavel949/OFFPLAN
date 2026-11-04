@@ -1,6 +1,7 @@
 "use client";
 
 import { ProjectFacts } from "@/components/catalogue/ProjectFacts";
+import { ProjectMaterials } from "@/components/catalogue/ProjectMaterials";
 import type { PublicProjectFacts } from "@/lib/project-facts-query";
 import Image from "next/image";
 import Link from "next/link";
@@ -172,6 +173,7 @@ export function ProjectDetailClient({
         </p>
         <p className="pd-dev">{p.dev}</p>
         <ProjectFacts data={facts} lang={lang} />
+        <ProjectMaterials sources={facts.sources} lang={lang} />
 
         {extras.campaigns.length > 0 ? (
           <div className="pd-campaigns">
