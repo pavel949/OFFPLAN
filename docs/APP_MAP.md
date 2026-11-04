@@ -2,6 +2,8 @@
 
 Dev server: **`http://localhost:3030`** (`npm run dev` in this folder or `npm run dev` from repo root).
 
+Updated 2026-11-04 for main after PR #26–28. This is an overview; a listed route does not certify a production user journey. See README for deployment requirements.
+
 ## Route map (App Router)
 
 ```mermaid
@@ -15,7 +17,7 @@ flowchart TB
     plogin["/partner/login"]
     phome["/partner"]
     pproj["/partner/projects"]
-    pedit["/partner/projects/[projectId] — Draft JSON"]
+    pedit["/partner/projects/[projectId] — Draft form"]
     pinv["/partner/projects/[projectId]/inventory"]
     pupd["/partner/projects/[projectId]/updates"]
     pcamp["/partner/projects/[projectId]/campaigns"]
@@ -42,11 +44,13 @@ flowchart TB
 
 | Area | Purpose |
 |------|--------|
-| **/** | Main catalogue (`CatalogueShell`): filters, shortlist, tabs (analytics/risk/devs/services/calc from `content/html-tabs/`), lead modal, optional favorites sync to DB when logged in. |
-| **/project/[slug]** | Single project: lead form, optional REC labels (`NEXT_PUBLIC_SHOW_PROJECT_REC`), units/campaigns/updates from Supabase, email subscribe MVP, product analytics `project.view`. |
+| **/** | Main catalogue (`HomeExperience`): search and project filters, favorites and buyer inquiries; reads published projects and updates through the server data layer. Legacy HTML tabs are not the current homepage. |
+| **/project/[slug]** | Single project (`ProjectPage`): verified-date price handling, published unit offers and sales terms, project costs, photos/evidence and updates, buyer inquiry with server-resolved sales selection. Subscriptions store requests; automated update delivery is not configured by this route. |
 | **/account** | Logged-in user email + list of favorite `project_id` (UUIDs). |
-| **/partner/** | Developer org: edit project JSON draft, submit moderation, inventory (units), news/construction updates, launch/sale campaigns, correction requests. Roles: `partner_role` owner vs sales (sales: no JSON/campaign edit). |
+| **/partner/** | Developer org: create project drafts with a structured wizard, edit existing descriptions, submit moderation and evidence, inventory/import, photos, news/construction updates and campaigns. Access is scoped by organization and partner role; see actions and RLS for each operation. |
 | **/admin/** | IE back office: catalog import/settings, projects, leads (unified store + optional AI summary), moderation queue, WhatsApp ingest, corrections, deals, platform settings. Auth via `ADMIN_SECRET` cookie. |
+
+Additional routes: `/partner/projects/new`, project `/facts`, the admin project sales tab, `/admin/readiness`, `/admin/methodology`, `/methodology`, `/quick-assessment`, and `/registry`. ClearView self-check uses the built-in version, while the studio manages separate published versions; commercial orders and monitoring remain unavailable.
 
 ## API routes (`app/api`)
 
@@ -73,6 +77,8 @@ flowchart TB
 - **orgs**, **profiles** (roles: admin, editor, partner, buyer; `org_id`, `partner_role`).
 - **catalog_projects** (payload JSON, moderation, geo, `data_confirmed_at`).
 - **project_units**, **sales_campaigns**, **project_updates**, **project_subscriptions**, **favorites**, **leads**, **deals**, **moderation_submissions**, **correction_requests**, **analytics_events**, **org_webhook_endpoints**, **billing_customers**, **catalog_audit_log** (see migrations in `supabase/migrations/`).
+
+Additional domains: `project_evidence` (photos, amenities, costs and sales-stage evidence), `project_sources`, private developer source imports, legal topics, `cv_methodology_versions` and approvals, private request-limit buckets, `project_sales_models` with publication pointers and trusted lead sales snapshots. Public readers use purpose-built views/RLS; an authenticated browser must not query private catalog payloads through a service key.
 
 ## Middleware
 
