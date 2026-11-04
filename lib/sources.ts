@@ -7,6 +7,7 @@ import { z } from "zod";
  */
 
 export const SOURCE_KINDS = [
+  "website",
   "brochure",
   "renders",
   "price_list",
@@ -28,6 +29,7 @@ export const SOURCE_CADENCE = ["none", "on_change", "daily", "weekly", "monthly"
 export type SourceCadence = (typeof SOURCE_CADENCE)[number];
 
 export const SOURCE_KIND_LABEL_RU: Record<SourceKind, string> = {
+  website: "Сайт проекта",
   brochure: "Брошюра",
   renders: "Рендеры и фото",
   price_list: "Прайс-лист",
@@ -41,6 +43,7 @@ export const SOURCE_KIND_LABEL_RU: Record<SourceKind, string> = {
   other: "Другое",
 };
 export const SOURCE_KIND_LABEL_EN: Record<SourceKind, string> = {
+  website: "Project website",
   brochure: "Brochure",
   renders: "Renders & photos",
   price_list: "Price list",

@@ -794,7 +794,7 @@ export function CatalogueShell({
                 ["analytics", "Market Analytics", "Аналитика рынка"],
                 ["risk", "Risk & Due Diligence", "Риски и Due Diligence"],
                 ["devs", "Developers", "Застройщики"],
-
+                ["calc", "Calculator", "Калькулятор"],
                 ["shortlist", "♥ Shortlist", "♥ Шортлист"],
                 ["services", "📞 Services", "📞 Услуги"],
               ] as const
