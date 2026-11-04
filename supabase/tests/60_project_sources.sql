@@ -42,13 +42,14 @@ insert into public.project_sources(project_id,kind,title,url,visibility)
 select pg_temp.src_expect_error($$insert into public.project_sources(project_id,kind,title,url) values ('00000000-0000-0000-0000-0000006000c1','brochure','x','javascript:alert(1)')$$,'non-https url accepted');
 select pg_temp.src_expect_error($$insert into public.project_sources(project_id,kind,title,url) values ('00000000-0000-0000-0000-0000006000c1','brochure','x','http://plain.example')$$,'http url accepted');
 select pg_temp.src_expect_error($$insert into public.project_sources(project_id,kind,title,url) values ('00000000-0000-0000-0000-0000006000c1','bogus','x','https://ok.example')$$,'bad kind accepted');
-do $$begin if (select count(*) from public.project_sources)<>4 then raise exception 'owner should see own 4 sources'; end if; end$$;
+insert into public.project_sources(project_id,kind,title,url,visibility) values ('00000000-0000-0000-0000-0000006000c1','website','Site','https://project.example','partners');
+do $$begin if (select count(*) from public.project_sources)<>5 then raise exception 'owner should see own 5 sources'; end if; end$$;
 reset role;
 
 -- sales role: can read, cannot write
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-0000006000a2',true);
 set local role authenticated;
-do $$begin if (select count(*) from public.project_sources)<>4 then raise exception 'sales should read org sources'; end if; end$$;
+do $$begin if (select count(*) from public.project_sources)<>5 then raise exception 'sales should read org sources'; end if; end$$;
 select pg_temp.src_expect_error($$insert into public.project_sources(project_id,kind,title,url) values ('00000000-0000-0000-0000-0000006000c1','other','x','https://ok.example')$$,'sales inserted');
 reset role;
 

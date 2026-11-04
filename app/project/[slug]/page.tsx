@@ -2,7 +2,11 @@ export const dynamic = "force-dynamic";
 import { createAnonClient, hasSupabasePublicConfig } from "@/lib/supabase/anon";
 import { getPublicProjectFacts } from "@/lib/project-facts-query";
 import { notFound, redirect } from "next/navigation";
-import { ProjectDetailClient } from "./project-detail-client";
+import { ProjectPage as ProjectView } from "@/components/ie/ProjectPage";
+import { SiteFooter } from "@/components/ie/SiteFooter";
+import { SiteHeader } from "@/components/ie/SiteHeader";
+import { developerSlug } from "@/lib/developers";
+import { getDevelopers } from "@/lib/home-feed";
 import { getProjectByLegacyId } from "@/lib/catalog";
 import { getProjectExtrasByLegacyId } from "@/lib/project-queries";
 import { parseLegacyIdFromSlug, projectSlug } from "@/lib/slug";
@@ -60,13 +64,23 @@ export default async function ProjectPage({
     extras.catalogProjectId,
     identity?.developer_id ?? null,
   );
+  const devRows = await getDevelopers();
+  const developer = {
+    slug: developerSlug(project.dt),
+    name: project.dev,
+    website: devRows[project.dt]?.website ?? null,
+  };
   return (
-    <ProjectDetailClient
-      project={project}
-      extras={extras}
-      facts={facts}
-      backHref="/"
-      legacyId={legacyId}
-    />
+    <>
+      <SiteHeader />
+      <ProjectView
+        project={project}
+        extras={extras}
+        facts={facts}
+        developer={developer}
+        legacyId={legacyId}
+      />
+      <SiteFooter />
+    </>
   );
 }
