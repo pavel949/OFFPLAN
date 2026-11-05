@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
 import { localizeProject } from "@/lib/i18n/localize-project";
 import { zoneLabel } from "@/lib/taxonomy";
-import type { CatalogMeta, CatalogProject } from "@/lib/types";
+import type { CatalogProject } from "@/lib/types";
 import {
   activeFilterCount,
   applyFilters,
@@ -20,6 +20,7 @@ import {
   filtersToSearchParams,
 } from "@/lib/url-filters";
 import { ProjectCard } from "./ProjectCard";
+import { marketFilters } from "@/lib/market-evidence";
 import { CalculatorPanel } from "./CalculatorPanel";
 import { LeadModal } from "./LeadModal";
 
@@ -61,28 +62,8 @@ function getShortlistIds(): number[] {
   }
 }
 
-export function CatalogueShell({
-  projects,
-  meta,
-  zones,
-  htmlTabs,
-  methodologyRu,
-  methodologyEn,
-}: {
-  projects: CatalogProject[];
-  meta: CatalogMeta;
-  zones: string[];
-  htmlTabs: {
-    analytics: string;
-    risk: string;
-    devs: string;
-    services: string;
-    calcBenchmarks: string;
-  };
-  /** Из /admin/settings — блок над статичным HTML аналитики */
-  methodologyRu?: string;
-  methodologyEn?: string;
-}) {
+export function CatalogueShell({ projects }: { projects: CatalogProject[] }) {
+  const zones = [...new Set(projects.map(p => p.zone))].sort();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -133,7 +114,7 @@ export function CatalogueShell({
   const tab = parseTab(searchParams.get("tab"));
 
   const filters = useMemo((): FilterState => {
-    const f = filtersFromSearchParams(searchParams);
+    const f = marketFilters(filtersFromSearchParams(searchParams));
     return f;
   }, [searchParams]);
 
@@ -142,7 +123,7 @@ export function CatalogueShell({
       const tabParam = searchParams.get("tab");
       const o = new URLSearchParams();
       if (tabParam) o.set("tab", tabParam);
-      const fp = filtersToSearchParams(next);
+      const fp = filtersToSearchParams(marketFilters(next));
       for (const [k, v] of Object.entries(fp)) {
         if (v) o.set(k, v);
       }
@@ -229,12 +210,6 @@ export function CatalogueShell({
     [view, shortlist],
   );
 
-  const cleanHtml = (html: string) =>
-    html.replace(
-      /<div id="tab-[^"]+" class="tcontent content hidden">/,
-      '<div class="tcontent content">',
-    );
-
   return (
     <div data-lang={lang}>
       <LeadModal
@@ -259,7 +234,7 @@ export function CatalogueShell({
         <div className="hdr-div" />
         <div className="hdr-kpis">
           <div className="hkpi">
-            <div className="hkpi-v">{meta.totalProjects}</div>
+            <div className="hkpi-v">{projects.length}</div>
             <div className="hkpi-l">
               <span className="i-en">Projects</span>
               <span className="i-ru">Проектов</span>
@@ -369,18 +344,11 @@ export function CatalogueShell({
                   updateFilter("fSort", e.target.value as FilterState["fSort"])
                 }
               >
-                <option value="rating">
-                  {lang === "ru" ? "Рейтинг ↓" : "Rating ↓"}
-                </option>
+                <option value="name">{lang === "ru" ? "Название А–Я" : "Name A–Z"}</option>
                 <option value="comp_asc">
                   {lang === "ru"
                     ? "Срок сдачи — ближайший"
                     : "Completion — soonest"}
-                </option>
-                <option value="risk">
-                  {lang === "ru"
-                    ? "Риск — сначала низкий"
-                    : "Risk — safest first"}
                 </option>
                 <option value="price_asc">
                   {lang === "ru" ? "Цена ↑" : "Price ↑"}
@@ -406,29 +374,7 @@ export function CatalogueShell({
                 placeholder="Project, developer, zone..."
               />
             </div>
-            <div className="fg">
-              <div className="fg-lbl">
-                <span className="i-en">Risk Tier</span>
-                <span className="i-ru">Уровень риска</span>
-              </div>
-              <select
-                value={filters.fRisk}
-                onChange={(e) => updateFilter("fRisk", e.target.value)}
-              >
-                <option value="">
-                  {lang === "ru" ? "Все уровни" : "All levels"}
-                </option>
-                <option value="1">
-                  {lang === "ru" ? "Уровень 1 — низкий" : "Tier 1 — Low"}
-                </option>
-                <option value="2">
-                  {lang === "ru" ? "Уровень 2 — средний" : "Tier 2 — Medium"}
-                </option>
-                <option value="3">
-                  {lang === "ru" ? "Уровень 3 — повышенный" : "Tier 3 — Higher"}
-                </option>
-              </select>
-            </div>
+
             <div className="fg">
               <div className="fg-lbl">
                 <span className="i-en">Segment</span>
@@ -741,36 +687,19 @@ export function CatalogueShell({
                 </span>
               </h2>
               <p className="hero-sub">
-                Q2 2026 · Ignatev Estate ·{" "}
-                <span className="i-en">Verified Data Only</span>
-                <span className="i-ru">Только верифицированные данные</span>
+                Ignatev Estate ·{" "}
+                <span className="i-en">Project information and evidence</span>
+                <span className="i-ru">Данные проектов и источники</span>
               </p>
               <div className="hero-kpis">
                 <div className="hkpi2">
-                  <div className="hkpi2-v">{meta.totalProjects}</div>
+                  <div className="hkpi2-v">{projects.length}</div>
                   <div className="hkpi2-l">
-                    <span className="i-en">Verified projects</span>
+                    <span className="i-en">Published projects</span>
                     <span className="i-ru">Проектов</span>
                   </div>
                 </div>
-                {process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true" ? (
-                  <>
-                    <div className="hkpi2">
-                      <div className="hkpi2-v">{meta.buyCount}</div>
-                      <div className="hkpi2-l">
-                        BUY <span className="i-en">rated</span>
-                        <span className="i-ru">рекомендаций</span>
-                      </div>
-                    </div>
-                    <div className="hkpi2">
-                      <div className="hkpi2-v">{meta.avoidCount}</div>
-                      <div className="hkpi2-l">
-                        AVOID <span className="i-en">flags</span>
-                        <span className="i-ru">предупреждений</span>
-                      </div>
-                    </div>
-                  </>
-                ) : null}
+
               </div>
             </div>
           </div>
@@ -814,20 +743,8 @@ export function CatalogueShell({
           {tab === "catalog" && (
             <div className="tcontent content">
               <div className="disc">
-                <span className="i-en">
-                  ⚠️ Important: Recommendations are based on data current at
-                  time of analysis. Prices, construction stage, developer terms
-                  and market demand change continuously. Every project requires
-                  independent verification and due diligence before any
-                  investment decision.
-                </span>
-                <span className="i-ru">
-                  ⚠️ Важно: Рекомендации основаны на данных, актуальных на
-                  момент анализа. Ситуация меняется — цены, стадия
-                  строительства, условия застройщика и спрос. Перед
-                  инвестиционным решением каждый проект требует самостоятельной
-                  проверки и due diligence.
-                </span>
+                <span className="i-en">Catalogue information is not a purchase recommendation. Review each project’s sources, evidence dates and unanswered questions. Published listings and registry labels do not replace independent due diligence.</span>
+                <span className="i-ru">Сведения каталога не являются рекомендацией покупать. Смотрите источники, даты проверки и открытые вопросы в карточке каждого проекта. Публикация и статус реестра не заменяют независимую проверку.</span>
               </div>
               <div className="cgrid">
                 {filtered.length === 0 ? (
@@ -865,20 +782,6 @@ export function CatalogueShell({
 
           {tab === "analytics" && (
             <div className="tcontent content">
-              {(methodologyRu || methodologyEn) && (
-                <div className="methodology-box">
-                  <div className="methodology-hdr">
-                    <span className="i-ru">Методология рейтинга (IE)</span>
-                    <span className="i-en">Rating methodology (IE)</span>
-                  </div>
-                  {methodologyRu ? (
-                    <p className="methodology-body i-ru">{methodologyRu}</p>
-                  ) : null}
-                  {methodologyEn ? (
-                    <p className="methodology-body i-en">{methodologyEn}</p>
-                  ) : null}
-                </div>
-              )}
               <div>
                 <p>
                   {lang === "ru"
@@ -889,10 +792,12 @@ export function CatalogueShell({
             </div>
           )}
           {tab === "risk" && (
-            <div
-              className="tcontent content"
-              dangerouslySetInnerHTML={{ __html: cleanHtml(htmlTabs.risk) }}
-            />
+            <div className="tcontent content">
+              <h2>{lang === "ru" ? "Риски требуют документов" : "Risk conclusions require evidence"}</h2>
+              <p>{lang === "ru" ? "Числовые рейтинги и категории риска не публикуются без проверенного отчёта. Наличие проекта в каталоге не означает, что он прошёл независимую проверку." : "Numerical ratings and risk tiers are not published without a reviewed report. Catalogue inclusion does not mean a project has undergone independent review."}</p>
+              <p><Link href="/methodology">{lang === "ru" ? "Что проверяем и как читаем документы" : "What we review and how we use evidence"}</Link></p>
+              <p><Link href="/quick-assessment">{lang === "ru" ? "Составить список вопросов по проекту" : "Build a project checklist"}</Link></p>
+            </div>
           )}
           {tab === "devs" && (
             <div className="tcontent content">
@@ -928,9 +833,12 @@ export function CatalogueShell({
             process.env.NEXT_PUBLIC_ENABLE_RETURN_SCENARIOS === "true" && (
               <CalculatorPanel
                 lang={lang}
-                benchmarksHtml={htmlTabs.calcBenchmarks}
+                benchmarksHtml=""
               />
             )}
+          {tab === "calc" && process.env.NEXT_PUBLIC_ENABLE_RETURN_SCENARIOS !== "true" && (
+            <div className="tcontent content"><h2>{lang === "ru" ? "Расчёт по подтверждённым расходам" : "Calculations need confirmed costs"}</h2><p>{lang === "ru" ? "Прогноз доходности сейчас не доступен. Проверьте расходы на обслуживание и условия управления в карточке выбранного проекта; неизвестные суммы не заменяются средними значениями." : "Return forecasts are currently unavailable. Check maintenance costs and management terms on the selected project page; unknown amounts are not replaced by averages."}</p><Link href="/">{lang === "ru" ? "Выбрать проект" : "Choose a project"}</Link></div>
+          )}
           {tab === "shortlist" && (
             <div className="tcontent content">
               <div className="sh">
@@ -990,10 +898,12 @@ export function CatalogueShell({
             </div>
           )}
           {tab === "services" && (
-            <div
-              className="tcontent content"
-              dangerouslySetInnerHTML={{ __html: cleanHtml(htmlTabs.services) }}
-            />
+            <div className="tcontent content">
+              <h2>{lang === "ru" ? "Проверка проекта: два отдельных этапа" : "Project review: two separate services"}</h2>
+              <p>{lang === "ru" ? "Базовый обзор показывает источники, отмеченные проверки фактов и вопросы по недостающим документам. Он не присваивает инвестиционный рейтинг." : "The basic review shows sources, recorded fact reviews and open document questions. It does not assign an investment rating."}</p>
+              <p>{lang === "ru" ? "Застройщик может обсудить независимое vendor due diligence за 49 000 THB. Налоги, состав работ, расходы третьих лиц и сроки согласуются до заказа. Оплата не гарантирует положительное заключение." : "Developers can discuss independent vendor due diligence for 49,000 THB. Taxes, scope, third-party costs and timing must be agreed before an order. Payment does not guarantee a favorable conclusion."}</p>
+              <Link href="/protection/contact">{lang === "ru" ? "Обсудить проверку (не заказ и не оплата)" : "Discuss a review (not an order or payment)"}</Link>
+            </div>
           )}
 
           <footer className="ftr">
@@ -1022,7 +932,7 @@ export function CatalogueShell({
               </Link>
             </div>
             <div className="ftr-bot">
-              Q2 2026 · For information purposes only. All investments require
+              For information purposes only. All investments require
               independent due diligence. Data sources cited per project card.
             </div>
           </footer>

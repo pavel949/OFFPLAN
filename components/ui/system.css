@@ -311,3 +311,6 @@ body { font-family: var(--ui-font); color: var(--ui-ink); background: var(--ui-c
 .ui-discovery-image:focus-visible { outline-offset: -4px; outline-color: var(--ui-on-action); }
 
 :is(.ie-phero, .ie-foot, .ie-banner, .ie-section--dark, .hdr, .hero, .svc-hero, .ftr, .pt-bar) :where(button,a,input,select,textarea,summary):focus-visible { outline: 3px solid var(--ui-focus-on-dark); outline-offset: 3px; }
+
+/* Legacy market context text must remain readable on its dark hero. */
+.hero .hero-sub { color: var(--ui-on-dark-muted); font-size: 12px; letter-spacing: .06em; line-height: 1.6; }

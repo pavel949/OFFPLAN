@@ -17,21 +17,7 @@ const SC: Record<string, string> = {
   "offplan-new": "s-offplan-new",
 };
 
-const RISK_EMOJI: Record<number, string> = { 1: "🟢", 2: "🟡", 3: "🔴" };
-const RISK_CLS: Record<number, string> = { 1: "r1", 2: "r2", 3: "r3" };
 const MGMT_EMOJI: Record<string, string> = { hotel: "🏨 ", pro: "👥 " };
-
-const REC_CLS: Record<string, string> = {
-  BUY: "rec-buy",
-  WATCH: "rec-watch",
-  AVOID: "rec-avoid",
-};
-
-const RT_CLS: Record<string, string> = {
-  BUY: "rt-buy",
-  WATCH: "rt-watch",
-  AVOID: "rt-avoid",
-};
 
 function compBanner(p: CatalogProject) {
   const q = p.compQ || (p.compY == null ? "Срок не подтверждён" : String(p.compY));
@@ -104,7 +90,6 @@ export function ProjectCard({
   onRequestLead?: () => void;
 }) {
   const ru = lang === "ru";
-  const showRec = process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true";
   const tl = (kind: TaxonomyKind, key: string | number) =>
     taxLabel(kind, key, lang, true);
 
@@ -120,10 +105,9 @@ export function ProjectCard({
   )}`;
 
   return (
-    <article className={`pc${showRec && p.rec === "AVOID" ? " avoid" : ""}`}>
+    <article className="pc">
       <div className={`pc-stripe ${SC[p.seg] || "s-offplan-new"}`} />
       <div className="pc-head">
-        <div className="pc-rat">{p.rat != null && p.rat > 0 ? p.rat : "—"}</div>
         <div className="pc-num">#{p.id}</div>
         <div className="pc-name">
           <Link href={`/project/${projectSlug(p)}`} className="pc-name-link">
@@ -134,9 +118,7 @@ export function ProjectCard({
         <div style={{ margin: "2px 0 4px" }}>
           <VerificationBadge ver={p.ver} lang={lang} />
         </div>
-        <span className={`pc-risk ${(p.risk == null ? "" : RISK_CLS[p.risk]) || ""}`}>
-          {(p.risk == null ? "⬜" : RISK_EMOJI[p.risk]) || "⬜"} {p.risk == null ? (ru ? "Риск не оценён" : "Risk not assessed") : tl("risk", p.risk)}
-        </span>
+        <span className="pc-risk">{ru ? "Рейтинг проекта не опубликован" : "Project rating not published"}</span>
         {compBanner(p)}
         {renderBadges(p.bdg, ru)}
       </div>
@@ -203,11 +185,6 @@ export function ProjectCard({
           </div>
         </div>
         <div className="pc-desc">{p.desc}</div>
-        {showRec ? (
-          <div className={`pc-rt ${RT_CLS[p.rec] || "rt-watch"}`}>
-            <strong>{tl("rec", p.rec)}:</strong> {p.recText || ""}
-          </div>
-        ) : null}
         <div className="pc-src">📌 {p.src}</div>
         <div className="pc-tags">
           {(p.tags || []).map((tg) => (
@@ -273,11 +250,6 @@ export function ProjectCard({
           >
             WhatsApp
           </a>
-          {showRec ? (
-            <span className={`pc-rec ${REC_CLS[p.rec] || "rec-watch"}`}>
-              {tl("rec", p.rec)}
-            </span>
-          ) : null}
         </div>
       </div>
     </article>

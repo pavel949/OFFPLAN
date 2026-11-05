@@ -3,6 +3,7 @@ import { searchHaystack } from "./i18n/localize-project";
 import type { CatalogProject, RecLabel } from "./types";
 
 export type SortKey =
+  | "name"
   | "rating"
   | "comp_asc"
   | "risk"
@@ -100,6 +101,7 @@ export function sortProjects(
 ): CatalogProject[] {
   const arr = [...list];
   arr.sort((a, b) => {
+    if (fSort === "name") return a.n.localeCompare(b.n) || a.id - b.id;
     if ((fSort === "price_asc" || fSort === "price_desc") && (!(a.pN > 0) || !(b.pN > 0))) return Number(!(a.pN > 0)) - Number(!(b.pN > 0));
     if (fSort === "price_asc") return (a.pN || 0) - (b.pN || 0);
     if (fSort === "price_desc") return (b.pN || 0) - (a.pN || 0);
