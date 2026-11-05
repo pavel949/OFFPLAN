@@ -154,6 +154,16 @@ export async function upsertProjectUnit(
   if (!projectId || !label) return { ok: false, error: "project_id и label обязательны" };
   const r = await getPartnerProjectContext(projectId);
   if (!r.ok) return { ok: false, error: r.error };
+  if (formData.get("physical_only") === "true") {
+    const status = String(formData.get("status") ?? "unknown");
+    if (!unitId || !["unknown", "available", "reserved", "sold"].includes(status)) return { ok: false, error: "Выберите лот и корректный статус" };
+    const { data, error } = await r.ctx.supabase.from("project_units").update({ status, updated_at: new Date().toISOString() }).eq("id", unitId).eq("project_id", projectId).select("id").maybeSingle();
+    if (error || !data) return { ok: false, error: "Не удалось изменить статус лота" };
+    revalidatePath(`/partner/projects/${projectId}/inventory`);
+    revalidatePath("/project/[slug]", "page");
+    revalidatePath("/");
+    return { ok: true };
+  }
   const bedrooms = formData.get("bedrooms");
   const sqm = formData.get("sqm");
   const price = formData.get("price_thb");

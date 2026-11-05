@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { adminSaveSalesModel,adminPublishSalesModel,adminWithdrawSalesModel } from "@/app/actions/sales-model";
+import { partnerSaveSalesModel, partnerCreateSalesUnit } from "@/app/actions/partner-sales";
+import { publicSalesProjection } from "@/lib/sales-public";
 import { adminStudioSaveUnit } from "@/app/actions/admin-studio";
 import { applicableFees, feePreview, paymentPreview, type SalesModel } from "@/lib/sales-model";
 import { fieldLabels, optionLabels, salesFormSchema, schemaType, formDefault, type FormSchema } from "@/lib/sales-form";
@@ -19,7 +21,7 @@ const hints: Record<string,string> = {
   offers:"Один физический юнит может иметь несколько вариантов владения, комплектации и оплаты. Это внутренние условия: сохранение не публикует их на сайте.",
 };
 
-export function SalesModelEditor({projectId,initial,initialRevision,units:initialUnits,initialPublication}:{projectId:string;initial:SalesModel;initialRevision:number;units:{id:string;label:string}[];initialPublication:{revision:number;expires_at:string}|null}) {
+export function SalesModelEditor({projectId,initial,initialRevision,units:initialUnits,initialPublication,mode="admin"}:{mode?:"admin"|"partner";projectId:string;initial:SalesModel;initialRevision:number;units:{id:string;label:string;status?:string;bedrooms?:number|null}[];initialPublication:{revision:number;expires_at:string}|null}) {
   const [units,setUnits]=useState(initialUnits),[newUnit,setNewUnit]=useState("");
   const [publication,setPublication]=useState(initialPublication),[until,setUntil]=useState("");
   const [approved,setApproved]=useState(false);
@@ -70,10 +72,10 @@ export function SalesModelEditor({projectId,initial,initialRevision,units:initia
   }
   const offer=model.offers.find(o=>o.id===offerId), unit=model.units.find(u=>u.id===offer?.unitId), plan=model.paymentPlans.find(p=>p.id===offer?.paymentPlanId);
   const preview=plan && offer?.price!==null && offer?.price!==undefined ? paymentPreview(plan,offer.price,offer.currency,new Date().toISOString().slice(0,10)):null;
-  return <form onSubmit={async e=>{e.preventDefault();setBusy(true);try{const r=await adminSaveSalesModel(projectId,revision,model);if(r.ok && r.revision){setRevision(r.revision);setDirty(false);setMessage("Сохранено. Внутренняя версия "+r.revision);}else setMessage(r.error ?? "Ошибка сохранения");}catch{setMessage("Ошибка соединения. Изменения остались в форме.");}finally{setBusy(false);}}}>
-    <section className="adm-card"><h2>Структура и условия продажи</h2><p className="adm-lead">Единая модель для квартир, вилл и смешанных проектов. Версия {revision || "ещё не сохранена"}. Сохранение создаёт внутреннюю версию. Публикация — отдельный шаг ниже.</p>
+  return <form onSubmit={async e=>{e.preventDefault();setBusy(true);try{const r=await (mode==="partner" ? partnerSaveSalesModel : adminSaveSalesModel)(projectId,revision,model);if(r.ok && r.revision){setRevision(r.revision);setDirty(false);setMessage((mode==="partner"?"Отправлено команде IE на проверку. Покупатели пока видят прежнюю опубликованную версию. Новая версия ":"Сохранено. Внутренняя версия ")+r.revision);}else setMessage(r.error ?? "Ошибка сохранения");}catch{setMessage("Ошибка соединения. Изменения остались в форме.");}finally{setBusy(false);}}}>
+    <section className="adm-card"><h2>Структура и условия продажи</h2><p className="adm-lead">Единая модель для квартир, вилл и смешанных проектов. Версия {revision || "ещё не сохранена"}. Сохранение создаёт внутреннюю версию. {mode==="partner"?"Команда IE проверяет и отдельно публикует её. Внутренние источники IE скрыты; изменённые факты требуют вашего датированного источника.":"Публикация — отдельный шаг ниже."}</p>
       <label>Новый физический юнит <input value={newUnit} onChange={e=>setNewUnit(e.target.value)} placeholder="Например: B-504 или Villa 8" /></label>{" "}
-      <button type="button" disabled={busy||!newUnit.trim()} onClick={async()=>{setBusy(true);try{const r=await adminStudioSaveUnit(projectId,{label:newUnit,bedrooms:null,floor:null,sqm:null,price:null,status:"unknown"});if(r.ok&&r.id){setUnits(u=>[...u,{id:r.id!,label:newUnit.trim()}]);setNewUnit("");setMessage("Юнит создан. Добавьте его расположение и предложение ниже.");}else setMessage(r.error??"Ошибка");}finally{setBusy(false);}}}>Создать юнит</button>
+      <button type="button" disabled={busy||!newUnit.trim()} onClick={async()=>{setBusy(true);try{const r=await (mode==="partner" ? partnerCreateSalesUnit(projectId,newUnit) : adminStudioSaveUnit(projectId,{label:newUnit,bedrooms:null,floor:null,sqm:null,price:null,status:"unknown"}));if(r.ok&&r.id){setUnits(u=>[...u,{id:r.id!,label:newUnit.trim()}]);setNewUnit("");setMessage("Юнит создан. Добавьте его расположение и предложение ниже.");}else setMessage(r.error??"Ошибка");}finally{setBusy(false);}}}>Создать юнит</button>
     </section>
     <fieldset disabled={busy} style={{border:0,padding:0,minWidth:0}}>
       <section className="adm-card"><h3>Проект и география</h3>{fields({...salesFormSchema,properties:Object.fromEntries(Object.entries(salesFormSchema.properties ?? {}).filter(([k])=>!sections.includes(k as typeof sections[number])))},model as unknown as Row,r=>{setModel(r as unknown as SalesModel);setDirty(true);},"project")}</section>
@@ -85,13 +87,15 @@ export function SalesModelEditor({projectId,initial,initialRevision,units:initia
       {preview?.error ? <p role="status">{preview.error}</p>:null}
       {preview && !preview.error ? <ol>{preview.rows.map(r=><li key={r.id}>{r.name}: {r.amount.toLocaleString("ru-RU",{maximumFractionDigits:2})} {offer?.currency}</li>)}</ol>:null}
     </section>
-    <section className="adm-card"><h3>Публикация условий для покупателей</h3><p>{publication?`Опубликована версия ${publication.revision}, до ${publication.expires_at.slice(0,10)}`:"Условия пока не опубликованы"}</p>
+    {mode==="admin" ? <section className="adm-card"><h3>Публикация условий для покупателей</h3><p>{publication?`Опубликована версия ${publication.revision}, до ${publication.expires_at.slice(0,10)}`:"Условия пока не опубликованы"}</p>
       <p className="adm-lead">Покупатель увидит юнит, цену, расходы, график и сведения о лицензиях. Внутренние ссылки на источники и примечания не публикуются. Заявка сохранит выбранное предложение и снимок этих условий. Сохранение новой внутренней версии само по себе не меняет опубликованную.</p>
       <label>Показывать до <input type="date" value={until} onChange={e=>setUntil(e.target.value)} /></label>
       <label style={{display:"block",margin:"12px 0"}}><input type="checkbox" checked={approved} onChange={e=>setApproved(e.target.checked)} /> Условия проверены для публикации покупателям</label>
       <button type="button" className="adm-btn" disabled={busy||dirty||!revision||!until||!approved} onClick={async()=>{setBusy(true);try{const r=await adminPublishSalesModel(projectId,revision,until);setMessage(r.ok?"Условия опубликованы на странице проекта":r.error??"Ошибка");if(r.ok){setPublication({revision,expires_at:until});setApproved(false);}}finally{setBusy(false);}}}>Опубликовать сохранённую версию</button>{" "}
       {publication?<button type="button" disabled={busy} onClick={async()=>{setBusy(true);try{const r=await adminWithdrawSalesModel(projectId);setMessage(r.ok?"Условия сняты с публикации":r.error??"Ошибка");if(r.ok)setPublication(null);}finally{setBusy(false);}}}>Снять с публикации</button>:null}
     </section>
-    <div className="adm-card" style={{position:"sticky",bottom:0,zIndex:2}}><button type="submit" className="adm-btn" disabled={busy}>{busy?"Сохранение…":"Сохранить новую версию"}</button> {dirty?"Есть несохранённые изменения":""}<p role="status" style={{whiteSpace:"pre-wrap"}}>{message}</p></div>
+    : <section className="adm-card"><h3>Проверка и публикация</h3><p>{publication?`Покупателям опубликована версия ${publication.revision} до ${publication.expires_at.slice(0,10)}.`:"Предложения пока не опубликованы."} Версия {revision || "новая"} в редакторе не заменяет публикацию автоматически. После отправки команда IE проверит источники и срок действия. Сохранение не продлевает цены.</p></section>}
+    <section className="adm-card"><h3>Предпросмотр допустимых предложений</h3><p>Предпросмотр текущих полей, не публикация и не бронирование. Не показываются просроченные предложения, неподтверждённое наличие и проданные/зарезервированные юниты.</p>{(()=>{const p=publicSalesProjection(model,revision,units.map(u=>({...u,status:u.status??"unknown"})),new Date().toISOString().slice(0,10));return p.offers.length?<ul>{p.offers.map(o=><li key={o.id}>{o.label} · {optionLabels[o.ownership]??o.ownership} · {o.price.toLocaleString("ru-RU")} {o.currency} · цена {o.priceDate} · наличие {o.availabilityDate}</li>)}</ul>:<p>Нет предложений, готовых к показу. Проверьте цену, статус, источники и даты.</p>;})()}</section>
+    <div className="adm-card" style={{position:"sticky",bottom:0,zIndex:2}}><button type="submit" className="adm-btn" disabled={busy}>{busy?"Сохранение…":mode==="partner"?"Отправить новую версию на проверку":"Сохранить новую версию"}</button> {dirty?"Есть несохранённые изменения":""}<p role="status" style={{whiteSpace:"pre-wrap"}}>{message}</p></div>
   </form>;
 }

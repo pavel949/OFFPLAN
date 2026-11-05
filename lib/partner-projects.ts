@@ -1,3 +1,4 @@
+import { getPublicSales } from "./sales-public-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { catalogProjectSchema } from "./schema";
 import { completeness, type CompletenessItem } from "./studio";
@@ -48,12 +49,11 @@ export async function listOrgProjects(db: SupabaseClient, orgId: string): Promis
     db.from("project_updates").select("project_id").in("project_id", ids),
   ]);
   const cu = tally(u.data as { project_id: string }[]), cp = tally(ph.data), cpp = tally(pp.data), cs = tally(so.data), cn = tally(up.data);
-  const cutoff = Date.now() - 30 * 86_400_000;
-  const expired = new Set(
-    ((u.data ?? []) as { project_id: string; status: string; price_updated_at: string | null }[])
-      .filter((x) => x.status !== "sold" && (!x.price_updated_at || Date.parse(x.price_updated_at) < cutoff))
-      .map((x) => x.project_id),
-  );
+  // Use exactly the buyer-facing published revision; legacy unit timestamps do not confirm offers.
+  const published = new Map(await Promise.all(ids.map(async id => {
+    try { return [id, await getPublicSales(id)] as const; }
+    catch { return [id, null] as const; }
+  })));
   return (rows ?? []).map((r) => {
     const parsed = catalogProjectSchema.safeParse(r.draft_payload ?? r.payload);
     const p = parsed.success ? parsed.data : null;
@@ -62,7 +62,7 @@ export async function listOrgProjects(db: SupabaseClient, orgId: string): Promis
       hasLocation: !!p?.zone,
       descLength: p?.desc.length ?? 0,
       hasSource: !!p?.src,
-      priceKnown: (p?.pN ?? 0) > 0,
+      priceKnown: (published.get(r.id)?.offers.length ?? 0) > 0,
       units: cu.get(r.id) ?? 0,
       photos: cp.get(r.id) ?? 0,
       links: cs.get(r.id) ?? 0,
@@ -79,7 +79,7 @@ export async function listOrgProjects(db: SupabaseClient, orgId: string): Promis
       photosPending: cpp.get(r.id) ?? 0,
       links: cs.get(r.id) ?? 0,
       news: cn.get(r.id) ?? 0,
-      expiredPrices: expired.has(r.id),
+      expiredPrices: !(published.get(r.id)?.offers.length),
       score: c.score,
       next: c.items.find((i) => !i.done) ?? null,
     };

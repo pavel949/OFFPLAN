@@ -1,84 +1,38 @@
+import { partnerGetSalesModel } from "@/app/actions/partner-sales";
+import { SalesModelEditor } from "@/components/admin/SalesModelEditor";
+import { PhysicalUnitStatus } from "@/components/partner/PhysicalUnitStatus";
 import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { daysSince, freshnessOf, summarizeFreshness } from "@/lib/inventory/freshness";
-import { InventoryClient } from "./inventory-client";
 
-export default async function PartnerInventoryPage({
-  params,
-}: {
-  params: Promise<{ projectId: string }>;
-}) {
+export default async function PartnerInventoryPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return <p className="pt-warn">Кабинет временно недоступен. Напишите нам, мы поможем.</p>;
-  }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const db = await createSupabaseServerClient();
+  if (!db) return <p role="alert">Кабинет временно недоступен.</p>;
+  const { data: { user } } = await db.auth.getUser();
   if (!user) redirect("/partner/login");
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("org_id, role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!prof?.org_id || prof.role !== "partner") redirect("/partner");
-  const { data: row } = await supabase
-    .from("catalog_projects")
-    .select("id, slug, org_id, data_confirmed_at")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (!row || row.org_id !== prof.org_id) notFound();
-  const { data: units } = await supabase
-    .from("project_units")
-    .select("id, label, bedrooms, floor, sqm, price_thb, currency, status, source, price_updated_at")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true });
-
-  const now = Date.now();
-  const list = (units ?? []).map((u) => ({
-    ...u,
-    fresh: freshnessOf(u.price_updated_at as string | null, now),
-    ageDays: daysSince(u.price_updated_at as string | null, now),
-  }));
-  const sum = summarizeFreshness(
-    list.map((u) => ({ price_updated_at: u.price_updated_at as string | null, status: u.status as string })),
-    now,
-  );
-
-  return (
-    <div className="max-w-4xl">
-      <ProjectTabs projectId={projectId} active="/inventory" />
-      <h2 style={{ fontFamily: "var(--font-cormorant), Georgia, serif", fontSize: 24, fontWeight: 600, margin: "0 0 8px" }}>Прайс-лист и наличие лотов</h2>
-      <p className="text-[var(--muted)] text-sm mb-4">
-        Данные видны покупателям в публичном каталоге. Цены старше 14 дней помечаются как
-        требующие подтверждения, старше 30 дней — скрываются до подтверждения.
-      </p>
-      <p className="text-sm mb-6">
-        Активных лотов: <b>{sum.active}</b> · актуальны: <b>{sum.fresh}</b> · требуют подтверждения:{" "}
-        <b style={{ color: sum.stale ? "var(--amb)" : undefined }}>{sum.stale}</b> · цены скрыты:{" "}
-        <b style={{ color: sum.expired ? "var(--red)" : undefined }}>{sum.expired}</b>
-        {row.data_confirmed_at
-          ? ` · подтверждено ${new Date(row.data_confirmed_at as string).toLocaleDateString("ru-RU")}`
-          : " · ещё не подтверждалось"}
-      </p>
-      <InventoryClient
-        projectId={row.id as string}
-        units={list.map((u) => ({
-          id: u.id as string,
-          label: u.label as string,
-          bedrooms: u.bedrooms as number | null,
-          floor: u.floor as number | null,
-          sqm: u.sqm as number | null,
-          price_thb: u.price_thb as number | null,
-          currency: (u.currency as string) ?? "THB",
-          status: u.status as string,
-          source: (u.source as string) ?? "developer",
-          fresh: u.fresh,
-          ageDays: u.ageDays,
-        }))}
-      />
-    </div>
-  );
+  const { data: profile } = await db.from("profiles").select("org_id,role,partner_role").eq("id", user.id).maybeSingle();
+  if (profile?.role !== "partner" || !profile.org_id) redirect("/partner");
+  const { data: project } = await db.from("catalog_projects").select("id,org_id").eq("id", projectId).eq("org_id", profile.org_id).maybeSingle();
+  if (!project || project.org_id !== profile.org_id) notFound();
+  if (profile.partner_role === "owner") {
+    try {
+      const sales = await partnerGetSalesModel(projectId);
+      return <div><ProjectTabs projectId={projectId} active="/inventory" />
+        <p className="pt-lock">Цены и условия для покупателей ведутся здесь, в одной версии с публичной витриной. Черновик → проверка IE → публикация. Изменение черновика не меняет действующие предложения.</p>
+        <PhysicalUnitStatus projectId={projectId} units={sales.units} />
+        <SalesModelEditor mode="partner" projectId={projectId} initial={sales.model} initialRevision={sales.revision} units={sales.units} initialPublication={sales.publication} />
+      </div>;
+    } catch {
+      return <div><ProjectTabs projectId={projectId} active="/inventory" /><p role="alert">Не удалось загрузить условия продажи. Повторите позже или обратитесь к команде IE. Старый редактор цен не используется вместо этой модели.</p></div>;
+    }
+  }
+  const units: { id: string; label: string; status: string }[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const result = await db.from("project_units").select("id,label,status").eq("project_id", projectId).order("id").range(offset, offset + 499);
+    if (result.error) return <p role="alert">Не удалось загрузить физические статусы.</p>;
+    units.push(...result.data);
+    if (result.data.length < 500) break;
+  }
+  return <div><ProjectTabs projectId={projectId} active="/inventory" /><p>Цены и условия ведёт владелец организации. Сотрудник отдела продаж может обновить физический статус ниже.</p><PhysicalUnitStatus projectId={projectId} units={units} /></div>;
 }

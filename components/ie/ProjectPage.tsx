@@ -17,6 +17,8 @@ import { ProjectSubscribeBlock } from "@/app/project/[slug]/project-subscribe";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
 import { localizeProject } from "@/lib/i18n/localize-project";
 import { formatPrice, freshnessOf } from "@/lib/inventory/freshness";
+import { publishedProjectMedia, mediaLabel, mediaKind } from "@/lib/project-media";
+import { basicProjectAssessment } from "@/lib/basic-project-assessment";
 import { operatingCostTotals } from "@/lib/project-evidence";
 import type { PublicProjectFacts } from "@/lib/project-facts-query";
 import type { ProjectUnitRow, ProjectUpdateRow, SalesCampaignRow } from "@/lib/project-queries";
@@ -116,7 +118,8 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   const t = (a: string, b: string) => (ru ? a : b);
   const p = useMemo(() => localizeProject(project, lang), [project, lang]);
 
-  const photos = facts.facts.filter((f) => f.kind === "photo");
+  const photos = publishedProjectMedia(facts.facts);
+  const assessment = basicProjectAssessment({projectId: extras.catalogProjectId, facts: facts.facts, sources: facts.sources, error: facts.error});
   const amenities = facts.facts.filter((f) => f.kind === "amenity");
   const costs = facts.facts.filter((f) => f.kind === "operating_cost");
   const sales = facts.facts.find((f) => f.kind === "sales");
@@ -132,7 +135,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   const displayPrice = unitSales ? unitSales.offers.length && publishedCurrencies.size===1 ? formatPrice(Math.min(...unitSales.offers.map(o=>o.price)),unitSales.offers[0].currency,lang) : t("Уточняется по юниту","Ask for unit pricing") : p.pT;
   const showRec = process.env.NEXT_PUBLIC_SHOW_PROJECT_REC === "true";
   const kindSeed = p.type === "condo" ? "condo" : p.type === "house" ? "house" : "villa";
-  const heroPhoto = photos.find(f=>f.details.cover===true) ?? photos[0];
+  const heroPhoto = photos.find(f=>["photo", "render", "unknown"].includes(mediaKind(f.details)));
   const salesStageLabel = sales ? SALES_STAGE[String(sales.details.stage)]?.[lang] : null;
 
   const publishedOwnerships = [...new Set(unitSales?.offers.map(o=>o.ownership) ?? [])];
@@ -170,6 +173,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             <Link href="/">{t("Каталог", "Catalogue")}</Link> / <Link href={`/developers/${developer.slug}`}>{developer.name}</Link>
           </div>
           <div className="ie-badges-row">
+            {heroPhoto ? <span className="ie-badge">{mediaLabel(heroPhoto.details, lang)}</span> : null}
             <span className="ie-badge">{(STEPS[stepIdx]?.[lang] ?? t("Стадия не подтверждена", "Stage not confirmed"))}</span>
             {salesStageLabel ? <span className="ie-badge">{salesStageLabel}</span> : null}
             {extras.campaigns.length ? <span className="ie-badge ie-badge--gold">{t("Акция", "Promo")}</span> : null}
@@ -216,60 +220,29 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
           {/* OVERVIEW */}
           <section className="ie-card">
             <h2 className="ie-h2">{t("О проекте", "Overview")}</h2>
-            <p className="ie-lead">{p.desc}</p>
+            <p className="ie-lead">{p.desc.length > 280 ? `${p.desc.slice(0, 280).trim()}…` : p.desc}</p>
+            {p.desc.length > 280 ? <a href="#project-details">{t("Полное описание", "Full description")}</a> : null}
             {showRec ? <div className="ie-note"><b>{p.rec}</b>: {p.recText}</div> : null}
-            <dl className="ie-dl">
-              {facts6.map(([k, v]) => (
-                <div key={k}>
-                  <dt>{k}</dt>
-                  <dd>{v}</dd>
-                </div>
-              ))}
-            </dl>
             <p className="ie-small">
               {extras.dataConfirmedAt
                 ? t(`Данные подтверждены застройщиком: ${fmtDate(extras.dataConfirmedAt, true)}.`, `Developer confirmed the data on ${fmtDate(extras.dataConfirmedAt, false)}.`)
                 : t("Дата подтверждения данных застройщиком пока не указана.", "The developer has not yet confirmed the data date.")}{" "}
-              {LEVEL_TEXT[level][ru ? "ruHint" : "enHint"]}{" "}{t("Это статус реестра, а не результат базовой проверки ниже или подтверждение заказа vendor due diligence.", "This is the registry status, not the basic review below or confirmation of a vendor due diligence commission.")}
+              {LEVEL_TEXT[level][ru ? "ruHint" : "enHint"]}{" "}{t("Это статус реестра, а не результат базовой проверки или подтверждение заказа углублённой проверки.", "This is the registry status, not the basic review below or confirmation of a vendor due diligence commission.")}
             </p>
           </section>
 
-          <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}>{unitSales?.offers.length ? <a className="ie-btn ie-btn--gold" href="#unit-offers">{t("Выбрать из опубликованных юнитов","Choose a published unit")}</a> : null}<a href="#basic-assessment">{t("Базовая проверка", "Basic review")}</a><a href="#project-photos">{t("Фото и визуализации","Photos and renders")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav>
-          <ProjectAssessment input={{ projectId: extras.catalogProjectId, facts: facts.facts, sources: facts.sources, error: facts.error }} lang={ru ? "ru" : "en"} />
-
-          {/* TIMELINE */}
-          <section className="ie-card">
-            <h2 className="ie-h2">{t("Этапы проекта", "Project stages")}</h2>
-            <ol className="ie-steps" aria-label={t("Этапы проекта", "Project stages")}>
-              {STEPS.map((s, i) => (
-                <li key={s.key} className={i < stepIdx || (i === 2 && stepIdx === 2) ? "is-done" : i === stepIdx ? "is-now" : ""}>
-                  <span className="ie-step-dot" />
-                  <b>{s[lang]}</b>
-                  <small>
-                    {i === 0 ? (salesStageLabel ?? t("статус продаж не подтверждён", "sales status unconfirmed")) : i === 1 ? (p.stT || "") : stepIdx < 0 ? completion : `${stepIdx === 2 ? t("сдан", "completed") : t("ожидается", "expected")}: ${completion}`}
-                  </small>
-                </li>
-              ))}
-            </ol>
-            {sales ? (
-              <p className="ie-small">
-                {t("Стадия продаж", "Sales stage")}: {salesStageLabel}
-                {typeof sales.details.starts_at === "string" ? ` · ${sales.details.starts_at}` : ""} ·{" "}
-                <a href={sales.source_url} target="_blank" rel="noopener noreferrer nofollow">{t("источник", "source")}</a> · {fmtDate(sales.observed_at, ru)}
-              </p>
-            ) : null}
-          </section>
-
+          <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}><a href="#project-photos">{t("Фото и планы","Photos and plans")}</a><a href="#unit-offers">{t("Лоты и цены","Units and prices")}</a><a href="#basic-assessment">{t("Базовая проверка", "Basic review")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav>
+          <div className="ie-note"><b>{t("Сведения и проверка: ", "Evidence and review: ")}{assessment.status === "unavailable" ? t("Данные проверки временно недоступны", "Review data is temporarily unavailable") : assessment.conclusion[lang]}</b><p className="ie-small">{t("Публикация материалов не означает проверку всего проекта или гарантию покупки.", "Published materials are not whole-project verification or a purchase guarantee.")} <a href="#basic-assessment">{t("Что подтверждено и что запросить", "Evidence and questions to ask")}</a></p></div>
           {/* PHOTOS */}
           <section className="ie-card">
-            <h2 className="ie-h2" id="project-photos">{t("Фото и визуализации проекта", "Project photos and renders")}</h2>
+            <h2 className="ie-h2" id="project-photos">{t("Фото, визуализации и планы", "Project photos, renders and plans")}</h2>
             <p className="ie-small">{t("Визуализации показывают замысел проекта и не подтверждают готовность. Дата материала или наблюдения указана отдельно от даты съёмки.","Renders illustrate the design and do not establish construction progress. Material observation dates are separate from capture dates.")}</p>
             {photos.length ? (
               <div className="ie-gallery">
                 {photos.map((f, i) => (
                   <button key={f.id} type="button" className="ie-shot" onClick={() => setLight(i)} aria-label={String(f.details.caption ?? f.title)}>
-                    <Image src={String(f.details.url)} alt={String(f.details.caption ?? "")} fill sizes="(max-width: 700px) 50vw, 300px" unoptimized referrerPolicy="no-referrer" />
-                    <span>{t("Источник просмотрен ","Source observed ")}{fmtDate(f.observed_at, ru)}{f.details.render ? ` · ${t("визуализация", "render")}` : ""}</span>
+                    <Image src={String(f.details.url)} alt={String(f.details.caption ?? "")} fill style={{objectFit:["masterplan", "unit_plan", "type_plan"].includes(mediaKind(f.details)) ? "contain" : "cover"}} sizes="(max-width: 700px) 50vw, 300px" unoptimized referrerPolicy="no-referrer" />
+                    <span>{t("Источник просмотрен ","Source observed ")}{fmtDate(f.observed_at, ru)}{` · ${mediaLabel(f.details, lang)}`}{f.details.type_label ? ` · ${String(f.details.type_label)}` : ""}</span>
                   </button>
                 ))}
               </div>
@@ -297,7 +270,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
           ) : null}
 
           {/* UNITS */}
-          {unitSales ? <SalesOffers sales={unitSales} projectId={p.id} projectName={p.n} lang={lang} /> : <section className="ie-card">
+          {unitSales ? <SalesOffers media={facts.facts} sales={unitSales} projectId={p.id} projectName={p.n} lang={lang} /> : <section className="ie-card" id="unit-offers">
             <h2 className="ie-h2">{t("Лоты и цены", "Units and prices")}</h2>
             {extras.units.length ? (
               <div className="ie-table-wrap">
@@ -343,6 +316,41 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
           </section>
 
           }
+          <section className="ie-card" id="project-details"><h2 className="ie-h2">{t("Характеристики проекта", "Project facts")}</h2>
+            {p.desc.length > 280 ? <p className="ie-lead">{p.desc}</p> : null}
+            <dl className="ie-dl">
+              {facts6.map(([k, v]) => (
+                <div key={k}>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          {/* TIMELINE */}
+          <section className="ie-card">
+            <h2 className="ie-h2">{t("Этапы проекта", "Project stages")}</h2>
+            <ol className="ie-steps" aria-label={t("Этапы проекта", "Project stages")}>
+              {STEPS.map((s, i) => (
+                <li key={s.key} className={i < stepIdx || (i === 2 && stepIdx === 2) ? "is-done" : i === stepIdx ? "is-now" : ""}>
+                  <span className="ie-step-dot" />
+                  <b>{s[lang]}</b>
+                  <small>
+                    {i === 0 ? (salesStageLabel ?? t("статус продаж не подтверждён", "sales status unconfirmed")) : i === 1 ? (p.stT || "") : stepIdx < 0 ? completion : `${stepIdx === 2 ? t("сдан", "completed") : t("ожидается", "expected")}: ${completion}`}
+                  </small>
+                </li>
+              ))}
+            </ol>
+            {sales ? (
+              <p className="ie-small">
+                {t("Стадия продаж", "Sales stage")}: {salesStageLabel}
+                {typeof sales.details.starts_at === "string" ? ` · ${sales.details.starts_at}` : ""} ·{" "}
+                <a href={sales.source_url} target="_blank" rel="noopener noreferrer nofollow">{t("источник", "source")}</a> · {fmtDate(sales.observed_at, ru)}
+              </p>
+            ) : null}
+          </section>
+
+          <ProjectAssessment input={{ projectId: extras.catalogProjectId, facts: facts.facts, sources: facts.sources, error: facts.error }} lang={lang} />
           {/* NEWS */}
           {extras.updates.length ? (
             <section className="ie-card">
@@ -486,7 +494,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={String(photos[light].details.url)} alt={String(photos[light].details.caption ?? "")} referrerPolicy="no-referrer" />
             <figcaption id="project-photo-caption">
-              {String(photos[light].details.caption ?? photos[light].title)} · {t("наблюдение источника ","source observed ")}{fmtDate(photos[light].observed_at, ru)} ·{" "}
+              {String(photos[light].details.caption ?? photos[light].title)} · {mediaLabel(photos[light].details, lang)} · {t("наблюдение источника ","source observed ")}{fmtDate(photos[light].observed_at, ru)} ·{" "}
               <a href={photos[light].source_url} target="_blank" rel="noopener noreferrer nofollow">{t("источник", "source")}</a>
             </figcaption>
           </figure>

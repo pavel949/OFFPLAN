@@ -19,6 +19,11 @@ export const evidenceSchema = z
             url: httpsUrl,
             caption: z.string().min(1).max(300),
             render: z.boolean().optional(),
+            media_kind: z.enum(["photo", "render", "masterplan", "unit_plan", "type_plan"]).optional(),
+            cover: z.boolean().optional(),
+            sort_order: z.number().int().min(0).max(9999).optional(),
+            unit_id: z.uuid().optional(),
+            type_label: z.string().trim().min(1).max(120).optional(),
           })
         : v.kind === "operating_cost"
           ? z.object({
@@ -47,6 +52,10 @@ export const evidenceSchema = z
         message: r.error.issues[0]?.message ?? "Некорректные данные",
         path: ["details"],
       });
+    if (v.kind === "photo" && v.details.media_kind === "unit_plan" && !v.details.unit_id)
+      c.addIssue({ code: "custom", message: "Выберите лот для его планировки", path: ["details", "unit_id"] });
+    if (v.kind === "photo" && v.details.media_kind === "type_plan" && !v.details.type_label)
+      c.addIssue({ code: "custom", message: "Укажите название типа планировки", path: ["details", "type_label"] });
     if (v.observed_at > new Date().toISOString().slice(0, 10))
       c.addIssue({
         code: "custom",
