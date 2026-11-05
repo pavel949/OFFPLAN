@@ -4,8 +4,6 @@ import { preparePhotoEvidence, type PhotoUploadItem } from "@/lib/photo-upload";
 import { revalidatePath } from "next/cache";
 import { requireAdminQuery, projectIsPublished } from "@/lib/admin-workspace";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
-import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
-import { devCode } from "@/lib/project-wizard";
 import { catalogProjectSchema } from "@/lib/schema";
 import { slugify } from "@/lib/slug";
 import { completeness, mergeStudioFields, parseStudioForm, type CompletenessItem } from "@/lib/studio";
@@ -192,104 +190,69 @@ export async function adminStudioGetProject(id: string): Promise<StudioProject> 
   };
 }
 
-/** Save the structured "Основное" form: merges into the payload and links developer and location records. */
+/** Resolve references read-only, then save references + payload + audit in one transaction. */
 export async function adminStudioSaveInfo(projectId: string, _prev: Res, fd: FormData): Promise<Res & { developerId?: string; regionId?: string }> {
   try {
     const db = await admin();
+    if (!UUID.test(projectId)) return { ok: false, error: "Некорректный проект" };
     const parsed = parseStudioForm(fd);
     if (!parsed.ok) return { ok: false, error: parsed.error };
-
-    const { data: row, error: rErr } = await db
-      .from("catalog_projects")
-      .select("slug, payload, region_id, developer_id, jurisdiction_code")
-      .eq("id", projectId)
-      .maybeSingle();
+    const { data: row, error: rErr } = await db.from("catalog_projects")
+      .select("slug,payload,updated_at").eq("id",projectId).maybeSingle();
     if (rErr || !row) return { ok: false, error: rErr?.message ?? "Проект не найден" };
 
-    // Location: an existing district, or a new one created on the fly under a chosen region.
-    let regionId = String(fd.get("region_id") ?? "");
-    let jurisdiction = row.jurisdiction_code as string | null;
-    let zoneEn = "";
+    let region: { id: string } | { parent_id: string; slug: string; name_en: string; name_ru: string };
+    let zoneEn: string;
+    const regionId = String(fd.get("region_id") ?? "");
     if (regionId === "__new") {
       const en = String(fd.get("zoneNewEn") ?? "").trim();
       const ru = String(fd.get("zoneNewRu") ?? "").trim() || en;
       const parent = String(fd.get("zoneNewParent") ?? "");
-      if (!en) return { ok: false, error: "Укажите название новой локации (по-английски)" };
+      const slug = slugify(en);
+      if (!en || en.length > 200 || ru.length > 200 || !slug) return { ok: false, error: "Укажите название новой локации: до 200 символов" };
       if (!UUID.test(parent)) return { ok: false, error: "Выберите город или провинцию для новой локации" };
-      const { data: par } = await db.from("regions").select("jurisdiction_code").eq("id", parent).maybeSingle();
-      if (!par) return { ok: false, error: "Город или провинция не найдены" };
-      const { data: made, error: mErr } = await db
-        .from("regions")
-        .insert({ jurisdiction_code: par.jurisdiction_code, parent_id: parent, slug: slugify(en), level: "district", name: { en, ru } })
-        .select("id")
-        .single();
-      if (mErr) return { ok: false, error: mErr.code === "23505" ? "Локация с таким названием уже есть: выберите её из списка" : mErr.message };
-      regionId = made.id;
-      jurisdiction = par.jurisdiction_code;
+      region = { parent_id: parent, slug, name_en: en, name_ru: ru };
       zoneEn = en;
     } else if (UUID.test(regionId)) {
-      const { data: reg } = await db.from("regions").select("jurisdiction_code, name").eq("id", regionId).maybeSingle();
-      if (!reg) return { ok: false, error: "Локация не найдена" };
-      jurisdiction = reg.jurisdiction_code;
+      const { data: reg, error } = await db.from("regions").select("name").eq("id",regionId).maybeSingle();
+      if (error || !reg) return { ok: false, error: "Не удалось найти локацию" };
+      region = { id: regionId };
       zoneEn = (reg.name as { en?: string }).en ?? "";
-    } else {
-      return { ok: false, error: "Выберите локацию" };
-    }
+    } else return { ok: false, error: "Выберите локацию" };
 
-    // Developer: existing, or created on the fly.
-    let developerId = String(fd.get("developer_id") ?? "");
-    let devName = "";
-    let devCodeValue = "";
+    let developer: { id: string } | { name: string };
+    let devName: string, code: string;
+    const developerId = String(fd.get("developer_id") ?? "");
     if (developerId === "__new") {
       const name = String(fd.get("devNewName") ?? "").trim();
-      if (name.length < 2) return { ok: false, error: "Укажите название нового застройщика" };
-      let code = devCode(name).toUpperCase().replace(/[^A-Z0-9А-ЯЁ]+/g, "").slice(0, 30) || "DEV";
-      const { data: taken } = await db.from("developers").select("code").like("code", `${code}%`);
-      if (taken?.some((t) => t.code === code)) code = `${code}${(taken?.length ?? 0) + 1}`;
-      const { data: made, error: dErr } = await db
-        .from("developers")
-        .insert({ code, name_en: name, name_ru: name, jurisdiction_code: jurisdiction })
-        .select("id")
-        .single();
-      if (dErr) return { ok: false, error: dErr.message };
-      developerId = made.id;
+      if (name.length < 2 || name.length > 200) return { ok: false, error: "Название нового застройщика: от 2 до 200 символов" };
+      developer = { name };
       devName = name;
-      devCodeValue = code;
+      code = "NEW"; // Validated preview only; the transaction assigns the canonical code.
     } else if (UUID.test(developerId)) {
-      const { data: dv } = await db.from("developers").select("code, name_en, name_ru").eq("id", developerId).maybeSingle();
-      if (!dv) return { ok: false, error: "Застройщик не найден" };
+      const { data: dv, error } = await db.from("developers").select("code,name_en,name_ru").eq("id",developerId).maybeSingle();
+      if (error || !dv) return { ok: false, error: "Не удалось найти застройщика" };
+      developer = { id: developerId };
       devName = dv.name_en || dv.name_ru;
-      devCodeValue = dv.code;
-    } else {
-      return { ok: false, error: "Выберите застройщика" };
-    }
+      code = dv.code;
+    } else return { ok: false, error: "Выберите застройщика" };
 
     const before = catalogProjectSchema.parse(row.payload);
-    let merged;
-    try {
-      merged = mergeStudioFields(before, parsed.fields, { dev: devName, dt: devCodeValue, zone: zoneEn });
-    } catch (e) {
-      return { ok: false, error: `Проверьте поля: ${msg(e)}` };
+    const payload = mergeStudioFields(before, parsed.fields, { dev: devName, dt: code, zone: zoneEn });
+    const { data: saved, error } = await db.rpc("admin_save_project_info", {
+      p_project_id: projectId, p_expected_updated_at: row.updated_at,
+      p_expected_payload: row.payload, p_payload: payload,
+      p_region: region, p_developer: developer, p_confirm: fd.get("confirm") === "on",
+    });
+    if (error) {
+      if (error.code === "PGRST202" || error.code === "42883") return { ok: false, error: "Атомарное сохранение ещё не подключено. Требуется миграция базы данных; изменения не сохранены." };
+      if (error.message.includes("project changed")) return { ok: false, error: "Проект изменён другим редактором. Обновите страницу и проверьте данные перед повтором." };
+      if (error.code === "23505") return { ok: false, error: "Локация или застройщик уже существуют. Выберите запись из справочника; изменения проекта не сохранены." };
+      if (!error.code) return { ok: false, error: "Не удалось подтвердить сохранение. Обновите страницу и проверьте проект и справочники перед повтором." };
+      return { ok: false, error: "Не удалось сохранить проект и справочники. Проверьте выбранные записи; изменения не сохранены." };
     }
-
-    const confirm = fd.get("confirm") === "on";
-    const { error } = await db
-      .from("catalog_projects")
-      .update({
-        payload: merged,
-        developer_id: developerId,
-        region_id: regionId,
-        jurisdiction_code: jurisdiction,
-        updated_at: new Date().toISOString(),
-        ...(confirm ? { data_confirmed_at: new Date().toISOString() } : {}),
-      })
-      .eq("id", projectId);
-    if (error) return { ok: false, error: error.message };
-
-    const changed = (Object.keys(merged) as (keyof typeof merged)[]).filter((k) => JSON.stringify(merged[k]) !== JSON.stringify(before[k]));
-    await insertCatalogAuditLog({ entity_type: "project", entity_id: projectId, actor_id: null, action: "project_edited_by_operator", diff: { changed } });
     refresh(projectId, row.slug);
-    return { ok: true, developerId, regionId };
+    return { ok: true, developerId: saved.developerId, regionId: saved.regionId };
   } catch (e) {
     return { ok: false, error: msg(e) };
   }
@@ -580,5 +543,6 @@ export async function adminStudioDeletePromo(projectId: string, id: string): Pro
     return { ok: false, error: msg(e) };
   }
 }
+
 
 
