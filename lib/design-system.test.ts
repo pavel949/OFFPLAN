@@ -65,3 +65,23 @@ describe("semantic color compatibility", () => {
     expect(read("components/catalogue/CalculatorPanel.tsx")).toContain('color: "var(--ui-on-action)"');
   });
 });
+
+describe("homepage buyer hierarchy", () => {
+  it("keeps catalogue before decision support and avoids duplicate promotion", () => {
+    const page = read("app/page.tsx");
+    expect(page.indexOf("<HomeExperience")).toBeLessThan(page.indexOf("ui-home-next"));
+    expect(page.indexOf("ui-home-next")).toBeLessThan(page.indexOf("ui-home-guides"));
+    expect(page).not.toContain("StatusCard");
+    expect(page).not.toContain("ie-countries");
+    expect(page).not.toContain("ie-devs");
+  });
+  it("offers a short initial selection and task-first deep links", () => {
+    const home = read("components/ie/HomeExperience.tsx");
+    expect(home).toContain("hasActiveFilters(filters) ? 24 : 6");
+    expect(home).toContain('!hasActiveFilters(filters) && filters.view !== "map"');
+    expect(home).toContain("featured && showDiscovery");
+    expect(home).toContain('id="home-search"');
+    expect(read("components/ui/DiscoveryHero.tsx")).toContain('href="#home-search"');
+    expect(home).not.toContain('className="ie-strip"');
+  });
+});

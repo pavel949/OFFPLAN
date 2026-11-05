@@ -21,7 +21,6 @@ import type { CatalogProject } from "@/lib/types";
 import { DiscoveryHero } from "@/components/ui/DiscoveryHero";
 import { projectSlug } from "@/lib/slug";
 import { ProjectTile } from "./ProjectTile";
-import { OmbudsmanLogo } from "./OmbudsmanLogo";
 const ProjectMapPanel = dynamic(()=>import("./ProjectMapPanel").then(m=>m.ProjectMapPanel),{ssr:false,loading:()=> <p role="status">Загружаем карту проектов…</p>});
 
 const STAGES: [string, string][] = [
@@ -36,8 +35,8 @@ const QUICK = [
   "вилла до 30 млн",
   "кондо у пляжа",
   "2 спальни 2027",
-  "Layan",
-  "Bang Tao",
+  "Лаян",
+  "Банг-Тао",
   "сдан",
 ];
 
@@ -67,11 +66,9 @@ function Select({
 export function HomeExperience({
   projects,
   feed,
-  stats,
 }: {
   projects: CatalogProject[];
   feed: HomeFeed;
-  stats: { projects: number; developers: number; verified: number; updatedLabel: string };
 }) {
   const expiry = Object.values(feed.availability).map(v=>v.expiresAt).filter(v=>Date.parse(v)>Date.now()).sort()[0];
   const expired = usePublicationExpired(expiry);
@@ -84,12 +81,14 @@ export function HomeExperience({
   useEffect(()=>{const clear=()=>{pendingFilters.current=null;};window.addEventListener("popstate",clear);return()=>window.removeEventListener("popstate",clear);},[]);
   const [draft, setDraft] = useState(filters.q);
   useEffect(()=>setDraft(filters.q),[filters.q]);
-  const [limit, setLimit] = useState(24);
+  const initialLimit = hasActiveFilters(filters) ? 24 : 6;
+  const [showDiscovery] = useState(() => !hasActiveFilters(filters) && filters.view !== "map");
+  const [limit, setLimit] = useState(initialLimit);
   const [moreFilters, setMoreFilters] = useState<boolean | null>(null);
   const advancedCount = [filters.bedrooms, filters.ownership, filters.year].filter(Boolean).length;
   const advancedOpen = moreFilters ?? advancedCount > 0;
   const filterKey = sp.toString();
-  useEffect(() => setLimit(24), [filterKey]);
+  useEffect(() => setLimit(initialLimit), [filterKey, initialLimit]);
 
   const apply = useCallback(
     (next: HomeFilters) => {
@@ -122,8 +121,8 @@ export function HomeExperience({
 
   return (
     <>
-      {featured ? <div className="ui-discovery-wrap"><DiscoveryHero image={feed.covers[featured.id].url} projectName={featured.n} href={`/project/${projectSlug(featured)}`} render={feed.covers[featured.id].render === true} location={zoneLabel(featured.zone, "ru")} /></div> : null}
-      <section className="ie-hero ie-catalogue-hero" aria-labelledby="ie-h1">
+      {featured && showDiscovery ? <div className="ui-discovery-wrap"><DiscoveryHero image={feed.covers[featured.id].url} projectName={featured.n} href={`/project/${projectSlug(featured)}`} render={feed.covers[featured.id].render === true} location={zoneLabel(featured.zone, "ru")} /></div> : null}
+      <section id="home-search" className="ie-hero ie-catalogue-hero" aria-labelledby="ie-h1">
         <div className="ie-wrap">
           <div className="ie-hero-copy">
             <div className="ie-eyebrow">Пхукет · Каталог новостроек</div>
@@ -293,7 +292,7 @@ export function HomeExperience({
           {list.length > limit && filters.view !== "map" ? (
             <div style={{ textAlign: "center", marginTop: 28 }}>
               <button type="button" className="ie-btn ie-btn--ink" onClick={() => setLimit((n) => n + 24)}>
-                Показать ещё ({list.length - limit})
+                Показать ещё проекты · осталось {list.length - limit}
               </button>
             </div>
           ) : null}
@@ -322,49 +321,6 @@ export function HomeExperience({
         </div>
       </section>
 
-      <div className="ie-strip">
-        <div className="ie-wrap">
-          <Link href="/protection/representative" className="ie-strip-cred" aria-label="Официальный статус: общественный представитель Уполномоченного в Таиланде">
-            <OmbudsmanLogo height={38} />
-            <em>Общественный представитель в Таиланде · приказ № 320-П</em>
-          </Link>
-          <span>Смотрите и выбирайте проекты здесь. Если нужно уточнить детали или возник конфликт с застройщиком:</span>
-          <Link href="/protection">Защита прав инвесторов →</Link>
-          <Link href="/protection/contact">Обратиться за помощью</Link>
-        </div>
-      </div>
-
-      <section className="ie-trustband" aria-label="О каталоге">
-        <div className="ie-wrap">
-          <div className="ie-trust">
-            <div>
-              <b>{stats.projects}</b>
-              <small>проектов в каталоге</small>
-            </div>
-            <div>
-              <b>{stats.developers}</b>
-              <small>застройщиков с досье</small>
-            </div>
-            <div>
-              {stats.verified > 0 ? (
-                <>
-                  <b>{stats.verified}</b>
-                  <small>проектов прошли проверку реестра</small>
-                </>
-              ) : (
-                <>
-                  <b>3 уровня</b>
-                  <small>проверки: заявлено, документы, независимая проверка</small>
-                </>
-              )}
-            </div>
-            <div>
-              <b>30 дней</b>
-              <small>цены без подтверждения старше этого срока скрываются</small>
-            </div>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

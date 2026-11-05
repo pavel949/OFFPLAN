@@ -3,167 +3,31 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HomeExperience } from "@/components/ie/HomeExperience";
 import { SiteFooter } from "@/components/ie/SiteFooter";
-import { StatusCard } from "@/components/ie/StatusCard";
 import { SiteHeader } from "@/components/ie/SiteHeader";
-import { getCatalogMeta, getProjects } from "@/lib/catalog";
-import { developerSlug, summarizeDevelopers } from "@/lib/developers";
+import { ActionLink, SectionHeading, Surface } from "@/components/ui";
+import { getProjects } from "@/lib/catalog";
 import { getHomeFeed } from "@/lib/home-feed";
 import { GUIDE } from "@/lib/guide-content";
-import { GEO } from "@/lib/geo-seed";
-import { effectiveLevel } from "@/lib/registry/levels";
 import { projectSlug } from "@/lib/slug";
 
 export default async function Home() {
   const [projects, feed] = await Promise.all([getProjects(), getHomeFeed()]);
-  const meta = getCatalogMeta(projects);
-  const devs = summarizeDevelopers(projects);
-  const verified = projects.filter((p) => effectiveLevel(p.ver) > 0).length;
-  const byId = new Map(projects.map((p) => [p.id, p]));
-  const news = feed.updates.slice(0, 6).filter((u) => byId.has(u.projectId));
-
-  return (
-    <div className="ie-page">
-      <SiteHeader />
-      <Suspense fallback={<div style={{ minHeight: "70vh", background: "#060f1e" }} />}>
-        <HomeExperience
-          projects={projects}
-          feed={feed}
-          stats={{
-            projects: projects.length,
-            developers: devs.length,
-            verified,
-            updatedLabel: meta.quarterLabel,
-          }}
-        />
-      </Suspense>
-
-      <section className="ie-section" style={{ paddingTop: 0 }}>
-        <div className="ie-wrap">
-          <div className="ie-banner">
-            <div>
-              <div className="ie-eyebrow">Защита прав российских инвесторов</div>
-              <h2>Смотрите и выбирайте здесь. Если что-то пошло не так, обращайтесь к нам.</h2>
-            </div>
-            <p>
-              Данные о проектах, источники и статусы проверки собраны в одном месте. Нужно уточнить детали, проверить договор или
-              решить спор с застройщиком (просрочка, возврат денег, несоответствие объекта) — мы рядом, на Пхукете.
-            </p>
-            <div className="ie-pillars">
-              <div><b>Смотрите здесь</b><span>Опубликованные цены и наличие с датами, материалы и этапы проектов.</span></div>
-              <div><b>Выбирайте с проверкой</b><span>Уровни проверки реестра и досье каждого застройщика.</span></div>
-              <div><b>Связывайтесь с нами</b><span>Вопросы до сделки и помощь при конфликтах и просрочках.</span></div>
-            </div>
-            <StatusCard />
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/protection" className="ie-btn ie-btn--gold">Как мы защищаем инвесторов</Link>
-              <Link href="/protection/contact" className="ie-btn ie-btn--ghost">Обратиться за помощью</Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {news.length ? (
-        <section className="ie-section ie-section--dark">
-          <div className="ie-wrap">
-            <div className="ie-section-head">
-              <div>
-                <div className="ie-eyebrow">Со строительных площадок</div>
-                <h2>Свежие новости проектов</h2>
-              </div>
-              <p>Фотоотчёты, этапы и анонсы публикуют сами застройщики.</p>
-            </div>
-            <div className="ie-news">
-              {news.map((u) => {
-                const p = byId.get(u.projectId)!;
-                return (
-                  <Link key={u.id} href={`/project/${projectSlug(p)}`} className="ie-news-item">
-                    <time dateTime={u.at}>{new Date(u.at).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })} · {p.n}</time>
-                    <h3>{u.titleRu}</h3>
-                    {u.bodyRu ? <p>{u.bodyRu.slice(0, 140)}</p> : null}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="ie-section ie-section--dark" style={{ paddingTop: news.length ? 0 : undefined }}>
-        <div className="ie-wrap">
-          <div className="ie-section-head">
-            <div>
-              <div className="ie-eyebrow">Досье застройщиков</div>
-              <h2>Кто строит</h2>
-            </div>
-            <p>
-              У каждого застройщика собраны проекты, сданные объекты, юридические данные и статус
-              проверки: решение начинается с того, кому вы доверяете деньги.
-            </p>
-            <Link href="/developers" className="ie-btn ie-btn--ghost">
-              Все застройщики →
-            </Link>
-          </div>
-          <div className="ie-devs">
-            {devs.slice(0, 8).map((d) => (
-              <Link key={d.slug} href={`/developers/${developerSlug(d.code)}`} className="ie-dev">
-                <span className="ie-dev-mono">{d.name.charAt(0)}</span>
-                <h3>{d.name}</h3>
-                <p>{d.zones.slice(0, 3).join(" · ")}</p>
-                <div className="ie-dev-meta">
-                  <span>{d.projects.length} проект.</span>
-                  {d.completed ? <span>{d.completed} сдано</span> : null}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="ie-section" style={{ paddingTop: 0 }}>
-        <div className="ie-wrap">
-          <div className="ie-section-head">
-            <div><div className="ie-eyebrow">География</div><h2>Страны и локации</h2></div>
-            <p>Начинаем с Таиланда: Пхукет, Бангкок, Паттайя, Хуахин. Вьетнам готовится к запуску.</p>
-            <Link href="/countries" className="ie-btn ie-btn--line">Все страны →</Link>
-          </div>
-          <div className="ie-countries">
-            {GEO.filter((c) => c.regions.length).map((c) => (
-              <Link key={c.code} href={`/countries/${c.slug}`} className={`ie-country ie-country--${c.status}`}>
-                <div className="ie-country-top"><span className="ie-flag" aria-hidden="true">{c.flag}</span><span className={`ie-pill ie-pill--${c.status}`}>{c.status === "active" ? "Работает" : "Готовим запуск"}</span></div>
-                <h2>{c.ru}</h2>
-                <p>{c.regions.map((r) => r.ru).join(" · ")}</p>
-                <span className="ie-country-go">Страна, локации и правила →</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="ie-section">
-        <div className="ie-wrap">
-          <div className="ie-section-head">
-            <div>
-              <div className="ie-eyebrow">Знания</div>
-              <h2>Прежде чем покупать</h2>
-            </div>
-            <p>Страна, районы, сделка и безопасность: короткие материалы для тех, кто покупает впервые.</p>
-            <Link href="/guide" className="ie-btn ie-btn--line">
-              Все материалы →
-            </Link>
-          </div>
-          <div className="ie-know">
-            {GUIDE.slice(0, 3).map((a) => (
-              <Link key={a.slug} href={`/guide/${a.slug}`}>
-                <span className="k">{a.group}</span>
-                <h3>{a.title}</h3>
-                <p>{a.lead}</p>
-                <span className="more">Читать →</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-      <SiteFooter />
-    </div>
-  );
+  const byId = new Map(projects.map(p => [p.id, p]));
+  const news = feed.updates.filter(u => byId.has(u.projectId)).slice(0, 3);
+  return <div className="ie-page">
+    <SiteHeader />
+    <Suspense fallback={<div className="ui-home-loading" role="status">Загружаем каталог…</div>}><HomeExperience projects={projects} feed={feed} /></Suspense>
+    <section className="ie-section ui-home-next" aria-label="Следующие шаги перед покупкой"><div className="ui-container">
+      <SectionHeading eyebrow="Перед решением" title="Не только выбрать. Разобраться." description="Карточка проекта — отправная точка. Дальше проверьте источники и уточните условия конкретного предложения." />
+      <div className="ui-grid">
+        <Surface><p className="ui-eyebrow">01 · Сравнить</p><h3>Район и застройщик</h3><p>Посмотрите локацию, историю проектов и опубликованные сведения о компании.</p><div className="ui-cluster"><Link href="/locations">Районы Пхукета →</Link><Link href="/developers">Застройщики →</Link></div></Surface>
+        <Surface><p className="ui-eyebrow">02 · Проверить</p><h3>Источники и пробелы</h3><p>Дата и источник важнее обещаний. Самопроверка помогает составить вопросы, но не присваивает рейтинг.</p><div className="ui-cluster"><Link href="/quick-assessment">Составить вопросы →</Link><Link href="/methodology">Как устроена проверка →</Link></div></Surface>
+        <Surface><p className="ui-eyebrow">03 · Уточнить</p><h3>Условия покупки</h3><p>Выберите лот в карточке проекта и запросите актуальные условия. Обращение не является бронью и не требует платежа.</p><ActionLink href="#home-search" variant="secondary">Вернуться к поиску</ActionLink></Surface>
+      </div>
+    </div></section>
+    {news.length ? <section className="ie-section ui-home-updates"><div className="ui-container"><SectionHeading eyebrow="Из источников" title="Обновления проектов" description="Материалы публикуют застройщики. Дата публикации не подтверждает текущую готовность объекта." /><div className="ui-grid">{news.map(u => <Surface key={u.id}><time dateTime={u.at}>{new Date(u.at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</time><h3><Link href={`/project/${projectSlug(byId.get(u.projectId)!)}`}>{u.titleRu}</Link></h3><p>{byId.get(u.projectId)!.n}</p></Surface>)}</div></div></section> : null}
+    <section className="ie-section ui-home-guides"><div className="ui-container"><SectionHeading eyebrow="Коротко о главном" title="Первый раз покупаете на Пхукете?"><ActionLink href="/guide" variant="secondary">Все материалы</ActionLink></SectionHeading><div className="ui-grid">{GUIDE.slice(0,3).map(a => <Surface key={a.slug}><p className="ui-eyebrow">{a.group}</p><h3><Link href={`/guide/${a.slug}`}>{a.title}</Link></h3><p>{a.lead}</p></Surface>)}</div></div></section>
+    <section className="ie-section ui-home-help"><div className="ui-container"><Surface><SectionHeading title="Нужна помощь по сделке?" description="Вопросы до покупки или спор с застройщиком: разберитесь, какое сопровождение вам подходит."><ActionLink href="/protection" variant="secondary">Помощь покупателю</ActionLink></SectionHeading><p className="ie-small">Объём работы и условия обсуждаются отдельно. Размещение проекта в каталоге не означает независимую проверку или гарантию результата.</p></Surface></div></section>
+    <SiteFooter />
+  </div>;
 }

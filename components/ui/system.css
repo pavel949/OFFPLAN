@@ -314,3 +314,24 @@ body { font-family: var(--ui-font); color: var(--ui-ink); background: var(--ui-c
 
 /* Legacy market context text must remain readable on its dark hero. */
 .hero .hero-sub { color: var(--ui-on-dark-muted); font-size: 12px; letter-spacing: .06em; line-height: 1.6; }
+
+/* Homepage composes discovery → catalogue → decision support, without duplicate directories. */
+.ui-discovery { min-height: 380px; }
+.ui-discovery-image { min-height: 380px; }
+.ui-discovery h2 { font-size: clamp(36px,3.8vw,54px); }
+.ui-discovery-copy { padding-block: 32px; }
+#home-search { scroll-margin-top: var(--ui-header-height); }
+.ui-home-loading { min-height: 70vh; padding: 120px 32px; background: var(--ui-canvas); color: var(--ui-muted); }
+.ui-home-next, .ui-home-updates, .ui-home-guides, .ui-home-help { padding-block: 40px; }
+.ui-home-next h3, .ui-home-updates h3, .ui-home-guides h3 { font: 600 20px/1.4 var(--ui-font); letter-spacing: -.025em; margin: 8px 0 12px; }
+.ui-home-next .ui-surface p, .ui-home-updates .ui-surface p, .ui-home-guides .ui-surface p { font-size: 14px; line-height: 1.8; color: var(--ui-muted); }
+.ui-home-next .ui-cluster { margin-top: 20px; }
+.ui-home-next .ui-cluster a { color: var(--ui-action); font-size: 13px; min-height: 44px; display: inline-flex; align-items: center; }
+.ui-home-updates time { font-size: 12px; color: var(--ui-muted); }
+.ui-home-help .ui-section-heading { margin-bottom: 12px; }
+@media (max-width: 800px) {
+  .ui-discovery-image { min-height: 200px; }
+  .ui-discovery h2 { font-size: 38px; }
+  .ui-discovery-copy { padding: 24px; }
+  .ui-discovery-copy > p:not(.ui-eyebrow) { margin-bottom: 16px; }
+}
