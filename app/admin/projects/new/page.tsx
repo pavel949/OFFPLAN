@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import { adminCreateProjectFromWizard } from "@/app/actions/project-evidence";
@@ -27,7 +28,8 @@ export default async function AdminNewProjectPage() {
       <p className="text-sm text-[var(--txt2)] mb-6 max-w-2xl">
         Форма для оператора. Рейтинг, риск и рекомендации после создания правятся в карточке проекта.
       </p>
-      <ProjectWizardForm action={adminCreateProjectFromWizard} orgs={orgs} zones={zones.length ? zones : undefined} adminMode />
+      <ProjectWizardForm creationId={randomUUID()} action={adminCreateProjectFromWizard} orgs={orgs} zones={zones.length ? zones : undefined} adminMode />
     </div>
   );
 }
+
