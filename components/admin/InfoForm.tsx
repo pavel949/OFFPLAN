@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import { adminStudioSaveInfo, type DeveloperOpt, type LocationOpt } from "@/app/actions/admin-studio";
 import type { StudioProject } from "@/app/actions/admin-studio";
 import {
@@ -17,15 +17,22 @@ export function InfoForm({
   regions: { id: string; name: string; country: string }[];
 }) {
   const p = project.payload;
+  const submitting = useRef(false);
+  const [confirmed, setConfirmed] = useState(false);
   const [dev, setDev] = useState(project.developerId ?? "");
   const [loc, setLoc] = useState(project.regionId ?? "");
   const [state, action, pending] = useActionState(async (previous: { ok: boolean; error?: string }, fd: FormData) => {
-    const result = await adminStudioSaveInfo(project.id, previous, fd);
-    if (result.ok) {
-      if (result.developerId) setDev(result.developerId);
-      if (result.regionId) setLoc(result.regionId);
+    try {
+      const result = await adminStudioSaveInfo(project.id, previous, fd);
+      if (result.ok) {
+        setConfirmed(false);
+        if (result.developerId) setDev(result.developerId);
+        if (result.regionId) setLoc(result.regionId);
+      }
+      return result;
+    } finally {
+      submitting.current = false;
     }
-    return result;
   }, { ok: false });
 
   const byRegion = new Map<string, LocationOpt[]>();
@@ -35,7 +42,17 @@ export function InfoForm({
   }
 
   return (
-    <form action={action}>
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      if (submitting.current) return;
+      // Capture before pending disables controls. Explicit submission avoids the
+      // automatic uncontrolled-input reset of a resolved React form action,
+      // including actions which return {ok:false} validation errors.
+      const fd = new FormData(event.currentTarget);
+      submitting.current = true;
+      startTransition(() => action(fd));
+    }}>
+      <fieldset disabled={pending} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <section className="adm-card">
         <h3>1 · Основное</h3>
         <p className="adm-lead">Название, застройщик и расположение. Застройщика и район выбирайте из справочника: так проект попадёт в досье застройщика и на страницу локации.</p>
@@ -143,13 +160,15 @@ export function InfoForm({
 
       <div className="adm-savebar">
         <button className="adm-btn" disabled={pending}>{pending ? "Сохраняю…" : "Сохранить"}</button>
-        <label><input type="checkbox" name="confirm" /> Данные подтверждены застройщиком сегодня</label>
+        <label><input type="checkbox" name="confirm" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /> Данные подтверждены застройщиком сегодня</label>
         <span className="grow" />
         {state.ok ? <span className="adm-msg ok">{project.published ? "Сохранено. Проверьте карточку на сайте." : "Сохранено в черновике. Проект ещё не опубликован."}</span> : null}
         {state.error ? <span className="adm-msg err">{state.error}</span> : null}
       </div>
+      </fieldset>
     </form>
   );
 }
+
 
 

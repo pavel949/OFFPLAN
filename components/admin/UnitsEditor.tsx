@@ -6,6 +6,7 @@ import {
   adminStudioConfirmPrices, adminStudioDeleteUnit, adminStudioSaveUnit, type UnitInput,
 } from "@/app/actions/admin-studio";
 import { saveUnitRows } from "@/lib/unit-editor-save";
+import { parseUnitNumber } from "@/lib/unit-number";
 import type { OperatorUnitRow } from "@/app/actions/admin-brain";
 import { daysSince, freshnessOf } from "@/lib/inventory/freshness";
 
@@ -16,7 +17,7 @@ const toRow = (u: OperatorUnitRow): Row => ({
   sqm: u.sqm?.toString() ?? "", price: u.price_thb?.toString() ?? "", status: u.status as UnitInput["status"], dirty: false, at: u.price_updated_at,
 });
 const blank = (): Row => ({ key: `n-${Math.random().toString(36).slice(2)}`, label: "", bedrooms: "", floor: "", sqm: "", price: "", status: "unknown", dirty: true, at: null });
-const num = (s: string) => { const v = s.replace(/[\s,]/g, ""); return v === "" ? null : Number(v); };
+const num = parseUnitNumber;
 const STATUS: Record<string, string> = { unknown: "Уточняется", available: "Свободен", reserved: "Бронь", sold: "Продан" };
 
 export function UnitsEditor({ projectId, initial }: { projectId: string; initial: OperatorUnitRow[] }) {
@@ -51,7 +52,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
     });
   }
   function save(row: Row) { persist([row]); }
-  function saveAll() { persist(rows.filter((x) => x.dirty && x.label.trim())); }
+  function saveAll() { persist(rows.filter((x) => x.dirty)); }
   function remove(row: Row) {
     if (!row.id) return setRows((r) => r.filter((x) => x.key !== row.key));
     if (!confirm(`Удалить лот ${row.label}?`)) return;
@@ -74,11 +75,12 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
     });
   }
 
-  const dirty = rows.filter((r) => r.dirty && r.label.trim()).length;
+  const dirty = rows.filter((r) => r.dirty).length;
   return (
     <section className="adm-card">
       <h3>Лоты и цены</h3>
       <p className="adm-lead">Редактируйте прямо в таблице. Изменение цены обновляет дату её актуальности; цены старше 30 дней на сайте скрываются, поэтому после сверки с застройщиком нажмите «Цены актуальны».</p>
+      <p className="adm-hint">Дробные значения: 35,5 или 35.5. Тысячи отделяйте пробелом: 1 000 000. Неоднозначную запись вроде 1,234 замените на 1.234 или 1 234.</p>
       <div className="adm-toolbar">
         <button type="button" className="adm-btn adm-btn--line adm-btn--sm" disabled={busy} onClick={() => setRows((r) => [...r, blank()])}>+ Добавить лот</button>
         <button type="button" className="adm-btn adm-btn--line adm-btn--sm" disabled={busy || !rows.some((r) => r.id)} onClick={confirmPrices}>✓ Цены актуальны сегодня</button>
@@ -113,7 +115,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
                     ) : "—"}
                   </td>
                   <td style={{ whiteSpace: "nowrap" }}>
-                    {r.dirty && r.label.trim() ? <button type="button" className="adm-btn adm-btn--sm" disabled={busy} onClick={() => save(r)}>Сохранить</button> : r.saved ? <span className="adm-msg ok">{r.saved}</span> : null}{" "}
+                    {r.dirty ? <button type="button" className="adm-btn adm-btn--sm" disabled={busy} onClick={() => save(r)}>Сохранить</button> : r.saved ? <span className="adm-msg ok">{r.saved}</span> : null}{" "}
                     <button type="button" className="adm-btn adm-btn--danger adm-btn--sm" disabled={busy} onClick={() => remove(r)} aria-label={`Удалить ${r.label}`}>✕</button>
                   </td>
                 </tr>
@@ -126,4 +128,5 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
     </section>
   );
 }
+
 
