@@ -44,6 +44,7 @@ export default async function PartnerDashboardPage() {
       <ProjectsList projects={projects} isOwner={isOwner} />
 
       <div className="pt-tiles">
+        <Link className="pt-tile" href="/partner/analytics"><b>Результаты витрины</b><span>Просмотры, интерес, заявки и отметки ответа.</span></Link>
         <Link className="pt-tile" href="/partner/leads"><b>Заявки покупателей</b><span>Кто интересуется вашими проектами и что просит.</span></Link>
         <Link className="pt-tile" href="/partner/deals"><b>Сделки и комиссии</b><span>Статус сделок по вашим проектам.</span></Link>
         <Link className="pt-tile" href="/partner/corrections"><b>Попросить исправить карточку</b><span>Если на сайте неверные данные, сообщите команде.</span></Link>

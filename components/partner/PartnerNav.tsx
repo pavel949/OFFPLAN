@@ -7,6 +7,7 @@ const ITEMS = [
   ["/partner", "Обзор", true],
   ["/partner/projects", "Мои проекты", false],
   ["/partner/leads", "Заявки", false],
+  ["/partner/analytics", "Результаты", false],
   ["/partner/deals", "Сделки", false],
   ["/partner/corrections", "Правки", false],
 ] as const;

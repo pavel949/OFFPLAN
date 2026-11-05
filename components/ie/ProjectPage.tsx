@@ -76,6 +76,14 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
   const unitSales = expired && initialSales ? { ...initialSales, offers: [] } : initialSales;
   const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
   const [leadOpen, setLeadOpen] = useState(false);
+  const openInquiry = () => {
+    setLeadOpen(true);
+    if (!extras.catalogProjectId) return;
+    void fetch("/api/analytics/public", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "project.cta_click", project_id: extras.catalogProjectId, path: window.location.pathname }),
+    }).catch(() => {});
+  };
   const [light, setLight] = useState<number | null>(null);
   const [sqm, setSqm] = useState("");
 
@@ -195,7 +203,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
               </span>
             </div>
             <div className="ie-pcta">
-              <button type="button" className="ie-btn ie-btn--gold" onClick={() => setLeadOpen(true)}>
+              <button type="button" className="ie-btn ie-btn--gold" onClick={openInquiry}>
                 {t("Задать вопрос по проекту", "Ask about the project")}
               </button>
               {site ? (
@@ -464,7 +472,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
                 {label:t("В продаже", "On sale"),value:unitSales?.offers.length ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот. в прайсе","units in price list")}` : t("уточняется", "unconfirmed")},
                 {label:t("Статус реестра", "Registry status"),value:`L${level}`},
               ]} />
-              <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => setLeadOpen(true)}>
+              <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={openInquiry}>
                 {t("Получить прайс и условия", "Get price list & terms")}
               </button>
               <Link className="ie-btn ie-btn--line" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} href={`/?view=map&q=${encodeURIComponent(p.n)}`} prefetch={false}>{t("На карте OFFPLAN", "OFFPLAN map")} →</Link>
