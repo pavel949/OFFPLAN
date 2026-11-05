@@ -65,6 +65,59 @@ describe("drive client (mocked network)", () => {
     );
     await expect(listFolder("1AbCdEfGhIjKlMn", denied as unknown as typeof fetch)).rejects.toMatchObject({ code: "no_access" });
   });
+  it("paginates and reads nested folders, preserving paths without following shortcuts", async () => {
+    const calls: URL[] = [];
+    const net = vi.fn(async (url: string | URL | Request) => {
+      const u = new URL(String(url));
+      if (u.hostname === "oauth2.googleapis.com") return Response.json({ access_token: "t" });
+      calls.push(u);
+      if (u.searchParams.get("q")?.startsWith("'child'"))
+        return Response.json({ files: [f({ id: "pdf", name: "Brochure.pdf" }), f({ id: "root", mimeType: "application/vnd.google-apps.folder" })] });
+      if (u.searchParams.get("pageToken") === "page2")
+        return Response.json({ files: [f({ id: "link", mimeType: "application/vnd.google-apps.shortcut" })] });
+      return Response.json({ files: [f({ id: "child", name: "Documents", mimeType: "application/vnd.google-apps.folder" })], nextPageToken: "page2" });
+    });
+    const files = await listFolder("root", net as typeof fetch);
+    expect(files.map(x => x.id)).toEqual(["link", "pdf"]);
+    expect(files[1].path).toBe("Documents/Brochure.pdf");
+    expect(calls).toHaveLength(3);
+    expect(calls[0].searchParams.get("fields")).toContain("nextPageToken");
+  });
+  it("fails closed on incomplete results, repeated pages and inaccessible descendants", async () => {
+    for (const mode of ["incomplete", "repeat", "denied"]) {
+      __resetDriveTokenCache();
+      const net = vi.fn(async (url: string | URL | Request) => {
+        const u = new URL(String(url));
+        if (u.hostname === "oauth2.googleapis.com") return Response.json({ access_token: "t" });
+        if (mode === "incomplete") return Response.json({ incompleteSearch: true, files: [f({ id: "partial" })] });
+        if (mode === "repeat") return Response.json({ files: [], nextPageToken: "same" });
+        if (u.searchParams.get("q")?.startsWith("'child'")) return new Response("{}", { status: 403 });
+        return Response.json({ files: [f({ id: "child", mimeType: "application/vnd.google-apps.folder" })] });
+      });
+      await expect(listFolder("root", net as typeof fetch)).rejects.toMatchObject({ code: mode === "denied" ? "no_access" : "failed" });
+    }
+  });
+  it("refuses excessive depth and oversized inventories rather than silently truncating", async () => {
+    for (const mode of ["depth", "size"]) {
+      __resetDriveTokenCache();
+      let depth = 0;
+      const net = vi.fn(async (url: string | URL | Request) => {
+        if (String(url).includes("oauth2")) return Response.json({ access_token: "t" });
+        return Response.json({ files: mode === "size" ? Array.from({ length: 1001 }, (_, i) => f({ id: String(i) }))
+          : [f({ id: `child${++depth}`, mimeType: "application/vnd.google-apps.folder" })] });
+      });
+      await expect(listFolder("root", net as typeof fetch)).rejects.toMatchObject({ code: "too_large" });
+    }
+  });
+  it("caps requests even when each page is empty and has a fresh token", async () => {
+    let requests = 0;
+    const net = vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes("oauth2")) return Response.json({ access_token: "t" });
+      return Response.json({ files: [], nextPageToken: `page${++requests}` });
+    });
+    await expect(listFolder("root", net as typeof fetch)).rejects.toMatchObject({ code: "too_large" });
+    expect(requests).toBe(50);
+  });
   it("exports sheets as csv and refuses oversized files", async () => {
     const calls: string[] = [];
     const net = vi.fn(async (url: string | URL | Request) => {

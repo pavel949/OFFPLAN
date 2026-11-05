@@ -7,6 +7,8 @@ export type DriveFile = {
   mimeType: string;
   modifiedTime: string;
   size?: string;
+  /** Relative path within the authorized source; metadata only, not extracted facts. */
+  path?: string;
 };
 
 const TEXT_MIMES = new Set([
@@ -19,6 +21,8 @@ const TEXT_MIMES = new Set([
 /** Files the unit importer can read directly: Google Sheets and CSV/TSV text. */
 export function isImportable(f: Pick<DriveFile, "mimeType" | "name">): boolean {
   if (f.mimeType === GOOGLE_SHEET) return true;
+  // Native Drive objects must never become downloadable inventory by filename alone.
+  if (f.mimeType.startsWith("application/vnd.google-apps.")) return false;
   if (TEXT_MIMES.has(f.mimeType)) return true;
   return /\.(csv|tsv)$/i.test(f.name);
 }

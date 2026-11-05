@@ -232,7 +232,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             </p>
           </section>
 
-          {unitSales?.offers.length ? <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}><a className="ie-btn ie-btn--gold" href="#unit-offers">{t("Выбрать из опубликованных юнитов","Choose a published unit")}</a><a href="#project-photos">{t("Фото и визуализации","Photos and renders")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav> : null}
+          <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}>{unitSales?.offers.length ? <a className="ie-btn ie-btn--gold" href="#unit-offers">{t("Выбрать из опубликованных юнитов","Choose a published unit")}</a> : null}<a href="#project-photos">{t("Фото и визуализации","Photos and renders")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav>
           {/* TIMELINE */}
           <section className="ie-card">
             <h2 className="ie-h2">{t("Этапы проекта", "Project stages")}</h2>
@@ -265,7 +265,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
                 {photos.map((f, i) => (
                   <button key={f.id} type="button" className="ie-shot" onClick={() => setLight(i)} aria-label={String(f.details.caption ?? f.title)}>
                     <Image src={String(f.details.url)} alt={String(f.details.caption ?? "")} fill sizes="(max-width: 700px) 50vw, 300px" unoptimized referrerPolicy="no-referrer" />
-                    <span>{t("Источник проверен ","Source observed ")}{fmtDate(f.observed_at, ru)}{f.details.render ? ` · ${t("визуализация", "render")}` : ""}</span>
+                    <span>{t("Источник просмотрен ","Source observed ")}{fmtDate(f.observed_at, ru)}{f.details.render ? ` · ${t("визуализация", "render")}` : ""}</span>
                   </button>
                 ))}
               </div>

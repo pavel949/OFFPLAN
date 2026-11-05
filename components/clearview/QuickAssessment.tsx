@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { runQuickAssessment } from "@/app/actions/quick-assessment";
-import { TIER_RU, type Stage } from "@/lib/clearview/engine";
+import { type Stage } from "@/lib/clearview/engine";
 import type { PublicQuickResult, Respondent } from "@/lib/clearview/quick";
-import { LevelBar, Radar, TIER_COLOR, TierLadder } from "./charts";
 
 type Q = { id: string; text: string; help?: string; options: { id: string; label: string }[] };
 const STAGES: [Stage, string][] = [["prelaunch", "Ещё не начали строить"], ["early", "Стройка началась"], ["mid", "Середина стройки"], ["late", "Почти готов"], ["completed", "Сдан"]];
-const IMPACT: Record<string, string> = { high: "Высокое влияние", medium: "Среднее влияние", low: "Низкое влияние" };
+const IMPACT: Record<string, string> = { high: "В первую очередь", medium: "Запросить подтверждение", low: "Уточнить" };
 
 export function QuickAssessment({ questions }: { questions: Q[] }) {
   const [step, setStep] = useState<number | "result">(-1);
@@ -20,19 +19,27 @@ export function QuickAssessment({ questions }: { questions: Q[] }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, start] = useTransition();
 
+  const choosing = useRef(false);
+
   const total = questions.length;
   const idx = typeof step === "number" ? step : total;
 
   function finish(a: Record<string, string>) {
     start(async () => {
-      const r = await runQuickAssessment({ respondent, stage, answers: a });
-      if (r.ok) { setResult(r.result); setStep("result"); setErr(null); } else setErr(r.error);
+      try {
+        const r = await runQuickAssessment({ respondent, stage, answers: a });
+        if (r.ok) { setResult(r.result); setStep("result"); setErr(null); } else setErr(r.error);
+      } catch {
+        setErr("Не удалось получить результат. Попробуйте ещё раз.");
+      } finally { choosing.current = false; }
     });
   }
   function choose(q: Q, optionId: string) {
+    if (choosing.current || busy) return;
     const next = { ...answers, [q.id]: optionId };
     setAnswers(next);
-    window.setTimeout(() => (idx + 1 >= total ? finish(next) : setStep(idx + 1)), 140);
+    if (idx + 1 >= total) { choosing.current = true; finish(next); }
+    else setStep(idx + 1);
   }
   function skip() {
     const q = questions[idx];
@@ -43,13 +50,13 @@ export function QuickAssessment({ questions }: { questions: Q[] }) {
     if (idx + 1 >= total) finish(next);
     else setStep(idx + 1);
   }
-  function restart() { setAnswers({}); setResult(null); setStep(-1); }
+  function restart() { setAnswers({}); setResult(null); setErr(null); setStep(-1); }
 
   if (step === -1) {
     return (
       <div className="cv-wiz">
         <h2>Быстрая проверка проекта</h2>
-        <p className="cv-lead">Четырнадцать коротких вопросов: уровень проекта до проверки документов и главные риски. Занимает около трёх минут, регистрация не нужна.</p>
+        <p className="cv-lead">{total} коротких вопросов: что известно с ваших слов и какие документы нужно запросить. Занимает около трёх минут, регистрация не нужна.</p>
         <fieldset><legend>Кто отвечает?</legend>
           <div className="cv-opts cv-opts--row">
             {([["buyer", "Покупатель или консультант", "Данные из брошюры, от агента или из договора"], ["developer", "Застройщик", "Данные о собственном проекте"]] as const).map(([k, t, d]) => (
@@ -76,7 +83,7 @@ export function QuickAssessment({ questions }: { questions: Q[] }) {
       <h2>{q.text}</h2>
       {q.help ? <p className="cv-lead">{q.help}</p> : null}
       <div className="cv-opts">
-        {q.options.map((o) => <button key={o.id} type="button" className={`cv-opt${answers[q.id] === o.id ? " on" : ""}`} onClick={() => choose(q, o.id)}><b>{o.label}</b></button>)}
+        {q.options.map((o) => <button key={o.id} type="button" className={`cv-opt${answers[q.id] === o.id ? " on" : ""}`} disabled={busy} onClick={() => choose(q, o.id)}><b>{o.label}</b></button>)}
       </div>
       <div className="cv-nav">
         <button type="button" className="ie-btn ie-btn--line" disabled={busy} onClick={() => setStep(idx === 0 ? -1 : idx - 1)}>Назад</button>
@@ -89,21 +96,12 @@ export function QuickAssessment({ questions }: { questions: Q[] }) {
 }
 
 function Result({ r, respondent, onRestart, onFix }: { r: PublicQuickResult; respondent: Respondent; onRestart: () => void; onFix: () => void }) {
-  const same = r.tierRange.low === r.tierRange.high;
-  const title = same ? TIER_RU[r.tierRange.high].label : `${TIER_RU[r.tierRange.low].label} – ${TIER_RU[r.tierRange.high].label}`;
   return (
     <div className="cv-res">
       <div className="cv-wiz cv-res-top">
-        <p className="cv-step-n">Предварительный уровень по вашим ответам</p>
-        <h2 style={{ color: TIER_COLOR[r.tierRange.high] }}>{r.blocked ? "Не рекомендуется: есть стоп-условие" : title}</h2>
-        <TierLadder low={r.tierRange.low} high={r.tierRange.high} />
-        <p className="cv-lead" style={{ marginTop: 12 }}>
-          {r.blocked
-            ? "По вашим ответам сработало условие, при котором оценка прекращается. Его нужно проверить в первую очередь."
-            : respondent === "developer"
-              ? "Это уровень по вашим собственным данным. Без подтверждения документами из реестров и писем третьих лиц проект не поднимается выше «Серебра»."
-              : "Сведения без подтверждения документами считаются менее надёжными, поэтому уровень занижен. Независимая проверка покажет реальную картину."}
-        </p>
+        <p className="cv-step-n">Предварительная самопроверка</p>
+        <h2>{r.blocked ? "Есть заявленные стоп-условия" : "Список вопросов для проверки"}</h2>
+        <p className="cv-lead">Это ответы {respondent === "developer" ? "застройщика" : "покупателя или консультанта"}, не проверенные платформой. Рейтинг проекта не присваивается. {r.blocked ? "Разберите стоп-условия с независимым юристом до сделки." : "Даже положительные ответы нужно подтвердить документами."}</p>
       </div>
 
       {r.flags.length ? (
@@ -113,11 +111,9 @@ function Result({ r, respondent, onRestart, onFix }: { r: PublicQuickResult; res
         </div>
       ) : null}
 
-      <div className="cv-grid2">
-        <div className="cv-wiz"><h3>Области</h3><Radar data={r.domains.map((d) => ({ code: d.code, label: d.ru, level: d.level }))} /></div>
-        <div className="cv-wiz"><h3>Уровень по областям</h3>
-          <div style={{ display: "grid", gap: 10 }}>{r.domains.map((d) => <div key={d.code} className="cv-row"><span><b>{d.code}</b> {d.ru}</span><LevelBar level={d.level} /></div>)}</div>
-        </div>
+      {r.unresolvedGates.length ? <div className="cv-wiz"><h3>Стоп-условия, которые ещё не проверены</h3><ul>{r.unresolvedGates.map(f => <li key={f.gate}>{f.text}</li>)}</ul><p className="cv-note">Нет данных не означает, что условие сработало или исключено.</p></div> : null}
+      <div className="cv-wiz"><h3>Что известно по областям</h3>
+        <div style={{ display: "grid", gap: 10 }}>{r.domains.map(d => <div key={d.code} className="cv-row"><span>{d.ru}</span><span>{d.status === "risk_reported" ? "Есть риск по ответам" : d.status === "needs_verification" ? "Нужны документы" : "Не оценивалось в этой анкете"}</span></div>)}</div>
       </div>
 
       {r.nextSteps.length ? (
@@ -129,14 +125,14 @@ function Result({ r, respondent, onRestart, onFix }: { r: PublicQuickResult; res
       <div className="cv-wiz">
         <h3>Полнота ответов</h3>
         <div className="cv-progress"><b style={{ width: `${(r.answered / r.total) * 100}%` }} /></div>
-        <p className="cv-lead">Вы ответили на {r.answered} из {r.total} вопросов. {r.coverage !== "high" ? "Чем больше ответов, тем уже диапазон." : ""}</p>
+        <p className="cv-lead">Содержательных ответов: {r.answered} из {r.total}. Ответы «не знаю» не учитываются. Это не доля проверенных документов.</p>
         {r.coverage !== "high" ? <button type="button" className="ie-btn ie-btn--line" onClick={onFix}>Дополнить ответы</button> : null}
       </div>
 
       <div className="cv-wiz cv-cta">
         {respondent === "developer" ? (
-          <><h3>Подтвердить уровень независимой оценкой</h3><p className="cv-lead">Оценка ClearView от 49 000 ฿ (без НДС): закрытый отчёт с планом улучшений, публичное резюме и значок.</p>
-            <Link className="ie-btn ie-btn--gold" href="/partner/login">Заказать в кабинете застройщика</Link></>
+          <><h3>Обсудить проверку документов</h3><p className="cv-lead">Уточните доступность проверки, состав документов и условия. Самопроверка не оформляет заказ и не выдаёт значок.</p>
+            <Link className="ie-btn ie-btn--gold" href="/protection/contact">Обсудить проверку</Link></>
         ) : (
           <><h3>Нужна проверка конкретного проекта?</h3><p className="cv-lead">Напишите нам название проекта: мы подскажем, есть ли по нему независимая оценка и какие документы запросить.</p>
             <Link className="ie-btn ie-btn--gold" href="/protection/contact">Запросить проверку</Link></>

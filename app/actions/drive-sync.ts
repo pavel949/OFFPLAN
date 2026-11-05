@@ -11,6 +11,7 @@ import {
   serviceAccount,
 } from "@/lib/drive/client";
 import { isExcel, isImportable, rankFiles, type DriveFile } from "@/lib/drive/pick";
+import { materialManifest, type DriveMaterial } from "@/lib/drive/manifest";
 import { parseDriveUrl } from "@/lib/drive/url";
 import { runUnitImport, type ImportState } from "@/lib/inventory/run";
 import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
@@ -25,6 +26,7 @@ export type DriveListState = {
   error?: string;
   files?: (DriveFile & { importable: boolean; excel: boolean })[];
   serviceAccountEmail?: string | null;
+  materials?: DriveMaterial[];
 };
 
 type Ctx = {
@@ -95,6 +97,7 @@ async function list(scope: "partner" | "admin", sourceId: string): Promise<Drive
     return {
       ok: true,
       serviceAccountEmail: serviceAccount()?.client_email ?? null,
+      materials: materialManifest(files),
       files: files.map((f) => ({ ...f, importable: isImportable(f), excel: isExcel(f) })),
     };
   } catch (e) {

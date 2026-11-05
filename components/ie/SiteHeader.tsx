@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PROTECTION_NAV } from "@/lib/protection-content";
 
 type Item = { href: string; label: string; children?: readonly { href: string; label: string }[] };
@@ -38,6 +38,7 @@ export function SiteHeader() {
   const [solid, setSolid] = useState(false);
   const [open, setOpen] = useState(false);
   const path = usePathname();
+  const menuButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const on = () => setSolid(window.scrollY > 24);
@@ -46,6 +47,15 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", on);
   }, []);
   useEffect(() => setOpen(false), [path]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setOpen(false); menuButton.current?.focus(); }
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [open]);
 
   const current = (href: string) => href.split("?")[0] === path;
 
@@ -59,7 +69,7 @@ export function SiteHeader() {
             <small>Проверенные новостройки ЮВА</small>
           </span>
         </Link>
-        <nav className={`ie-nav${open ? " is-open" : ""}`} aria-label="Основная навигация">
+        <nav id="ie-main-navigation" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setOpen(false); }} className={`ie-nav${open ? " is-open" : ""}`} aria-label="Основная навигация">
           {NAV.map((n) =>
             n.children ? (
               <div key={n.href} className="ie-nav-group">
@@ -88,7 +98,9 @@ export function SiteHeader() {
           <button
             type="button"
             className="ie-burger"
-            aria-label="Меню"
+            ref={menuButton}
+            aria-controls="ie-main-navigation"
+            aria-label={open ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
