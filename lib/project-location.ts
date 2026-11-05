@@ -11,7 +11,7 @@ const googleSource=(url:string)=>/(^|\.)(google\.[a-z.]+|goo\.gl)$/i.test(new UR
 export const locationEvidenceSchema = z.object({
   lat: z.number().finite().min(-85).max(85),
   lng: z.number().finite().min(-180).max(180),
-  precision: z.enum(["project", "entrance", "approximate", "sales_office"]),
+  precision: z.enum(["project", "entrance", "site", "approximate", "sales_office"]),
   sourceUrl: publicSource,
   confirmationUrl: publicSource.optional(),
   reuseBasis: z.enum(["developer_published","independently_confirmed","open_data"]),
@@ -35,6 +35,7 @@ export function reviewedLocation(evidence: unknown, lat: unknown, lng: unknown, 
 export const LOCATION_PRECISION: Record<ProjectLocation["precision"], string> = {
   project: "Точка проекта · не отдельного юнита",
   entrance: "Въезд в проект",
+  site: "Территория комплекса · не отдельное здание или юнит",
   approximate: "Приблизительное положение",
   sales_office: "Офис продаж · не расположение проекта",
 };
