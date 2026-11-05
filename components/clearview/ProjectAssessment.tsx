@@ -28,11 +28,11 @@ export function ProjectAssessment({ input, lang = "ru" }: { input: BasicAssessme
       {topic.sources.length ? <ul>{topic.sources.map(s => <li key={s.id}><a href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.title}</a></li>)}</ul> : null}
     </Disclosure>)}
     <hr />
-    <h3>{t("Отдельно: независимая проверка по заказу застройщика", "Separately: developer-commissioned independent review")}</h3>
+    <h3>{t("Отдельно: проверка по заказу застройщика", "Separately: developer-commissioned review")}</h3>
     <p>{t("Vendor due diligence — подробное исследование проекта с раскрытием документов. Застройщик оплачивает работу, а не положительный результат.", "Vendor due diligence is a detailed examination of the project and its disclosed documents. The developer pays for the work, not a favorable outcome.")}</p>
     <p><b>{VENDOR_DUE_DILIGENCE.priceTHB.toLocaleString(lang === "ru" ? "ru-RU" : "en-GB")} THB</b> · {t("Налоги, точный состав работ, расходы третьих лиц и сроки согласуются до заказа.", "Taxes, detailed scope, third-party costs and timing must be agreed before an order.")}</p>
-    <p className="ie-small">{t("В этом разделе независимый отчёт по проекту не подключён. Заказ, оплата или готовность раскрыть документы сами по себе не являются проверкой. Публичный отчёт должен указывать заказчика, проверяющего, дату, охват, выводы и ограничения, включая нерешённые вопросы.", "This section is not connected to a project-specific independent report. An order, payment or willingness to disclose documents is not verification. A public report must identify the commissioning party, reviewer, date, scope, findings and limitations, including unresolved questions.")}</p>
-    <Link href="/protection/contact" className="ie-btn ie-btn--line">{t("Обсудить состав проверки", "Discuss the review scope")}</Link>
+    <p className="ie-small">{t("В этом разделе отчёт ClearView по проекту не подключён. Заказ, оплата или готовность раскрыть документы сами по себе не являются проверкой. Публичный отчёт должен указывать заказчика, проверяющего, дату, охват, выводы и ограничения, включая нерешённые вопросы.", "This section is not connected to a project-specific ClearView report. An order, payment or willingness to disclose documents is not verification. A public report must identify the commissioning party, reviewer, date, scope, findings and limitations, including unresolved questions.")}</p>
+    <Link href="/services#developer" className="ie-btn ie-btn--line">{t("Состав и условия проверки", "Review scope and terms")}</Link>
     <p className="ie-small">{t("Это обращение, не оформление заказа или оплаты. Проверка не является гарантией завершения строительства, доходности или рекомендацией покупать.", "This is an inquiry, not an order or payment. Review does not guarantee completion or returns and is not a recommendation to buy.")}</p>
   </section>;
 }
