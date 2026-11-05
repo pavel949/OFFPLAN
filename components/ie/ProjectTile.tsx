@@ -19,11 +19,13 @@ const STAGE_RU: Record<string, string> = { offplan: "Старт продаж", b
 export function ProjectTile({
   p,
   feed,
+  selectionSearch = "",
 }: {
   p: CatalogProject;
+  selectionSearch?: string;
   feed: Pick<HomeFeed, "covers" | "campaigns" | "availability" | "sources">;
 }) {
-  const href = `/project/${projectSlug(p)}`;
+  const href = `/project/${projectSlug(p)}${selectionSearch}`;
   const cover = feed.covers[p.id];
   const promo = feed.campaigns[p.id];
   const avail = feed.availability[p.id];
