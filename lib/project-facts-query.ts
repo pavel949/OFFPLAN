@@ -59,6 +59,6 @@ export async function getPublicProjectFacts(
     developerProjects: (history.data ?? []).filter(
       (x) => x.legacy_id != null,
     ) as PublicProjectFacts["developerProjects"],
-    error: !!(facts.error || inventory.error || history.error),
+    error: !!(facts.error || inventory.error || history.error || sources.error),
   };
 }
