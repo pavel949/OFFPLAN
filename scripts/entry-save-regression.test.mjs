@@ -92,36 +92,53 @@ test('new rows and price edits return the persisted freshness date', async () =>
   }
 });
 
-test('info save returns canonical developer and region IDs for repeat saves', async () => {
+function infoFixture(rpcError = null) {
+  const projectId = '00000000-0000-4000-8000-000000000003';
   const developerId = '00000000-0000-4000-8000-000000000001';
   const regionId = '00000000-0000-4000-8000-000000000002';
-  const inserts = [];
+  const calls = [];
   const db = { from(table) {
     return {
       select() { return this; }, eq() { return this; },
-      update() { return this; }, insert(row) { inserts.push({ table, row }); return this; },
-      maybeSingle: async () => ({ data: table === 'catalog_projects' ? { slug: 'test', payload: {}, jurisdiction_code: 'TH' }
-        : table === 'regions' ? { jurisdiction_code: 'TH', name: { en: 'Test District' } }
+      insert() { throw new Error('Nontransactional reference insert'); },
+      update() { throw new Error('Nontransactional project update'); },
+      maybeSingle: async () => ({ data: table === 'catalog_projects' ? { slug: 'test', payload: {n:'Before'}, updated_at: '2026-11-01T00:00:00Z' }
+        : table === 'regions' ? { name: { en: 'Test District' } }
         : { code: 'TEST', name_en: 'Test Developer' } }),
-      then(resolve) { return Promise.resolve({ error: null }).then(resolve); },
     };
-  }};
-  const save = new Function('getAdminSessionOk', 'hasSupabaseServiceConfig', 'createServiceRoleClient', 'revalidatePath', 'parseStudioForm', 'catalogProjectSchema', 'mergeStudioFields', 'insertCatalogAuditLog', actionCode + '\nreturn adminStudioSaveInfo;')(
+  }, rpc: async (name,args) => { calls.push({name,args}); return {data:rpcError?null:{developerId,regionId},error:rpcError}; }};
+  const save = new Function('getAdminSessionOk', 'hasSupabaseServiceConfig', 'createServiceRoleClient', 'revalidatePath', 'parseStudioForm', 'catalogProjectSchema', 'mergeStudioFields', 'slugify', actionCode + '\nreturn adminStudioSaveInfo;')(
     async () => true, () => true, () => db, () => {}, () => ({ ok: true, fields: {} }),
-    { parse: value => value }, () => ({}), async () => {},
+    { parse: value => value }, (_before,_fields,links) => ({n:'After',...links}), value=>value.toLowerCase().replaceAll(' ','-'),
   );
-  const fd = new FormData();
-  fd.set('developer_id', developerId);
-  fd.set('region_id', regionId);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await save('fake-project', { ok: false }, fd);
-    assert.deepEqual(result, { ok: true, developerId, regionId });
-    fd.set('developer_id', result.developerId);
-    fd.set('region_id', result.regionId);
-  }
-  assert.equal(inserts.length, 0);
+  const fd = new FormData(); fd.set('developer_id',developerId);fd.set('region_id',regionId);
+  return {projectId,developerId,regionId,save,fd,calls};
+}
+test('info save uses one transactional RPC and returns canonical IDs', async () => {
+  const f=infoFixture();
+  assert.deepEqual(await f.save(f.projectId,{ok:false},f.fd),{ok:true,developerId:f.developerId,regionId:f.regionId});
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].name,'admin_save_project_info');
+  assert.deepEqual(f.calls[0].args.p_expected_payload,{n:'Before'});
+  assert.deepEqual(f.calls[0].args.p_developer,{id:f.developerId});
 });
-
+test('new references are sent together to RPC, never independently inserted', async () => {
+  const f=infoFixture();f.fd.set('region_id','__new');f.fd.set('zoneNewEn','New district');f.fd.set('zoneNewParent',f.regionId);
+  f.fd.set('developer_id','__new');f.fd.set('devNewName','New developer');
+  assert.equal((await f.save(f.projectId,{ok:false},f.fd)).ok,true);
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].args.p_region.name_en,'New district');
+  assert.deepEqual(f.calls[0].args.p_developer,{name:'New developer'});
+});
+test('invalid new developer never creates the otherwise valid new region', async () => {
+  const f=infoFixture();f.fd.set('region_id','__new');f.fd.set('zoneNewEn','New district');f.fd.set('zoneNewParent',f.regionId);
+  f.fd.set('developer_id','__new');f.fd.set('devNewName','x');
+  assert.equal((await f.save(f.projectId,{ok:false},f.fd)).ok,false);assert.equal(f.calls.length,0);
+});
+test('missing migration and transaction failure never fall back to partial writes', async () => {
+  for(const error of [{code:'PGRST202',message:'missing RPC'},{code:'23505',message:'duplicate'},{code:'P0001',message:'project changed'}]) {
+    const f=infoFixture(error);const result=await f.save(f.projectId,{ok:false},f.fd);
+    assert.equal(result.ok,false);assert.equal(f.calls.length,1);assert(result.error);
+  }
+});
 
 // Client parsing → real server action control flow → mocked stored row.
 const { parseUnitNumber } = await import('../lib/unit-number.ts');
