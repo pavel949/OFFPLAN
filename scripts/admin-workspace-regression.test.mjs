@@ -48,3 +48,9 @@ test('directory SQL keeps ownership and publication unchanged, requires service 
  assert.match(read('app/actions/developer-directory.ts'),/getAdminSessionOk/);
  assert.match(read('app/admin/developers/developer-directory.tsx'),/state.id \?\? developer\?\.id/);
 });
+
+test('developer fields survive form reset and repeat-save uses returned identity',()=>{
+ const form=read('app/admin/developers/developer-directory.tsx');
+ for(const key of ['name_en','name_ru','website','org_id']) assert.ok(form.includes(`value={fields.${key}}`));
+ assert.match(form,/state.revision \?\? developer\?\.admin_revision/);
+});
