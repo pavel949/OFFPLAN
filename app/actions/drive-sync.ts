@@ -137,15 +137,15 @@ async function importFile(scope: "partner" | "admin", f: FormData): Promise<Impo
       actorId: ctx.userId,
     });
     if (res.ok && res.mode === "apply") {
-      // bookkeeping needs the trusted client: developers cannot write sync fields themselves
+      // Sync records ingestion, not verification. Only explicit source confirmation may
+      // update confirmed_at/confirmed_by, even when the imported file has changed.
+      // Bookkeeping needs the trusted client: developers cannot write sync fields themselves
       const admin = createServiceRoleClient();
       await admin
         .from("project_sources")
         .update({
           last_synced_at: new Date().toISOString(),
           last_sync_note: `${file.name}: +${res.applied?.inserted ?? 0} / ~${res.applied?.updated ?? 0}`.slice(0, 500),
-          confirmed_at: new Date().toISOString(),
-          confirmed_by: ctx.userId,
         })
         .eq("id", sourceId);
       void insertCatalogAuditLog({
