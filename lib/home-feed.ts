@@ -1,3 +1,4 @@
+import { readAllPages } from "./paginated-rows";
 import { publishedProjectMedia, mediaKind } from "./project-media";
 import type { ProjectEvidence } from "./project-evidence";
 import { createAnonClient, hasSupabasePublicConfig } from "./supabase/anon";
@@ -37,13 +38,14 @@ export async function getHomeFeed(): Promise<HomeFeed> {
         const db = createAnonClient();
         const [ids, photos, upd, camp, inv, src] = await Promise.all([
           db.from("public_catalog_projects").select("id, legacy_id"),
-          db
+          readAllPages<ProjectEvidence>((from,to) => db
             .from("project_evidence")
             .select("id,project_id,kind,fact_key,title,source_url,observed_at,details,status,reviewed_at")
             .eq("kind", "photo")
             .eq("status", "published")
             .order("observed_at", { ascending: false })
-            .limit(400),
+            .order("id", { ascending: true })
+            .range(from,to)),
           db
             .from("project_updates")
             .select("id, project_id, kind, title_ru, title_en, body_ru, published_at")
@@ -58,7 +60,7 @@ export async function getHomeFeed(): Promise<HomeFeed> {
           if (r.legacy_id != null) legacy.set(r.id as string, r.legacy_id as number);
 
         const feed: HomeFeed = { covers: {}, updates: [], campaigns: {}, availability: {}, sources: {} };
-        for (const r of publishedProjectMedia((photos.data ?? []) as ProjectEvidence[])) {
+        for (const r of publishedProjectMedia(photos)) {
           const id = legacy.get(r.project_id);
           const d = r.details;
           if (id == null || feed.covers[id] || ["masterplan", "unit_plan", "type_plan"].includes(mediaKind(d))) continue;

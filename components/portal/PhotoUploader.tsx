@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { PhotoUploadRecovery, usePhotoUploadRecovery } from "@/components/shared/PhotoUploadRecovery";
 import { LocalPhotoPreview } from "@/components/shared/LocalPhotoPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { preflightUploadedPhotos, submitUploadedPhotos } from "@/app/actions/project-evidence";
@@ -14,6 +15,7 @@ const MAX = 8 * 1024 * 1024;
 export function PhotoUploader({ projectId, units = [] }: { projectId: string; units?: {id:string;label:string}[] }) {
   const [items, setItems] = useState<Item[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const {recovery,ready,recoveryError,saveRecovery,completeRecovery} = usePhotoUploadRecovery(projectId,"partner");
   const active = useRef(false);
   const [blocked, setBlocked] = useState(false);
   const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
@@ -34,6 +36,7 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
 
   async function send() {
     if (active.current || blocked) return;
+    if (!ready || recovery || recoveryError) return;
     active.current = true;
     setBusy(true);
     setMsg(null);
@@ -47,6 +50,7 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
       const checked = await preflightUploadedPhotos({projectId,observedAt:date,items:batch});
       if (!checked.ok) throw new Error(checked.error ?? "Проверьте материалы");
       // Preserve paths even if a network response is lost. Never replay this batch blindly.
+      saveRecovery({projectId,observedAt:date,items:batch});
       setUploadedPaths(batch.map(x=>x.path));
       for (let i=0;i<items.length;i++) {
         writing = true;
@@ -57,6 +61,7 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
       phase = "register";
       const r = await submitUploadedPhotos({projectId,observedAt:date,items:batch});
       if (!r.ok) throw new Error(r.error ?? "Ошибка регистрации");
+      completeRecovery();
       setItems([]);
       setUploadedPaths([]);
       setMsg({ok:true,text:`Отправлено на проверку: ${r.saved}. После одобрения материалы появятся на странице проекта.`});
@@ -77,10 +82,10 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
         Хранилище фотографий публично по ссылке сразу после загрузки; документы для проверки здесь размещать нельзя. Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз). Укажите дату материала и его тип: фото, визуализация или план. Загружайте только материалы, которые вы вправе публиковать.
         Обложку и порядок можно выбрать ниже; изменения публикуются после проверки.
       </p>
-      <input type="file" multiple disabled={busy || blocked} accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
+      <input type="file" multiple disabled={busy || blocked || !ready || !!recovery || !!recoveryError} accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
       <label className="block text-xs">
         Дата материала
-        <input type="date" disabled={busy || blocked} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
+        <input type="date" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
       </label>
       {items.length ? (
         <ul className="space-y-2">
@@ -89,22 +94,23 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
               <LocalPhotoPreview file={it.file} className="w-16 h-12 object-cover rounded" />
               <input
                 className="admin-inp mb-0 flex-1"
-                disabled={busy || blocked}
+                disabled={busy || blocked || !ready || !!recovery || !!recoveryError}
                 placeholder="Подпись: например, «Фасад, блок A»"
                 value={it.caption}
                 onChange={(e) => setItems((cur) => cur.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
               />
-              <button type="button" disabled={busy || blocked} className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
+              <button type="button" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
                 убрать
               </button></div>
-              <MediaFields value={it.metadata} onChange={metadata=>setItems(cur=>cur.map((x,j)=>j===i?{...x,metadata}:x))} disabled={busy || blocked} units={units}/>
+              <MediaFields value={it.metadata} onChange={metadata=>setItems(cur=>cur.map((x,j)=>j===i?{...x,metadata}:x))} disabled={busy || blocked || !ready || !!recovery || !!recoveryError} units={units}/>
             </li>
           ))}
         </ul>
       ) : null}
-      <button type="button" className="admin-btn py-2 px-3" disabled={busy || blocked || !items.length} onClick={send}>
+      <button type="button" className="admin-btn py-2 px-3" disabled={busy || blocked || !ready || !!recovery || !!recoveryError || !items.length} onClick={send}>
         {busy ? "Загрузка…" : `Отправить на проверку${items.length ? ` (${items.length})` : ""}`}
       </button>
+      <PhotoUploadRecovery recovery={recovery} mode="partner" error={recoveryError} busy={busy} onResolved={()=>{completeRecovery();setItems([]);setBlocked(false);setUploadedPaths([]);}}/>
       {blocked && uploadedPaths.length ? <details><summary>Пути файлов для проверки</summary><ul>{uploadedPaths.map(path=><li key={path}>{path}</li>)}</ul></details> : null}
       {msg ? <p role="status" className={msg.ok ? "text-sm text-[var(--grn)]" : "text-sm text-[var(--red)]"}>{msg.text}</p> : null}
     </section>

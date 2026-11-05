@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { PhotoUploadRecovery, usePhotoUploadRecovery } from "@/components/shared/PhotoUploadRecovery";
 import { LocalPhotoPreview } from "@/components/shared/LocalPhotoPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -20,6 +21,7 @@ export function PhotosManager({ projectId, photos, units = [] }: { projectId: st
   const router = useRouter();
   const [picks, setPicks] = useState<Pick[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const {recovery,ready,recoveryError,saveRecovery,completeRecovery} = usePhotoUploadRecovery(projectId,"admin");
   const active = useRef(false);
   const [blocked,setBlocked] = useState(false);
   const [uploadedPaths,setUploadedPaths] = useState<string[]>([]);
@@ -41,6 +43,7 @@ export function PhotosManager({ projectId, photos, units = [] }: { projectId: st
 
   async function upload() {
     if (active.current || blocked) return;
+    if (!ready || recovery || recoveryError) return;
     active.current = true;
     let uploaded = 0;
     let writing = false;
@@ -52,6 +55,7 @@ export function PhotosManager({ projectId, photos, units = [] }: { projectId: st
     try {
       const slots = await adminStudioSignUploads(projectId, picks.length, picks.map((p) => EXT[p.file.type]), picks.map(p=>({caption:p.caption,details:mediaDetails(p.metadata)})), date);
       if (!slots.ok || !slots.slots) { setBusy(false); return setMsg({ ok: false, text: slots.error ?? "Ошибка" }); }
+      saveRecovery({projectId,observedAt:date,items:slots.slots.map((s,i)=>({path:s.path,caption:picks[i].caption,details:mediaDetails(picks[i].metadata)}))});
       setUploadedPaths(slots.slots.map(s=>s.path));
       const done: { path: string; caption: string; details:Record<string,unknown> }[] = [];
       for (let i = 0; i < picks.length; i++) {
@@ -66,6 +70,7 @@ export function PhotosManager({ projectId, photos, units = [] }: { projectId: st
       const r = await adminStudioRegisterPhotos(projectId, done, date);
       setBusy(false);
       if (!r.ok) throw new Error(r.error ?? "Ошибка регистрации");
+      completeRecovery();
       setPicks([]);
       setUploadedPaths([]);
       setMsg({ ok: true, text: `Опубликовано фото: ${r.saved}` });
@@ -95,28 +100,29 @@ export function PhotosManager({ projectId, photos, units = [] }: { projectId: st
         <h3>Загрузить фотографии</h3>
         <p className="adm-lead">Фотографии доступны по ссылке сразу после загрузки. Документы для проверки размещайте в разделе документов. Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз), добавьте подписи и дату съёмки. Фото публикуются сразу. Выберите тип материала, порядок и предпочтительную обложку. Планы с указанным типом не используются как фон проекта. Загружайте только материалы, которые вы вправе публиковать.</p>
         <div className="adm-drop">
-          <input type="file" multiple disabled={busy || blocked} accept="image/jpeg,image/png,image/webp" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+          <input type="file" multiple disabled={busy || blocked || !ready || !!recovery || !!recoveryError} accept="image/jpeg,image/png,image/webp" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
         </div>
         {picks.length ? (
           <>
             <div className="adm-grid" style={{ marginTop: 14 }}>
-              <div className="adm-field c3"><label>Дата съёмки</label><input type="date" disabled={busy || blocked} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} /></div>
+              <div className="adm-field c3"><label>Дата съёмки</label><input type="date" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} /></div>
             </div>
             <div className="adm-photos" style={{ marginTop: 14 }}>
               {picks.map((p, i) => (
                 <div className="adm-photo" key={i}>
                   <LocalPhotoPreview file={p.file} />
                   <div>
-                    <input className="adm-cell" disabled={busy || blocked} placeholder="Подпись, например: Фасад, блок A" value={p.caption} onChange={(e) => setPicks((c) => c.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))} />
-                    <MediaFields value={p.metadata} onChange={metadata=>setPicks(c=>c.map((x,j)=>j===i?{...x,metadata}:x))} units={units} disabled={busy || blocked}/>
-                    <button type="button" disabled={busy || blocked} className="adm-btn adm-btn--line adm-btn--sm" onClick={() => setPicks((c) => c.filter((_, j) => j !== i))}>Убрать</button>
+                    <input className="adm-cell" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} placeholder="Подпись, например: Фасад, блок A" value={p.caption} onChange={(e) => setPicks((c) => c.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))} />
+                    <MediaFields value={p.metadata} onChange={metadata=>setPicks(c=>c.map((x,j)=>j===i?{...x,metadata}:x))} units={units} disabled={busy || blocked || !ready || !!recovery || !!recoveryError}/>
+                    <button type="button" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} className="adm-btn adm-btn--line adm-btn--sm" onClick={() => setPicks((c) => c.filter((_, j) => j !== i))}>Убрать</button>
                   </div>
                 </div>
               ))}
             </div>
-            <p style={{ marginTop: 14 }}><button type="button" className="adm-btn" disabled={busy || blocked} onClick={upload}>{busy ? "Загрузка…" : `Опубликовать (${picks.length})`}</button></p>
+            <p style={{ marginTop: 14 }}><button type="button" className="adm-btn" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} onClick={upload}>{busy ? "Загрузка…" : `Опубликовать (${picks.length})`}</button></p>
           </>
         ) : null}
+        <PhotoUploadRecovery recovery={recovery} mode="admin" error={recoveryError} busy={busy} onResolved={()=>{completeRecovery();setPicks([]);setBlocked(false);setUploadedPaths([]);}}/>
         {blocked && uploadedPaths.length ? <details><summary>Пути файлов для проверки</summary><ul>{uploadedPaths.map(path=><li key={path}>{path}</li>)}</ul></details> : null}
         {msg ? <p role="status" className={`adm-msg ${msg.ok ? "ok" : "err"}`} style={{ marginTop: 10 }}>{msg.text}</p> : null}
       </section>
