@@ -3,52 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAdmin } from "@/app/actions/admin-auth";
-
-const items = [
-  { href:"/admin/evidence", label:"Проверка сведений" },
-  { href: "/admin", label: "Обзор" },
-  { href: "/admin/projects", label: "Проекты" },
-  { href: "/admin/imports", label: "Материалы застройщиков" },
-  { href: "/admin/developers", label: "Застройщики" },
-  { href: "/admin/methodology", label: "Методология" },
-  { href: "/admin/readiness", label: "Готовность к работе" },
-  { href: "/admin/settings", label: "Настройки" },
-  { href: "/admin/leads", label: "Лиды" },
-  { href: "/admin/moderation", label: "Модерация" },
-  { href: "/admin/corrections", label: "Правки" },
-  { href: "/admin/deals", label: "Сделки" },
-  { href: "/admin/commissions", label: "Комиссии" },
-  { href: "/admin/ingest/whatsapp", label: "WhatsApp" },
-  { href: "/admin/catalog", label: "Каталог JSON" },
-];
+import { ADMIN_GROUPS, adminRouteActive } from "@/lib/admin-workspace";
 
 export function AdminNav() {
   const pathname = usePathname();
-
   return (
-    <nav className="admin-nav">
-      <div className="admin-nav-title">Панель</div>
-      {items.map(({ href, label }) => {
-        const on =
-          href === "/admin"
-            ? pathname === "/admin"
-            : pathname.startsWith(href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={`admin-nav-link${on ? " on" : ""}`}
-          >
-            {label}
-          </Link>
-        );
-      })}
+    <nav className="admin-nav" aria-label="Управление платформой">
+      <div className="admin-nav-title">Управление платформой</div>
+      {ADMIN_GROUPS.map(group => (
+        <section className="admin-nav-group" key={group.label} aria-label={group.label}>
+          <h2 className="admin-nav-group-title">{group.label}</h2>
+          {group.items.map(({ href, label }) => {
+            const on = adminRouteActive(pathname, href);
+            return <Link key={href} href={href} aria-current={on ? "page" : undefined} className={`admin-nav-link${on ? " on" : ""}`}>{label}</Link>;
+          })}
+        </section>
+      ))}
       <div className="admin-nav-foot">
-        <form action={logoutAdmin}>
-          <button type="submit" className="admin-nav-out">
-            Выйти
-          </button>
-        </form>
+        <form action={logoutAdmin}><button type="submit" className="admin-nav-out">Выйти</button></form>
       </div>
     </nav>
   );

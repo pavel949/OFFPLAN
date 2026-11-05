@@ -17,6 +17,8 @@ psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/110_developer_import.sql | sed 
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/120_sales_model.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/130_sales_publication.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/140_partner_performance.sql | sed "/^$/d"
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/150_translation_invalidation.sql | sed "/^$/d"
+psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/160_admin_developer_directory.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/10_rls_hardening.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/20_registry.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/30_deals.sql | sed "/^$/d"
@@ -27,3 +29,4 @@ psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/70_legal_topics.sql | sed "/^$/
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/80_project_photos.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/90_cv_methodology.sql | sed "/^$/d"
 psql -q -tA -v ON_ERROR_STOP=1 -f supabase/tests/50_privileges.sql | sed "/^$/d"
+

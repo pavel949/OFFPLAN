@@ -40,10 +40,10 @@ export default async function AdminSettingsPage() {
       <div>
         <h1 className="serif text-2xl mb-1">Настройки платформы</h1>
         <p className="text-[var(--txt2)] text-sm mb-6">
-          Методология рейтинга (шкалы <code>rat</code>, <code>risk</code>,{" "}
-          <code>rec</code>), заголовки главной страницы. Тексты RU/EN
-          показываются на сайте во вкладке <strong>Analytics</strong> над
-          обзором.
+          Тексты методологии (шкалы <code>rat</code>, <code>risk</code>,{" "}
+          <code>rec</code>) и показатели страницы рынка. Тексты RU/EN
+          используются на странице <Link href="/market">«Рынок»</Link>.
+          Эти настройки не пересчитывают оценки проектов и не заменяют версионную методологию ClearView.
         </p>
       </div>
 
@@ -57,3 +57,4 @@ export default async function AdminSettingsPage() {
     </div>
   );
 }
+

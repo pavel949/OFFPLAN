@@ -19,6 +19,7 @@ export default async function AdminDashboardPage() {
   return (
     <div>
       <h1 className="serif text-2xl mb-1">Обзор</h1>
+      <section className="adm-card"><h2>С чего начать</h2><p>Изменить каталог: <Link href="/admin/projects">откройте проект</Link>. Обработать обращение: <Link href="/admin/leads">заявки клиентов</Link>.</p><p><Link href="/admin/guide">Что и где редактировать, что увидит покупатель →</Link></p></section>
       <div className="flex flex-wrap gap-3 mb-6 text-sm">
         <Link className="admin-btn py-2 px-3 no-underline" href="/admin/projects">
           Проекты каталога
@@ -116,3 +117,4 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
+

@@ -430,6 +430,7 @@ export async function adminListInterests(projectId: string): Promise<{ interests
     db.from("project_commercial_interests").select("org_id, kind, note, orgs(name_ru)").eq("project_id", projectId),
     db.from("orgs").select("id, name_ru").eq("kind", "broker").order("name_ru"),
   ]);
+  if (i.error || o.error) throw new Error("Не удалось загрузить коммерческие интересы и организации");
   return {
     interests: ((i.data ?? []) as unknown as { org_id: string; kind: string; note: string; orgs: { name_ru: string } | null }[]).map((r) => ({
       org_id: r.org_id,
@@ -474,3 +475,4 @@ export async function adminRemoveInterest(projectId: string, orgId: string, kind
     return { ok: false, error: e instanceof Error ? e.message : "Ошибка" };
   }
 }
+
