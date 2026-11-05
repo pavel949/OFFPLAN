@@ -48,6 +48,8 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000140002'
 select pg_temp.partner_expect_error($q$select public.partner_update_lead('00000000-0000-4000-8000-000000140006','claim')$q$);
 do $$ begin if exists(select 1 from public.partner_showcase_metrics()) then raise exception 'Buyer read metrics'; end if; end $$;
 reset role;
+-- Clear the previous test JWT for trusted fixture setup; reset role alone keeps auth.uid().
+select set_config('request.jwt.claim.sub','',true);
 -- A genuine second partner organization must remain isolated, not only a buyer or unowned project.
 insert into public.orgs(id,slug,name_en,name_ru) values
  ('00000000-0000-4000-8000-000000140009','performance-second','Other','Other');

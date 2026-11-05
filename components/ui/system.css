@@ -340,3 +340,9 @@ body { font-family: var(--ui-font); color: var(--ui-ink); background: var(--ui-c
 .ui-destinations a[aria-current] { border-color: var(--ui-action); color: var(--ui-action); background: var(--ui-action-soft); }
 .ui-destinations small { color: var(--ui-muted); font-size: 11px; }
 .ui-coverage-note { color: var(--ui-muted); font-size: 12px; line-height: 1.7; max-width: 840px; margin: 0 0 20px; }
+
+/* Light page introductions must not inherit white-on-dark legacy labels/tabs. */
+.ie-sub .ie-stat small { color: var(--ui-muted); }
+.ie-sub .ie-tabs a { color: var(--ui-action) !important; background: var(--ui-surface); border-color: var(--ui-border-strong); min-height: var(--ui-touch); display: inline-flex; align-items: center; }
+.ie-sub .ie-tabs a:hover, .ie-sub .ie-tabs a[aria-current="page"] { color: var(--ui-action) !important; background: var(--ui-action-soft); border-color: var(--ui-action); }
+.ie-sub .ie-tabs a:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
