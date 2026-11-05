@@ -12,8 +12,8 @@ import { displayDate } from "@/lib/display-date";
 
 const groupColor = (p: MapProject) => /banyan/i.test(p.dev) ? "banyan" : /sansiri/i.test(p.dev) ? "sansiri" : /sudara/i.test(p.n) ? "sudara" : /assetwise|rhom/i.test(p.dev) ? "title" : "other";
 
-export function ProjectMapPanel({ projects, onZoneChange, offline = false }: {
-  projects: MapProject[]; onZoneChange?: (zone: string) => void; offline?: boolean;
+export function ProjectMapPanel({ projects, onZoneChange, offline = false, selectionSearch = "" }: {
+  selectionSearch?: string; projects: MapProject[]; onZoneChange?: (zone: string) => void; offline?: boolean;
 }) {
   const [land, setLand] = useState("");
   const [landError, setLandError] = useState(false);
@@ -97,7 +97,7 @@ export function ProjectMapPanel({ projects, onZoneChange, offline = false }: {
             <p>{p.description.slice(0,210)}{p.description.length>210 ? "…" : ""}</p>
             <p className="ie-small">{p.dataConfirmedAt ? `Дата подтверждения характеристик: ${displayDate(p.dataConfirmedAt,true)}` : "Дата подтверждения характеристик не указана. Описание каталога требует проверки перед сделкой."}</p>
             <div className="ie-map-offer">{a ? <><b>{a.available} лотов в опубликованном прайсе</b><small>По данным на {a.observedAt} · набор может быть неполным</small></> : <b>Актуальное наличие уточняется</b>}{price ? <span>от {price.amount.toLocaleString("ru-RU")} {price.currency} · {ownershipLabel(price.ownership)}</span> : <span>Цена не подтверждена</span>}</div>
-            <div className="ie-map-project-links">{q ? <button type="button" onClick={()=>{setSelected([p.id]);setView(fitPoints([p],1.25));host.current?.scrollIntoView({block:"nearest"});}}>Точка на карте</button> : null}{online ? <Link href={`/project/${p.slug}`} prefetch={false}>Проект и юниты →</Link> : <span>Страница проекта откроется при подключении</span>}{q?.sourceUrl.startsWith("https://") ? <a href={q.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">Источник координат ↗</a> : null}</div>
+            <div className="ie-map-project-links">{q ? <button type="button" onClick={()=>{setSelected([p.id]);setView(fitPoints([p],1.25));host.current?.scrollIntoView({block:"nearest"});}}>Точка на карте</button> : null}{online ? <Link href={`/project/${p.slug}${selectionSearch}`} prefetch={false}>Проект и юниты →</Link> : <span>Страница проекта откроется при подключении</span>}{q?.sourceUrl.startsWith("https://") ? <a href={q.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">Источник координат ↗</a> : null}</div>
           </article>;
         })}
         {shown.length>limit ? <button type="button" className="ie-btn ie-btn--line" onClick={()=>setLimit(n=>n+12)}>Показать ещё ({shown.length-limit})</button> : null}

@@ -10,6 +10,7 @@ import { getDevelopers } from "@/lib/home-feed";
 import { getProjectByLegacyId } from "@/lib/catalog";
 import { getProjectExtrasByLegacyId } from "@/lib/project-queries";
 import { parseLegacyIdFromSlug, projectSlug } from "@/lib/slug";
+import { selectionFromSearch } from "@/lib/unit-selection";
 import { getPublicSales } from "@/lib/sales-public-query";
 
 export async function generateMetadata({
@@ -36,9 +37,12 @@ export async function generateMetadata({
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const context = selectionFromSearch(await searchParams);
   const { slug } = await params;
   const legacyId = parseLegacyIdFromSlug(slug);
   if (legacyId == null) notFound();
@@ -48,7 +52,7 @@ export default async function ProjectPage({
 
   const canonical = projectSlug(project);
   if (slug !== canonical) {
-    redirect(`/project/${canonical}`);
+    redirect(`/project/${canonical}${context.search}`);
   }
 
   const extras = await getProjectExtrasByLegacyId(legacyId);
@@ -76,6 +80,8 @@ export default async function ProjectPage({
     <>
       <SiteHeader />
       <ProjectView
+        selection={context.selection}
+        catalogueHref={`/${context.search}`}
         project={project}
         extras={extras}
         facts={facts}

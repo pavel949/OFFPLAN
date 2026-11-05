@@ -20,6 +20,7 @@ import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
 import { DiscoveryHero } from "@/components/ui/DiscoveryHero";
 import { projectSlug } from "@/lib/slug";
+import { projectSelectionSearch } from "@/lib/unit-selection";
 import { ProjectTile } from "./ProjectTile";
 const ProjectMapPanel = dynamic(()=>import("./ProjectMapPanel").then(m=>m.ProjectMapPanel),{ssr:false,loading:()=> <p role="status">Загружаем карту проектов…</p>});
 
@@ -288,11 +289,11 @@ export function HomeExperience({
             ) : null}
           </div>
           {list.some(p=>p.stK==="ready" && p.compY!=null && p.compY<new Date().getFullYear()-5) ? <p className="ie-small">Здесь также есть ранее построенные проекты для изучения истории застройщиков. Год постройки не означает, что в проекте сейчас продаются юниты. Для новых строек выберите соответствующую стадию.</p> : null}
-          {filters.view === "map" ? <ProjectMapPanel projects={mapProjects} onZoneChange={zone=>set("zone")(zone)} /> : null}
+          {filters.view === "map" ? <ProjectMapPanel selectionSearch={projectSelectionSearch(filters)} projects={mapProjects} onZoneChange={zone=>set("zone")(zone)} /> : null}
           {list.length && filters.view !== "map" ? (
             <div className="ie-grid">
               {list.slice(0, limit).map((p) => (
-                <ProjectTile key={p.id} p={p} feed={feed} />
+                <ProjectTile key={p.id} p={p} feed={feed} selectionSearch={projectSelectionSearch(filters)} />
               ))}
             </div>
           ) : null}

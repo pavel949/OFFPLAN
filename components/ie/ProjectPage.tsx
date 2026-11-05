@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
+import type { UnitSelection } from "@/lib/unit-selection";
 import { SalesOffers } from "@/components/catalogue/SalesOffers";
 import type { PublicSales } from "@/lib/sales-public";
 import { ProjectAssessment } from "@/components/clearview/ProjectAssessment";
@@ -55,6 +56,8 @@ const STEPS = [
 ] as const;
 
 export type ProjectPageProps = {
+  selection?: UnitSelection;
+  catalogueHref?: string;
   sales?: PublicSales | null;
   project: CatalogProject;
   facts: PublicProjectFacts;
@@ -71,7 +74,7 @@ export type ProjectPageProps = {
   legacyId: number;
 };
 
-export function ProjectPage({ project, facts, extras, developer, legacyId,sales:initialSales }: ProjectPageProps) {
+export function ProjectPage({ project, facts, extras, developer, legacyId,sales:initialSales, selection, catalogueHref = "/" }: ProjectPageProps) {
   const expired = usePublicationExpired(initialSales?.expiresAt);
   const unitSales = expired && initialSales ? { ...initialSales, offers: [] } : initialSales;
   const [lang, setLang] = useState<Locale>(DEFAULT_LOCALE);
@@ -178,7 +181,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
         <div className="ie-phero-shade" />
         <div className="ie-wrap ie-phero-in">
           <div className="ie-crumbs">
-            <Link href="/">{t("Каталог", "Catalogue")}</Link> / <Link href={`/developers/${developer.slug}`}>{developer.name}</Link>
+            <Link href={catalogueHref}>{t("Каталог", "Catalogue")}</Link> / <Link href={`/developers/${developer.slug}`}>{developer.name}</Link>
           </div>
           <div className="ie-badges-row">
             {heroPhoto ? <span className="ie-badge">{mediaLabel(heroPhoto.details, lang)}</span> : null}
@@ -278,7 +281,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
           ) : null}
 
           {/* UNITS */}
-          {unitSales ? <SalesOffers media={facts.facts} sales={unitSales} projectId={p.id} projectName={p.n} lang={lang} /> : <section className="ie-card" id="unit-offers">
+          {unitSales ? <SalesOffers key={JSON.stringify(selection)} initialSelection={selection} media={facts.facts} sales={unitSales} projectId={p.id} projectName={p.n} lang={lang} /> : <section className="ie-card" id="unit-offers">
             <h2 className="ie-h2">{t("Лоты и цены", "Units and prices")}</h2>
             {extras.units.length ? (
               <div className="ie-table-wrap">
