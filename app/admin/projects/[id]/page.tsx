@@ -142,7 +142,7 @@ async function UnitsTab({ id }: { id: string }) {
 
 async function SalesTab({ id }: { id: string }) {
   const data = await adminGetSalesModel(id);
-  return <SalesModelEditor projectId={id} initial={data.model} initialRevision={data.revision} units={data.units} initialPublication={data.publication} />;
+  return <>{data.actor?.startsWith("partner:") && data.publication?.revision!==data.revision ? <div className="adm-card"><h2>Новая версия от застройщика ждёт проверки</h2><p>Версия {data.revision}. Проверьте изменённые цены, наличие, источники и срок действия. Публикация ниже заменит действующие условия только после вашего подтверждения.</p></div> : null}<SalesModelEditor projectId={id} initial={data.model} initialRevision={data.revision} units={data.units} initialPublication={data.publication} /></>;
 }
 
 async function PhotosTab({ id }: { id: string }) {

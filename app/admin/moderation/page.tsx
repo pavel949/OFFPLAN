@@ -1,3 +1,4 @@
+import { adminPendingSalesReviews } from "@/app/actions/sales-model";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import { hasSupabaseServiceConfig, createServiceRoleClient } from "@/lib/supabase/service";
@@ -24,9 +25,12 @@ export default async function AdminModerationPage() {
       rows = (data ?? []) as typeof rows;
   }
 
+  const salesReviews = hasSupabaseServiceConfig() ? await adminPendingSalesReviews() : [];
+
   return (
     <div>
       <h1 className="serif text-2xl mb-1">Модерация</h1>
+      <section className="adm-card"><h2>Условия продажи от застройщиков</h2><p>Внутренние версии не меняют предложения для покупателей до отдельной публикации.</p>{salesReviews.length ? <ul>{salesReviews.map(r => <li key={r.projectId}><Link href={`/admin/projects/${r.projectId}?tab=sales`}>{r.name} · версия {r.revision}</Link> · {new Date(r.createdAt).toLocaleDateString("ru-RU")}</li>)}</ul> : <p>Новых версий на проверку нет.</p>}</section>
       <p className="text-[var(--txt2)] text-sm mb-6 max-w-xl">
         Очередь черновиков застройщиков: diff и решение на странице заявки.
         Запросы правок по карточкам IE — в разделе{" "}

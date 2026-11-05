@@ -46,5 +46,34 @@ try{
  const leads=await (await fetch('http://127.0.0.1:4040/rest/v1/leads')).json();assert.equal(leads.length,1);assert.equal(leads[0].sales_selection.price,1000000);assert.equal(leads[0].sales_selection.fees[0].amount,4300);assert.equal(leads[0].project_name,'E2E Sales Test');console.log('PASS: actual lead action stores trusted offer, price and computed costs');
  const leadPage=await (await fetch(base+'/admin/leads/'+leads[0].id,{headers:{cookie}})).text();assert.ok(leadPage.includes('Выбранный юнит и условия'));console.log('PASS: sales selection visible in admin lead');
  assert.ok((await action('adminWithdrawSalesModel',[pid])).includes('"ok":true'));const withdrawn=await fetch(base+publicRoute);const withdrawnHtml=await withdrawn.text();assert.ok(!withdrawnHtml.includes('Test A101 Freehold'));console.log('PASS: withdrawal removes offer from public page');
+
+ // Real partner cookie/session -> redacted draft -> review -> same public offer model.
+ const owner='00000000-0000-4000-8000-000000990011';
+ const jwtPart=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
+ const access=jwtPart({alg:'HS256',typ:'JWT'})+'.'+jwtPart({sub:owner,exp:Math.floor(Date.now()/1000)+3600,aud:'authenticated',role:'authenticated'})+'.local-test-signature';
+ const partnerCookie='sb-127-auth-token=base64-'+Buffer.from(JSON.stringify({access_token:access,refresh_token:'local-refresh-only',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user:{id:owner}})).toString('base64url');
+ const partnerRoute=`/partner/projects/${pid}/inventory`;
+ const partnerPage=await fetch(base+partnerRoute,{headers:{cookie:partnerCookie}});const partnerHtml=await partnerPage.text();
+ assert.equal(partnerPage.status,200);assert.ok(partnerHtml.includes('Отправить новую версию на проверку'),'owner receives shared sales editor');
+ assert.ok(!partnerHtml.includes('Local fixture'),'operator private evidence absent from partner RSC/HTML');
+ const readResponse=await fetch(base+partnerRoute,{method:'POST',headers:{'Next-Action':actionId('partnerGetSalesModel','partner/projects/[projectId]/inventory'),'Content-Type':'text/plain;charset=UTF-8',Accept:'text/x-component',Origin:base,cookie:partnerCookie},body:JSON.stringify([pid])});
+ const readText=await readResponse.text();assert.ok(!readText.includes('Local fixture'),'action also redacts internal sources');
+ const latestRows=await (await fetch('http://127.0.0.1:4040/rest/v1/project_sales_models?order=revision.desc')).json();
+ const partnerModel=structuredClone(latestRows[0].model);for(const section of ['units','offers','licenses','fees','paymentPlans'])for(const row of partnerModel[section]){row.source=row.source?'Источник хранится у команды IE':'';row.checkedOn='';row.verification=row.source&&row.sourceDate?'documented':'unknown';if('notes' in row)row.notes='';if('depositPayee' in row){row.depositPayee='';row.paymentMethod='';}};partnerModel.offers[0].price=1100000;partnerModel.offers[0].source='Developer updated price';
+ const partnerAction=async(auth=true,rev=2)=>{const response=await fetch(base+partnerRoute,{method:'POST',headers:{'Next-Action':actionId('partnerSaveSalesModel'),'Content-Type':'text/plain;charset=UTF-8',Accept:'text/x-component',Origin:base,...(auth?{cookie:partnerCookie}:{})},body:JSON.stringify([pid,rev,partnerModel])});return response.text();};
+ assert.ok((await partnerAction(false)).includes('"ok":false'),'signed-out proposal rejected');
+ assert.ok((await partnerAction(true,1)).includes('"ok":false'),'stale proposal rejected');
+ assert.ok((await partnerAction()).includes('"ok":true'),'owner submits version 3');
+ assert.equal((await (await fetch('http://127.0.0.1:4040/rest/v1/project_sales_publications')).json()).length,0,'proposal does not republish withdrawn terms');
+ const review=await (await fetch(base+route,{headers:{cookie}})).text();assert.ok(review.includes('Новая версия от застройщика ждёт проверки'));
+ assert.ok((await action('adminPublishSalesModel',[pid,3,until])).includes('"ok":true'));
+ const finalPublic=await (await fetch(base+publicRoute)).text();assert.ok(finalPublic.includes('1,100,000')||finalPublic.includes('1 100 000')||finalPublic.includes('1100000'),'reviewed partner price reaches public page');
+ console.log('PASS: authenticated owner draft -> unchanged publication -> admin review -> public price; stale and anonymous writes rejected');
+ const stockForm=new FormData();for(const [k,v] of Object.entries({project_id:pid,unit_id:model.units[0].id,label:'physical status',physical_only:'true',status:'reserved'}))stockForm.set('_1_'+k,v);stockForm.set('0',JSON.stringify([{ok:false},'$K1']));
+ const stockResponse=await fetch(base+partnerRoute,{method:'POST',headers:{'Next-Action':actionId('upsertProjectUnit','partner/projects/[projectId]/inventory'),Accept:'text/x-component',Origin:base,cookie:partnerCookie},body:stockForm});assert.ok((await stockResponse.text()).includes('"ok":true'));
+ const reservedPublic=await (await fetch(base+publicRoute)).text();assert.ok(!reservedPublic.includes('Test A101 Freehold'),'reserved physical unit is no longer offered');
+ const unchanged=await (await fetch('http://127.0.0.1:4040/rest/v1/project_sales_models?order=revision.desc')).json();assert.equal(unchanged[0].model.offers[0].price,1100000);
+ console.log('PASS: owner reservation removes public offer immediately without changing commercial price');
+
  console.log('HTTP_E2E_ALL_PASSED');
 }catch(e){console.error('FAIL',e.message);console.error(logs.slice(-6000));process.exitCode=1;}finally{child.kill('SIGTERM');setTimeout(()=>process.exit(process.exitCode??0),500);}

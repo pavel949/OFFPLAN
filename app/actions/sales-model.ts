@@ -18,7 +18,7 @@ export async function adminGetSalesModel(projectId: string) {
   z.uuid().parse(projectId);
   const [project, latest, publication] = await Promise.all([
     db.from("catalog_projects").select("id,jurisdiction_code").eq("id",projectId).single(),
-    db.from("project_sales_models").select("revision,model,created_at").eq("project_id",projectId).order("revision",{ascending:false}).limit(1).maybeSingle(),
+    db.from("project_sales_models").select("revision,model,created_at,actor").eq("project_id",projectId).order("revision",{ascending:false}).limit(1).maybeSingle(),
     db.from("project_sales_publications").select("revision,expires_at").eq("project_id",projectId).maybeSingle(),
   ]);
   if (project.error) throw new Error("Проект не найден");
@@ -38,7 +38,7 @@ export async function adminGetSalesModel(projectId: string) {
     if(geo.error) throw new Error("Не удалось прочитать валюту юрисдикции");
     if(geo.data?.currency) model.defaultCurrency=geo.data.currency;
   }
-  return {model,revision:latest.data?.revision ?? 0,updatedAt:latest.data?.created_at ?? null,units,publication:publication.data};
+  return {actor:latest.data?.actor ?? null,model,revision:latest.data?.revision ?? 0,updatedAt:latest.data?.created_at ?? null,units,publication:publication.data};
 }
 
 export async function adminPublishSalesModel(projectId:string,revision:number,until:string) {
@@ -93,4 +93,31 @@ export async function adminSaveSalesModel(projectId: string, revision: number, i
     revalidatePath(`/admin/projects/${projectId}`);
     return {ok:true,revision:revision+1};
   } catch { return {ok:false,error:"Не удалось сохранить. Проверьте вход администратора."}; }
+}
+
+/** Thin metadata only; latest partner revisions awaiting explicit operator publication. */
+export async function adminPendingSalesReviews() {
+  const db = await admin();
+  const latest = new Map<string, { project_id: string; revision: number; actor: string; created_at: string }>();
+  for (let offset = 0; ; offset += 500) {
+    const result = await db.from("project_sales_models").select("project_id,revision,actor,created_at").order("project_id").order("revision", { ascending: false }).range(offset, offset + 499);
+    if (result.error) throw new Error("Не удалось загрузить очередь условий продажи");
+    for (const row of result.data) if (!latest.has(row.project_id)) latest.set(row.project_id, row);
+    if (result.data.length < 500) break;
+  }
+  const candidates = [...latest.values()].filter(r => r.actor?.startsWith("partner:"));
+  if (!candidates.length) return [];
+  const result: { projectId: string; revision: number; name: string; createdAt: string }[] = [];
+  for (let offset = 0; offset < candidates.length; offset += 100) {
+    const batch = candidates.slice(offset, offset + 100), ids = batch.map(r => r.project_id);
+    const [published, projects] = await Promise.all([
+      db.from("project_sales_publications").select("project_id,revision").in("project_id", ids),
+      db.from("catalog_projects").select("id,payload").in("id", ids),
+    ]);
+    if (published.error || projects.error) throw new Error("Не удалось сопоставить очередь с публикациями");
+    for (const r of batch) if (!published.data.some(p => p.project_id === r.project_id && p.revision === r.revision)) {
+      result.push({ projectId: r.project_id, revision: r.revision, name: String(projects.data.find(p => p.id === r.project_id)?.payload?.n ?? "Проект"), createdAt: r.created_at });
+    }
+  }
+  return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

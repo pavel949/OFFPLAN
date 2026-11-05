@@ -34,6 +34,10 @@ export async function submitProjectEvidence(
     });
     if (!parsed.success)
       return { ok: false, error: parsed.error.issues[0]?.message };
+    if (parsed.data.kind === "photo" && parsed.data.details.unit_id) {
+      const {data: unit} = await db.from("project_units").select("id").eq("id", String(parsed.data.details.unit_id)).eq("project_id", parsed.data.project_id).maybeSingle();
+      if (!unit) return {ok:false,error:"Лот не принадлежит этому проекту или недоступен"};
+    }
     const { error } = await db
       .from("project_evidence")
       .insert({ ...parsed.data, submitted_by: user.id, status: "pending" });
@@ -51,7 +55,7 @@ export async function submitProjectEvidence(
 export async function submitUploadedPhotos(input: {
   projectId: string;
   observedAt: string;
-  items: { path: string; caption: string }[];
+  items: { path: string; caption: string; details?: Record<string, unknown> }[];
 }): Promise<State & { saved?: number }> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!url) return { ok: false, error: "Нет подключения к базе" };
@@ -75,11 +79,16 @@ export async function submitUploadedPhotos(input: {
       source_url: projectPhotoUrl(url, it.path),
       observed_at: input.observedAt,
       details: {
+        ...it.details,
         url: projectPhotoUrl(url, it.path),
         caption: it.caption.trim().slice(0, 300) || "Фото проекта",
       },
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    if (parsed.data.details.unit_id) {
+      const {data: unit} = await db.from("project_units").select("id").eq("id", String(parsed.data.details.unit_id)).eq("project_id", input.projectId).maybeSingle();
+      if (!unit) return {ok:false,error:"Лот не принадлежит этому проекту или недоступен"};
+    }
     rows.push({ ...parsed.data, submitted_by: user.id, status: "pending" });
   }
   const { error } = await db.from("project_evidence").insert(rows);

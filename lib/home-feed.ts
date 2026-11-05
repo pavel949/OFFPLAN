@@ -1,3 +1,5 @@
+import { publishedProjectMedia, mediaKind } from "./project-media";
+import type { ProjectEvidence } from "./project-evidence";
 import { createAnonClient, hasSupabasePublicConfig } from "./supabase/anon";
 import { withTimeout } from "./with-timeout";
 import { getPublishedAvailability } from "./published-availability-query";
@@ -37,7 +39,7 @@ export async function getHomeFeed(): Promise<HomeFeed> {
           db.from("public_catalog_projects").select("id, legacy_id"),
           db
             .from("project_evidence")
-            .select("project_id, details, observed_at")
+            .select("id,project_id,kind,fact_key,title,source_url,observed_at,details,status,reviewed_at")
             .eq("kind", "photo")
             .eq("status", "published")
             .order("observed_at", { ascending: false })
@@ -56,11 +58,11 @@ export async function getHomeFeed(): Promise<HomeFeed> {
           if (r.legacy_id != null) legacy.set(r.id as string, r.legacy_id as number);
 
         const feed: HomeFeed = { covers: {}, updates: [], campaigns: {}, availability: {}, sources: {} };
-        for (const r of photos.data ?? []) {
-          const id = legacy.get(r.project_id as string);
-          const d = r.details as { url?: string; caption?: string; render?:boolean; cover?:boolean; media_type?:string } | null;
-          if (id == null || !d?.url || (feed.covers[id] && !d.cover)) continue;
-          feed.covers[id] = { url: d.url, caption: d.caption ?? "", at: r.observed_at as string, render:d.render === true, mediaType:d.media_type };
+        for (const r of publishedProjectMedia((photos.data ?? []) as ProjectEvidence[])) {
+          const id = legacy.get(r.project_id);
+          const d = r.details;
+          if (id == null || feed.covers[id] || ["masterplan", "unit_plan", "type_plan"].includes(mediaKind(d))) continue;
+          feed.covers[id] = { url: String(d.url), caption: String(d.caption ?? ""), at: r.observed_at, render:mediaKind(d) === "render", mediaType:mediaKind(d) };
         }
         for (const r of upd.data ?? []) {
           const id = legacy.get(r.project_id as string);

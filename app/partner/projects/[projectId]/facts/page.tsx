@@ -2,6 +2,8 @@ import { ProjectTabs } from "@/components/partner/ProjectTabs";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EvidenceForm } from "@/components/portal/EvidenceForm";
+import { MediaEditor } from "@/components/portal/MediaEditor";
+import type { ProjectEvidence } from "@/lib/project-evidence";
 import { PhotoUploader } from "@/components/portal/PhotoUploader";
 export default async function FactsPage({
   params,
@@ -23,9 +25,10 @@ export default async function FactsPage({
   if (!p) notFound();
   const { data, error } = await db
     .from("project_evidence")
-    .select("id,title,status,kind")
+    .select("id,project_id,title,status,kind,fact_key,source_url,observed_at,details,reviewed_at")
     .eq("project_id", projectId)
     .order("submitted_at", { ascending: false });
+  const {data: units} = await db.from("project_units").select("id,label").eq("project_id",projectId).order("label");
   return (
     <div className="space-y-5">
       <ProjectTabs projectId={projectId} active="/facts" />
@@ -33,11 +36,12 @@ export default async function FactsPage({
       {error ? (
         <p role="alert">Не удалось загрузить сведения: {error.message}</p>
       ) : null}
-      <PhotoUploader projectId={projectId} />
+      <PhotoUploader projectId={projectId} units={units ?? []} />
+      <section className="space-y-3"><h3>Управление опубликованной галереей</h3>{data?.filter(x=>x.kind === "photo" && x.status === "published").map(x=><MediaEditor key={x.id} item={x as ProjectEvidence} units={units ?? []}/>)}</section>
       <details className="rounded-lg border border-[var(--bdr)] p-4">
         <summary className="cursor-pointer text-sm font-bold">Добавить сведения: инфраструктура, расходы на содержание, стадия продаж</summary>
         <div className="mt-3">
-          <EvidenceForm projectId={projectId} />
+          <EvidenceForm projectId={projectId} units={units ?? []} />
         </div>
       </details>
       <section className="adm-card">
