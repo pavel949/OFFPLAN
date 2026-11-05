@@ -17,9 +17,16 @@ export function InfoForm({
   regions: { id: string; name: string; country: string }[];
 }) {
   const p = project.payload;
-  const [state, action, pending] = useActionState(adminStudioSaveInfo.bind(null, project.id), { ok: false } as { ok: boolean; error?: string });
   const [dev, setDev] = useState(project.developerId ?? "");
   const [loc, setLoc] = useState(project.regionId ?? "");
+  const [state, action, pending] = useActionState(async (previous: { ok: boolean; error?: string }, fd: FormData) => {
+    const result = await adminStudioSaveInfo(project.id, previous, fd);
+    if (result.ok) {
+      if (result.developerId) setDev(result.developerId);
+      if (result.regionId) setLoc(result.regionId);
+    }
+    return result;
+  }, { ok: false });
 
   const byRegion = new Map<string, LocationOpt[]>();
   for (const l of locations) {
@@ -144,3 +151,4 @@ export function InfoForm({
     </form>
   );
 }
+

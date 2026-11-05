@@ -1,5 +1,6 @@
 "use server";
 
+import { preparePhotoEvidence, type PhotoUploadItem } from "@/lib/photo-upload";
 import { revalidatePath } from "next/cache";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
@@ -24,6 +25,7 @@ function refresh(projectId: string, slug?: string) {
   revalidatePath("/");
   revalidatePath("/admin/projects");
   revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath("/project", "layout");
   if (slug) revalidatePath(`/project/${slug}`);
 }
 
@@ -184,7 +186,7 @@ export async function adminStudioGetProject(id: string): Promise<StudioProject> 
 }
 
 /** Save the structured "Основное" form: merges into the payload and links developer and location records. */
-export async function adminStudioSaveInfo(projectId: string, _prev: Res, fd: FormData): Promise<Res> {
+export async function adminStudioSaveInfo(projectId: string, _prev: Res, fd: FormData): Promise<Res & { developerId?: string; regionId?: string }> {
   try {
     const db = await admin();
     const parsed = parseStudioForm(fd);
@@ -280,7 +282,7 @@ export async function adminStudioSaveInfo(projectId: string, _prev: Res, fd: For
     const changed = (Object.keys(merged) as (keyof typeof merged)[]).filter((k) => JSON.stringify(merged[k]) !== JSON.stringify(before[k]));
     await insertCatalogAuditLog({ entity_type: "project", entity_id: projectId, actor_id: null, action: "project_edited_by_operator", diff: { changed } });
     refresh(projectId, row.slug);
-    return { ok: true };
+    return { ok: true, developerId, regionId };
   } catch (e) {
     return { ok: false, error: msg(e) };
   }
@@ -297,42 +299,49 @@ export type UnitInput = {
   status: "unknown" | "available" | "reserved" | "sold";
 };
 
-export async function adminStudioSaveUnit(projectId: string, u: UnitInput): Promise<Res & { id?: string }> {
+export async function adminStudioSaveUnit(projectId: string, u: UnitInput): Promise<Res & { id?: string; priceUpdatedAt?: string | null }> {
   try {
     const db = await admin();
     const label = u.label.trim();
     if (!label) return { ok: false, error: "Укажите номер лота" };
     if (!["unknown", "available", "reserved", "sold"].includes(u.status)) return { ok: false, error: "Некорректный статус" };
-    const nn = (v: number | null, max: number) => (v == null || !Number.isFinite(v) || v < 0 || v > max ? null : v);
+    const nn = (v: number | null, max: number, label: string, integer = false) => {
+      if (v == null) return null;
+      if (!Number.isFinite(v) || v < 0 || v > max || (integer && !Number.isInteger(v)))
+        throw new Error(`${label}: укажите корректное ${integer ? "целое " : ""}число от 0 до ${max}`);
+      return v;
+    };
     const row = {
       label: label.slice(0, 80),
-      bedrooms: nn(u.bedrooms, 50),
-      floor: nn(u.floor, 300),
-      sqm: nn(u.sqm, 100_000),
-      price_thb: nn(u.price, 1e12),
+      bedrooms: nn(u.bedrooms, 50, "Спальни", true),
+      floor: nn(u.floor, 300, "Этаж", true),
+      sqm: nn(u.sqm, 100_000, "Площадь"),
+      price_thb: nn(u.price, 1e12, "Цена"),
       status: u.status,
     };
     if (u.id) {
-      const { data: old } = await db.from("project_units").select("price_thb").eq("id", u.id).eq("project_id", projectId).maybeSingle();
+      const { data: old } = await db.from("project_units").select("price_thb, price_updated_at").eq("id", u.id).eq("project_id", projectId).maybeSingle();
       if (!old) return { ok: false, error: "Лот не найден" };
       const priceTouched = Number(old.price_thb ?? -1) !== Number(row.price_thb ?? -1);
+      const priceUpdatedAt = priceTouched ? new Date().toISOString() : old.price_updated_at;
       const { error } = await db
         .from("project_units")
-        .update({ ...row, ...(priceTouched ? { price_updated_at: new Date().toISOString() } : {}), source: "operator", updated_at: new Date().toISOString() })
+        .update({ ...row, ...(priceTouched ? { price_updated_at: priceUpdatedAt } : {}), source: "operator", updated_at: new Date().toISOString() })
         .eq("id", u.id)
         .eq("project_id", projectId);
       if (error) return { ok: false, error: error.message };
       refresh(projectId);
-      return { ok: true, id: u.id };
+      return { ok: true, id: u.id, priceUpdatedAt };
     }
+    const priceUpdatedAt = new Date().toISOString();
     const { data, error } = await db
       .from("project_units")
-      .insert({ ...row, project_id: projectId, currency: "THB", source: "operator", price_updated_at: new Date().toISOString(), sort_order: 100000 })
+      .insert({ ...row, project_id: projectId, currency: "THB", source: "operator", price_updated_at: priceUpdatedAt, sort_order: 100000 })
       .select("id")
       .single();
     if (error) return { ok: false, error: error.message };
     refresh(projectId);
-    return { ok: true, id: data.id };
+    return { ok: true, id: data.id, priceUpdatedAt };
   } catch (e) {
     return { ok: false, error: msg(e) };
   }
@@ -351,26 +360,27 @@ export async function adminStudioDeleteUnit(projectId: string, unitId: string): 
 }
 
 /** "Prices are still valid": re-stamps every priced, unsold unit as confirmed today. */
-export async function adminStudioConfirmPrices(projectId: string): Promise<Res & { count?: number }> {
+export async function adminStudioConfirmPrices(projectId: string): Promise<Res & { count?: number; ids?: string[]; confirmedAt?: string }> {
   try {
     const db = await admin();
+    const confirmedAt = new Date().toISOString();
     const { data, error } = await db
       .from("project_units")
-      .update({ price_updated_at: new Date().toISOString(), source: "operator" })
+      .update({ price_updated_at: confirmedAt, source: "operator" })
       .eq("project_id", projectId)
       .neq("status", "sold")
       .not("price_thb", "is", null)
       .select("id");
     if (error) return { ok: false, error: error.message };
     refresh(projectId);
-    return { ok: true, count: data?.length ?? 0 };
+    return { ok: true, count: data?.length ?? 0, ids: (data ?? []).map((row) => row.id), confirmedAt };
   } catch (e) {
     return { ok: false, error: msg(e) };
   }
 }
 
 // ───────────────────────────── photos ─────────────────────────────
-export type PhotoRow = { id: string; url: string; caption: string; status: string; observed_at: string };
+export type PhotoRow = { id: string; url: string; caption: string; status: string; observed_at: string; details: Record<string, unknown> };
 
 export async function adminStudioListPhotos(projectId: string): Promise<PhotoRow[]> {
   const db = await admin();
@@ -384,7 +394,7 @@ export async function adminStudioListPhotos(projectId: string): Promise<PhotoRow
   if (error) throw new Error(error.message);
   return (data ?? []).map((r) => {
     const d = (r.details ?? {}) as { url?: string; caption?: string };
-    return { id: r.id, url: d.url ?? "", caption: d.caption ?? "", status: r.status, observed_at: r.observed_at };
+    return { id: r.id, url: d.url ?? "", caption: d.caption ?? "", status: r.status, observed_at: r.observed_at, details: (r.details ?? {}) as Record<string, unknown> };
   });
 }
 
@@ -393,14 +403,24 @@ export async function adminStudioSignUploads(
   projectId: string,
   count: number,
   exts: string[],
+  metadata: {caption:string;details?:Record<string,unknown>}[],
+  observedAt: string,
 ): Promise<{ ok: boolean; error?: string; slots?: { path: string; token: string }[] }> {
   try {
     const db = await admin();
-    if (!UUID.test(projectId) || count < 1 || count > 40) return { ok: false, error: "От 1 до 40 файлов за раз" };
+    if (!UUID.test(projectId) || !Number.isInteger(count) || count < 1 || count > 40 || metadata.length !== count || exts.length !== count) return { ok: false, error: "От 1 до 40 файлов за раз" };
+    const paths = exts.map(ext => `${projectId}/${crypto.randomUUID()}.${["jpg", "png", "webp"].includes(ext) ? ext : "jpg"}`);
+    const rows = preparePhotoEvidence({projectId,observedAt,items:metadata.map((m,i)=>({...m,path:paths[i]}))}, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    const {data: project} = await db.from("catalog_projects").select("id").eq("id",projectId).maybeSingle();
+    if (!project) return {ok:false,error:"Проект не найден"};
+    for (const row of rows) {
+      if (!row.details.unit_id) continue;
+      const {data: unit} = await db.from("project_units").select("id").eq("id",String(row.details.unit_id)).eq("project_id",projectId).maybeSingle();
+      if (!unit) return {ok:false,error:"Лот не принадлежит этому проекту"};
+    }
     const slots: { path: string; token: string }[] = [];
     for (let i = 0; i < count; i++) {
-      const ext = ["jpg", "png", "webp"].includes(exts[i]) ? exts[i] : "jpg";
-      const path = `${projectId}/${crypto.randomUUID()}.${ext}`;
+      const path = paths[i];
       const { data, error } = await db.storage.from("project-photos").createSignedUploadUrl(path);
       if (error || !data) return { ok: false, error: error?.message ?? "Не удалось подготовить загрузку" };
       slots.push({ path, token: data.token });
@@ -414,44 +434,40 @@ export async function adminStudioSignUploads(
 /** Operator-uploaded photos are trusted: they are published immediately. */
 export async function adminStudioRegisterPhotos(
   projectId: string,
-  items: { path: string; caption: string }[],
+  items: PhotoUploadItem[],
   observedAt: string,
 ): Promise<Res & { saved?: number }> {
+  let saved = 0;
   try {
     const db = await admin();
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!url) return { ok: false, error: "Нет NEXT_PUBLIC_SUPABASE_URL" };
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(observedAt) || observedAt > new Date().toISOString().slice(0, 10))
-      return { ok: false, error: "Дата съёмки не может быть в будущем" };
-    let saved = 0;
-    for (const it of items) {
-      if (!it.path.startsWith(`${projectId}/`) || !/^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,120}$/.test(it.path))
-        return { ok: false, error: "Некорректный путь файла" };
-      const publicUrl = `${url.replace(/\/$/, "")}/storage/v1/object/public/project-photos/${it.path}`;
-      const caption = it.caption.trim().slice(0, 300) || "Фото проекта";
+    const rows = preparePhotoEvidence({projectId,observedAt,items}, url);
+    for (const row of rows) {
+      if (!row.details.unit_id) continue;
+      const {data: unit} = await db.from("project_units").select("id").eq("id",String(row.details.unit_id)).eq("project_id",projectId).maybeSingle();
+      if (!unit) return {ok:false,error:"Лот не принадлежит этому проекту"};
+    }
+    for (const row of rows) {
       const { data, error } = await db
         .from("project_evidence")
         .insert({
-          project_id: projectId,
-          kind: "photo",
-          fact_key: `photo-${it.path.split("/")[1]}`.slice(0, 100),
-          title: caption,
-          source_url: publicUrl,
-          observed_at: observedAt,
-          details: { url: publicUrl, caption },
+          ...row,
           status: "pending",
         })
         .select("id")
         .single();
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, saved, error: `Опубликовано: ${saved} из ${items.length}. ${error.message}` };
       const { error: aErr } = await db.rpc("review_project_evidence", { p_id: data.id, p_approve: true });
-      if (aErr) return { ok: false, error: aErr.message };
+      if (aErr) return { ok: false, saved, error: `Опубликовано: ${saved} из ${items.length}; ещё один материал ожидает проверки. ${aErr.message}` };
       saved++;
     }
     refresh(projectId);
     return { ok: true, saved };
   } catch (e) {
-    return { ok: false, error: msg(e) };
+    return { ok: false, saved, error: `Подтверждённо опубликовано: ${saved}. ${msg(e)}` };
+  } finally {
+    if (saved) refresh(projectId);
   }
 }
 
@@ -462,6 +478,8 @@ export async function adminStudioPhotoDecision(projectId: string, id: string, ac
       const { error } = await db.from("project_evidence").update({ status: "archived" }).eq("id", id).eq("project_id", projectId).eq("kind", "photo").eq("status", "published");
       if (error) return { ok: false, error: error.message };
     } else {
+      const {data: evidence} = await db.from("project_evidence").select("id").eq("id",id).eq("project_id",projectId).eq("kind","photo").eq("status","pending").maybeSingle();
+      if (!evidence) return {ok:false,error:"Ожидающий проверки материал проекта не найден"};
       const { error } = await db.rpc("review_project_evidence", { p_id: id, p_approve: action === "approve" });
       if (error) return { ok: false, error: error.message };
     }
@@ -553,3 +571,4 @@ export async function adminStudioDeletePromo(projectId: string, id: string): Pro
     return { ok: false, error: msg(e) };
   }
 }
+

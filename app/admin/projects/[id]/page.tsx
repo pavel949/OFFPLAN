@@ -146,7 +146,7 @@ async function SalesTab({ id }: { id: string }) {
 }
 
 async function PhotosTab({ id }: { id: string }) {
-  return <PhotosManager projectId={id} photos={await adminStudioListPhotos(id)} />;
+  return <PhotosManager projectId={id} photos={await adminStudioListPhotos(id)} units={await adminListProjectUnits(id)} />;
 }
 
 async function NewsTab({ id }: { id: string }) {
@@ -189,3 +189,4 @@ async function AdvancedTab({ id }: { id: string }) {
     </>
   );
 }
+

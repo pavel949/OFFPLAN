@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
-import { evidenceSchema, PHOTO_PATH_RE, projectPhotoUrl } from "@/lib/project-evidence";
+import { evidenceSchema } from "@/lib/project-evidence";
 import { catalogProjectSchema } from "@/lib/schema";
 import { parseWizardForm } from "@/lib/project-wizard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -11,6 +11,7 @@ import {
   createServiceRoleClient,
   hasSupabaseServiceConfig,
 } from "@/lib/supabase/service";
+import { preparePhotoEvidence, type PhotoUploadBatch } from "@/lib/photo-upload";
 type State = { ok: boolean; error?: string };
 export async function submitProjectEvidence(
   _: State,
@@ -51,6 +52,25 @@ export async function submitProjectEvidence(
     };
   }
 }
+/** Read-only preflight; revalidated again when registering because permissions can change. */
+export async function preflightUploadedPhotos(input: PhotoUploadBatch): Promise<State> {
+  try {
+    const db = await createSupabaseServerClient();
+    if (!db) return {ok:false,error:"Нет подключения к базе"};
+    const {data:{user}} = await db.auth.getUser();
+    if (!user) return {ok:false,error:"Войдите"};
+    const {data: allowed, error} = await db.rpc("can_submit_project_evidence", {p_project:input.projectId});
+    if (error || !allowed) return {ok:false,error:"Нет прав на добавление материалов этого проекта"};
+    const rows = preparePhotoEvidence(input, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    for (const row of rows) {
+      if (!row.details.unit_id) continue;
+      const {data: unit} = await db.from("project_units").select("id").eq("id", String(row.details.unit_id)).eq("project_id", input.projectId).maybeSingle();
+      if (!unit) return {ok:false,error:"Лот не принадлежит этому проекту или недоступен"};
+    }
+    return {ok:true};
+  } catch(e) { return {ok:false,error:e instanceof Error ? e.message : "Ошибка данных"}; }
+}
+
 /** Files were already uploaded by the browser to the `project-photos` bucket; register them as pending photo evidence. */
 export async function submitUploadedPhotos(input: {
   projectId: string;
@@ -67,30 +87,16 @@ export async function submitUploadedPhotos(input: {
   if (!user) return { ok: false, error: "Войдите" };
   if (!input.items.length || input.items.length > 40)
     return { ok: false, error: "Загрузите от 1 до 40 фотографий за раз" };
-  const rows = [];
-  for (const it of input.items) {
-    if (!PHOTO_PATH_RE.test(it.path) || !it.path.startsWith(`${input.projectId}/`))
-      return { ok: false, error: "Некорректный путь файла" };
-    const parsed = evidenceSchema.safeParse({
-      project_id: input.projectId,
-      kind: "photo",
-      fact_key: `photo-${it.path.split("/")[1]}`.slice(0, 100),
-      title: it.caption.trim().slice(0, 300) || "Фото проекта",
-      source_url: projectPhotoUrl(url, it.path),
-      observed_at: input.observedAt,
-      details: {
-        ...it.details,
-        url: projectPhotoUrl(url, it.path),
-        caption: it.caption.trim().slice(0, 300) || "Фото проекта",
-      },
-    });
-    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-    if (parsed.data.details.unit_id) {
-      const {data: unit} = await db.from("project_units").select("id").eq("id", String(parsed.data.details.unit_id)).eq("project_id", input.projectId).maybeSingle();
+  let parsedRows;
+  try { parsedRows = preparePhotoEvidence(input, url); }
+  catch (e) { return {ok:false,error:e instanceof Error ? e.message : "Ошибка данных"}; }
+  for (const row of parsedRows) {
+    if (row.details.unit_id) {
+      const {data: unit} = await db.from("project_units").select("id").eq("id", String(row.details.unit_id)).eq("project_id", input.projectId).maybeSingle();
       if (!unit) return {ok:false,error:"Лот не принадлежит этому проекту или недоступен"};
     }
-    rows.push({ ...parsed.data, submitted_by: user.id, status: "pending" });
   }
+  const rows = parsedRows.map(row => ({...row, submitted_by:user.id, status:"pending"}));
   const { error } = await db.from("project_evidence").insert(rows);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/partner/projects/${input.projectId}/facts`);
@@ -248,3 +254,4 @@ export async function adminCreateProjectFromWizard(
   revalidatePath("/admin/projects");
   redirect(`/admin/projects/${data.id}`);
 }
+

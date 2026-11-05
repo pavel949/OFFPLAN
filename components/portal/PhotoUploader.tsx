@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { LocalPhotoPreview } from "@/components/shared/LocalPhotoPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { submitUploadedPhotos } from "@/app/actions/project-evidence";
+import { preflightUploadedPhotos, submitUploadedPhotos } from "@/app/actions/project-evidence";
 
 import { MediaFields, mediaDetails, emptyMediaMetadata, type MediaMetadata } from "./MediaFields";
+import { photoUploadFailure } from "@/lib/photo-upload";
 type Item = { file: File; caption: string; metadata: MediaMetadata };
 const MAX = 8 * 1024 * 1024;
 
@@ -13,6 +14,9 @@ const MAX = 8 * 1024 * 1024;
 export function PhotoUploader({ projectId, units = [] }: { projectId: string; units?: {id:string;label:string}[] }) {
   const [items, setItems] = useState<Item[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const active = useRef(false);
+  const [blocked, setBlocked] = useState(false);
+  const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -29,33 +33,39 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
   }
 
   async function send() {
-    const sb = createSupabaseBrowserClient();
-    if (!sb) return setMsg({ ok: false, text: "Нет подключения к базе" });
+    if (active.current || blocked) return;
+    active.current = true;
     setBusy(true);
     setMsg(null);
+    let uploaded = 0;
+    let writing = false;
+    let phase: "upload" | "register" = "upload";
     try {
-      const done: { path: string; caption: string; details: Record<string,unknown> }[] = [];
-      for (const it of items) {
-        const ext = it.file.type === "image/png" ? "png" : it.file.type === "image/webp" ? "webp" : "jpg";
-        const path = `${projectId}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await sb.storage.from("project-photos").upload(path, it.file, {
-          contentType: it.file.type,
-          cacheControl: "31536000",
-        });
-        if (error) {
-          setBusy(false);
-          return setMsg({ ok: false, text: `Не удалось загрузить «${it.file.name}»: ${error.message}` });
-        }
-        done.push({ path, caption: it.caption, details:mediaDetails(it.metadata) });
+      const sb = createSupabaseBrowserClient();
+      if (!sb) throw new Error("Нет подключения к базе");
+      const batch = items.map(it => ({path:`${projectId}/${crypto.randomUUID()}.${it.file.type === "image/png" ? "png" : it.file.type === "image/webp" ? "webp" : "jpg"}`,caption:it.caption,details:mediaDetails(it.metadata)}));
+      const checked = await preflightUploadedPhotos({projectId,observedAt:date,items:batch});
+      if (!checked.ok) throw new Error(checked.error ?? "Проверьте материалы");
+      // Preserve paths even if a network response is lost. Never replay this batch blindly.
+      setUploadedPaths(batch.map(x=>x.path));
+      for (let i=0;i<items.length;i++) {
+        writing = true;
+        const {error} = await sb.storage.from("project-photos").upload(batch[i].path,items[i].file,{contentType:items[i].file.type,cacheControl:"31536000"});
+        if (error) throw new Error(error.message);
+        uploaded++;
       }
-      const r = await submitUploadedPhotos({ projectId, observedAt: date, items: done });
-      setBusy(false);
-      if (!r.ok) return setMsg({ ok: false, text: r.error ?? "Ошибка" });
+      phase = "register";
+      const r = await submitUploadedPhotos({projectId,observedAt:date,items:batch});
+      if (!r.ok) throw new Error(r.error ?? "Ошибка регистрации");
       setItems([]);
-      setMsg({ ok: true, text: `Отправлено на проверку: ${r.saved}. После одобрения фото появятся на странице проекта.` });
-    } catch {
-      setMsg({ ok: false, text: "Соединение прервано. Некоторые фотографии могли сохраниться. Проверьте список материалов перед повторной загрузкой." });
+      setUploadedPaths([]);
+      setMsg({ok:true,text:`Отправлено на проверку: ${r.saved}. После одобрения материалы появятся на странице проекта.`});
+    } catch(e) {
+      const reason = e instanceof Error ? e.message : "Соединение прервано";
+      if (writing) setBlocked(true);
+      setMsg({ok:false,text:writing ? photoUploadFailure(uploaded,items.length,phase,reason) : reason});
     } finally {
+      active.current = false;
       setBusy(false);
     }
   }
@@ -67,10 +77,10 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
         Хранилище фотографий публично по ссылке сразу после загрузки; документы для проверки здесь размещать нельзя. Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз). Укажите дату материала и его тип: фото, визуализация или план. Загружайте только материалы, которые вы вправе публиковать.
         Обложку и порядок можно выбрать ниже; изменения публикуются после проверки.
       </p>
-      <input type="file" multiple disabled={busy} accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
+      <input type="file" multiple disabled={busy || blocked} accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
       <label className="block text-xs">
         Дата материала
-        <input type="date" disabled={busy} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
+        <input type="date" disabled={busy || blocked} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
       </label>
       {items.length ? (
         <ul className="space-y-2">
@@ -79,23 +89,25 @@ export function PhotoUploader({ projectId, units = [] }: { projectId: string; un
               <LocalPhotoPreview file={it.file} className="w-16 h-12 object-cover rounded" />
               <input
                 className="admin-inp mb-0 flex-1"
-                disabled={busy}
+                disabled={busy || blocked}
                 placeholder="Подпись: например, «Фасад, блок A»"
                 value={it.caption}
                 onChange={(e) => setItems((cur) => cur.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
               />
-              <button type="button" disabled={busy} className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
+              <button type="button" disabled={busy || blocked} className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
                 убрать
               </button></div>
-              <MediaFields value={it.metadata} onChange={metadata=>setItems(cur=>cur.map((x,j)=>j===i?{...x,metadata}:x))} disabled={busy} units={units}/>
+              <MediaFields value={it.metadata} onChange={metadata=>setItems(cur=>cur.map((x,j)=>j===i?{...x,metadata}:x))} disabled={busy || blocked} units={units}/>
             </li>
           ))}
         </ul>
       ) : null}
-      <button type="button" className="admin-btn py-2 px-3" disabled={busy || !items.length} onClick={send}>
+      <button type="button" className="admin-btn py-2 px-3" disabled={busy || blocked || !items.length} onClick={send}>
         {busy ? "Загрузка…" : `Отправить на проверку${items.length ? ` (${items.length})` : ""}`}
       </button>
+      {blocked && uploadedPaths.length ? <details><summary>Пути файлов для проверки</summary><ul>{uploadedPaths.map(path=><li key={path}>{path}</li>)}</ul></details> : null}
       {msg ? <p role="status" className={msg.ok ? "text-sm text-[var(--grn)]" : "text-sm text-[var(--red)]"}>{msg.text}</p> : null}
     </section>
   );
 }
+

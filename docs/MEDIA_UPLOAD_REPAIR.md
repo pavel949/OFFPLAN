@@ -1,0 +1,9 @@
+# Media entry repair
+
+Admin and developer uploads validate the whole metadata batch before Storage writes. Admin metadata now includes image classification, preferred cover, ordering and exact-unit/type association. Server actions revalidate unit membership at registration; metadata is visible during Studio moderation. New metadata still follows the existing immediate-admin versus pending-developer publication behavior.
+
+Both clients prevent same-tick duplicate submission and stop replay after any upload/registration error. They retain attempted Storage paths and report confirmed upload counts, possible partial registration and public accessibility. Admin registration reports confirmed publication counts on partial failure. This is a fail-closed recovery safeguard, not transactional uploads or automatic reconciliation. The operator must reconcile those paths and existing evidence before retrying; reloading the page loses client-local recovery information. No uploaded file is deleted or access policy changed.
+
+The existing photo bucket remains public immediately, including pending, rejected, archived and orphaned objects. Moderation/removal controls gallery visibility, not raw-URL access. Private documents must use the existing private document workflow.
+
+Verification: six Node isolated control-flow checks pass (scripts/media-upload-regression.test.mjs). These execute real server action code with mocked dependencies and assert client safeguards; they do not prove React rendering, Supabase RLS or Storage transport behavior. Added Vitest schema regression tests in lib/photo-upload.test.ts, but Vitest cannot run in the partial checkout because dependencies are absent. Full TypeScript, lint, build, browser and authenticated integration checks remain required before merging. The global 400-image catalogue cover cutoff remains unchanged.
