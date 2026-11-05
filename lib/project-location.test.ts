@@ -1,6 +1,6 @@
 import { describe,it,expect } from "vitest";
 import seed from "@/data/seed/projects.json";
-import { reviewedLocation } from "./project-location";
+import { LOCATION_PRECISION, reviewedLocation } from "./project-location";
 import { parseCatalogRows } from "./schema";
 
 const evidence={lat:8.01,lng:98.3,precision:"project",sourceUrl:"https://example.com/test-project",observedOn:"2026-11-04",sourceTitle:"Test source",reuseBasis:"developer_published",licenseNote:"Test-only source; no Google data",note:"Test-only point",reviewStatus:"reviewed"};
@@ -29,4 +29,11 @@ describe("coordinate evidence",()=>{
     const rows=parseCatalogRows([{...seed[0],locationEvidence:{sourceUrl:"bad"}}]);
     expect(rows).toHaveLength(1);expect(rows[0].locationEvidence).toBeUndefined();
   });
+});
+
+it("retains estate-level precision for licensed OSM site points",()=>{
+ const site={...evidence,precision:"site",sourceUrl:"https://www.openstreetmap.org/way/611236208",reuseBasis:"open_data",licenseNote:"© OpenStreetMap contributors · ODbL-1.0"};
+ expect(reviewedLocation(site,8.01,98.3)?.precision).toBe("site");
+ expect(LOCATION_PRECISION.site).toContain("не отдельное здание");
+ expect(reviewedLocation(site,8.02,98.3)).toBeUndefined();
 });
