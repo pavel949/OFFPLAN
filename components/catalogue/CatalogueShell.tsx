@@ -901,8 +901,8 @@ export function CatalogueShell({ projects }: { projects: CatalogProject[] }) {
             <div className="tcontent content">
               <h2>{lang === "ru" ? "Проверка проекта: два отдельных этапа" : "Project review: two separate services"}</h2>
               <p>{lang === "ru" ? "Базовый обзор показывает источники, отмеченные проверки фактов и вопросы по недостающим документам. Он не присваивает инвестиционный рейтинг." : "The basic review shows sources, recorded fact reviews and open document questions. It does not assign an investment rating."}</p>
-              <p>{lang === "ru" ? "Застройщик может обсудить независимое vendor due diligence за 49 000 THB. Налоги, состав работ, расходы третьих лиц и сроки согласуются до заказа. Оплата не гарантирует положительное заключение." : "Developers can discuss independent vendor due diligence for 49,000 THB. Taxes, scope, third-party costs and timing must be agreed before an order. Payment does not guarantee a favorable conclusion."}</p>
-              <Link href="/protection/contact">{lang === "ru" ? "Обсудить проверку (не заказ и не оплата)" : "Discuss a review (not an order or payment)"}</Link>
+              <p>{lang === "ru" ? "Застройщик может обсудить проверку по методологии ClearView (vendor due diligence) за 49 000 THB. Налоги, состав работ, расходы третьих лиц и сроки согласуются до заказа. Оплата не гарантирует положительное заключение." : "Developers can discuss a ClearView review (vendor due diligence) for 49,000 THB. Taxes, scope, third-party costs and timing must be agreed before an order. Payment does not guarantee a favorable conclusion."}</p>
+              <Link href="/services#developer">{lang === "ru" ? "Условия проверки (не заказ и не оплата)" : "Review scope (not an order or payment)"}</Link>
             </div>
           )}
 
