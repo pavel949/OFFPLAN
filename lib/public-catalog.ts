@@ -13,6 +13,8 @@ export function showRecLabels(): boolean {
  */
 export function toPublicProject(p: CatalogProject, show = showRecLabels()): CatalogProject {
   const out: CatalogProject = show ? { ...p } : { ...p, rec: "WATCH", recText: "" };
+  // Only the server-checked coordinate (matching the native columns) reaches the map.
+  delete out.locationEvidence;
   // Legacy yield estimates have no attributable current forecast model. Preserve them in storage only.
   out.yN = 0;
   out.yield = "";

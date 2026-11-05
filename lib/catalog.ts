@@ -11,6 +11,7 @@ import {
 import { showRecLabels, toPublicProject } from "./public-catalog";
 import type { CatalogMeta, CatalogProject, ProjectTexts } from "./types";
 import { withTimeout } from "./with-timeout";
+import { reviewedLocation } from "./project-location";
 
 const DB_TIMEOUT_MS = 8000;
 
@@ -193,19 +194,19 @@ async function readPublishedFromDb(): Promise<CatalogProject[]> {
   // Editorial labels (rec/recText) are only read when publishing them is explicitly enabled,
   // and then only by trusted server code. Everything else goes through the public view,
   // which has them neutralised and never exposes draft_payload.
-  let data: { id?: string; legacy_id?: number; data_confirmed_at?: string | null; payload: unknown }[] | null;
+  let data: { id?: string; legacy_id?: number; data_confirmed_at?: string | null; lat?: number | null; lng?: number | null; payload: unknown }[] | null;
   let error: { message: string } | null;
   if (showRecLabels() && hasSupabaseServiceConfig()) {
     ({ data, error } = await createServiceRoleClient()
       .from("catalog_projects")
-      .select("id, legacy_id, payload, data_confirmed_at")
+      .select("id, legacy_id, payload, data_confirmed_at, lat, lng")
       .eq("is_published", true)
       .eq("moderation_status", "published")
       .order("legacy_id", { ascending: true }));
   } else {
     ({ data, error } = await createAnonClient()
       .from("public_catalog_projects")
-      .select("id, legacy_id, payload, data_confirmed_at")
+      .select("id, legacy_id, payload, data_confirmed_at, lat, lng")
       .order("legacy_id", { ascending: true }));
   }
   if (error) throw new Error(error.message);
@@ -230,8 +231,10 @@ async function readPublishedFromDb(): Promise<CatalogProject[]> {
     loadSales(client, idMap),
   ]);
   const confirmed = new Map((data ?? []).map((r) => [r.legacy_id, r.data_confirmed_at ?? null]));
+  const coordinates = new Map((data ?? []).map(r => [r.legacy_id, r]));
   return attachRu(rows, texts).map((p) => ({
     ...p,
+    location: reviewedLocation(p.locationEvidence, coordinates.get(p.id)?.lat, coordinates.get(p.id)?.lng),
     dataConfirmedAt: confirmed.get(p.id) ?? null,
     ...(ver?.has(p.id) ? { ver: ver.get(p.id) } : {}),
     ...(sales.has(p.id) ? { sales: sales.get(p.id) } : {}),
