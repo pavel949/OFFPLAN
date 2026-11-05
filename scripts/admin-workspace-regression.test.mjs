@@ -40,7 +40,7 @@ test('developer validation rejects invalid identifiers, revisions, URLs and shor
  for(const change of [{name_en:'x'},{website:'javascript:alert(1)'},{website:'https://user:password@example.com'},{id:'wrong'},{org_id:'wrong'},{revision:'-1'},{id:'00000000-0000-4000-8000-000000000001',revision:'0'}])assert.equal(parseDeveloperInput(form(change)).ok,false);
 });
 test('directory SQL keeps ownership and publication unchanged, requires service role and revision',()=>{
- const sql=read('supabase/migrations/20261105190000_admin_developer_directory.sql');
+ const sql=read('supabase/migrations/20261105122009_admin_developer_directory.sql');
  assert.match(sql,/security invoker/);assert.match(sql,/revision conflict/);assert.match(sql,/where developer_id=p_id/);
  assert.match(sql,/from public,anon,authenticated/);
  const projects=sql.split('update public.catalog_projects set')[1].split('end if;')[0];
