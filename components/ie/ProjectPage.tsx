@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LeadModal } from "@/components/catalogue/LeadModal";
 import { SalesOffers } from "@/components/catalogue/SalesOffers";
 import type { PublicSales } from "@/lib/sales-public";
+import { ProjectAssessment } from "@/components/clearview/ProjectAssessment";
 import { Scene } from "@/components/ie/Scene";
 import { ProjectSubscribeBlock } from "@/app/project/[slug]/project-subscribe";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
@@ -173,7 +174,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
             {extras.campaigns.length ? <span className="ie-badge ie-badge--gold">{t("Акция", "Promo")}</span> : null}
             <span className={`ie-badge ${level > 0 ? "ie-badge--ver" : ""}`}>
               {level > 0 ? "🛡 " : ""}
-              {LEVEL_TEXT[level][ru ? "ruShort" : "enShort"]}
+              {t("Реестр", "Registry")}: {LEVEL_TEXT[level][ru ? "ruShort" : "enShort"]}
             </span>
           </div>
           <h1 className="ie-ptitle">{p.n}</h1>
@@ -228,11 +229,13 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
               {extras.dataConfirmedAt
                 ? t(`Данные подтверждены застройщиком: ${fmtDate(extras.dataConfirmedAt, true)}.`, `Developer confirmed the data on ${fmtDate(extras.dataConfirmedAt, false)}.`)
                 : t("Дата подтверждения данных застройщиком пока не указана.", "The developer has not yet confirmed the data date.")}{" "}
-              {LEVEL_TEXT[level][ru ? "ruHint" : "enHint"]}
+              {LEVEL_TEXT[level][ru ? "ruHint" : "enHint"]}{" "}{t("Это статус реестра, а не результат базовой проверки ниже или подтверждение заказа vendor due diligence.", "This is the registry status, not the basic review below or confirmation of a vendor due diligence commission.")}
             </p>
           </section>
 
-          <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}>{unitSales?.offers.length ? <a className="ie-btn ie-btn--gold" href="#unit-offers">{t("Выбрать из опубликованных юнитов","Choose a published unit")}</a> : null}<a href="#project-photos">{t("Фото и визуализации","Photos and renders")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav>
+          <nav className="ie-project-jump" aria-label={t("Разделы проекта","Project sections")}>{unitSales?.offers.length ? <a className="ie-btn ie-btn--gold" href="#unit-offers">{t("Выбрать из опубликованных юнитов","Choose a published unit")}</a> : null}<a href="#basic-assessment">{t("Базовая проверка", "Basic review")}</a><a href="#project-photos">{t("Фото и визуализации","Photos and renders")}</a><a href="#project-materials">{t("Документы и источники","Documents and sources")}</a></nav>
+          <ProjectAssessment input={{ projectId: extras.catalogProjectId, facts: facts.facts, sources: facts.sources, error: facts.error }} lang={ru ? "ru" : "en"} />
+
           {/* TIMELINE */}
           <section className="ie-card">
             <h2 className="ie-h2">{t("Этапы проекта", "Project stages")}</h2>
@@ -451,7 +454,7 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
                 <li><span>{t("Сдача", "Handover")}</span><i>{completion}</i></li>
                 <li><span>{t("Стадия", "Stage")}</span><i>{(STEPS[stepIdx]?.[lang] ?? t("Стадия не подтверждена", "Stage not confirmed"))}</i></li>
                 <li><span>{t("В продаже", "On sale")}</span><i>{unitSales?.offers.length ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот. в прайсе","units in price list")}` : t("уточняется", "unconfirmed")}</i></li>
-                <li><span>{t("Проверка", "Verification")}</span><i>L{level}</i></li>
+                <li><span>{t("Статус реестра", "Registry status")}</span><i>L{level}</i></li>
               </ul>
               <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => setLeadOpen(true)}>
                 {t("Получить прайс и условия", "Get price list & terms")}

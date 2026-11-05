@@ -22,6 +22,13 @@ try{
  const reload=await (await fetch(base+route,{headers:{cookie}})).text();assert.ok(reload.includes('86'));console.log('PASS: saved fee restored on page reload');
  const until=new Date(Date.now()+7*86400000).toISOString().slice(0,10);assert.ok((await action('adminPublishSalesModel',[pid,2,until])).includes('"ok":true'));console.log('PASS: publication action saved revision pointer');
  const publicRoute='/project/e2e-sales-test-999';const publicR=await fetch(base+publicRoute);const publicHtml=await publicR.text();assert.equal(publicR.status,200);assert.ok(publicHtml.includes('A101'));assert.ok(publicHtml.includes('Test CAM'));assert.ok(!publicHtml.includes('Local fixture'));console.log('PASS: public page renders sanitized offer and costs');
+ assert.equal((publicHtml.match(/id="basic-assessment"/g)||[]).length,1,'one buyer evidence review');
+ assert.ok(publicHtml.includes('Что подтверждено и чего не хватает'));
+ assert.ok(publicHtml.includes('Источник') || publicHtml.includes('нужно запросить документы'));
+ assert.ok(publicHtml.includes('Это обращение, не оформление заказа или оплаты'));
+ assert.ok(publicHtml.includes('Налоги, точный состав работ'));
+ assert.ok(publicHtml.includes('Статус реестра'));
+ console.log('PASS: buyer review and inquiry-only VDD render once, distinct from registry status');
  
  const fd=new FormData();for(const [k,v] of Object.entries({name:'Local E2E',email:'e2e@example.invalid',phone:'',message:'Isolated test',projectId:'999',projectName:'Forged name',locale:'ru',consent:'on',offerId:model.offers[0].id,salesRevision:'2'}))fd.set(k,v);
  // Next 15.5.29 prefixes nested FormData entries with _<part>_ (matching its bundled client encoder).
