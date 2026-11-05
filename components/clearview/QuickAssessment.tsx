@@ -134,7 +134,7 @@ function Result({ r, respondent, onRestart, onFix }: { r: PublicQuickResult; res
           <><h3>Обсудить проверку документов</h3><p className="cv-lead">Уточните доступность проверки, состав документов и условия. Самопроверка не оформляет заказ и не выдаёт значок.</p>
             <Link className="ie-btn ie-btn--gold" href="/protection/contact">Обсудить проверку</Link></>
         ) : (
-          <><h3>Нужна проверка конкретного проекта?</h3><p className="cv-lead">Напишите нам название проекта: мы подскажем, есть ли по нему независимая оценка и какие документы запросить.</p>
+          <><h3>Нужна проверка конкретного проекта?</h3><p className="cv-lead">Напишите нам название проекта: мы подскажем, есть ли по нему отчёт с указанным проверяющим и какие документы запросить.</p>
             <Link className="ie-btn ie-btn--gold" href="/protection/contact">Запросить проверку</Link></>
         )}
         <Link className="ie-btn ie-btn--line" href="/methodology" style={{ marginLeft: 10 }}>Как устроена методология</Link>

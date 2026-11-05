@@ -19,6 +19,11 @@ try{
  assert.ok(systemHtml.includes('Демонстрационные состояния')); assert.ok(systemHtml.includes('ui-disclosure'));
  assert.ok(systemHtml.includes('<summary>')); assert.ok(systemHtml.includes('<dl')); assert.ok(systemHtml.includes('<dt>'));
  console.log('PASS: database-independent design reference renders semantic disclosures and labeled examples');
+ const servicesResponse=await fetch(base+'/services'); const servicesHtml=await servicesResponse.text();
+ assert.equal(servicesResponse.status,200); assert.ok(servicesHtml.includes('AV Group — партнёр рейтинга ClearView'));
+ assert.ok(servicesHtml.includes('Оценку и итоговое решение принимает команда Ignatev Estate'));
+ assert.ok(servicesHtml.includes('онлайн-заказ не подключён')); assert.ok(servicesHtml.includes('расходы третьих лиц и сроки'));
+ console.log('PASS: public services disclose evaluator, bounded partner role and unconnected ordering');
  function actionId(name,path='admin/projects/[id]'){const file=root+`/.next/server/app/${path}/page/server-reference-manifest.json`;const manifest=JSON.parse(fs.readFileSync(file));const found=Object.entries(manifest.node).find(([,v])=>v.exportedName===name);assert.ok(found,name+' action exists');return found[0];}
  async function action(name,args,path=route,auth=true){const r=await fetch(base+path,{method:'POST',headers:{'Next-Action':actionId(name),'Content-Type':'text/plain;charset=UTF-8',Accept:'text/x-component',Origin:base,...(auth?{cookie}:{})},body:JSON.stringify(args)});const t=await r.text();if(!t.includes('"ok":true'))console.log(name+' response: '+t.slice(0,500));return t;}
  const rows=await (await fetch('http://127.0.0.1:4040/rest/v1/project_sales_models')).json();const model=rows[0].model;model.fees[0].amount=86;

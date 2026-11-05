@@ -335,3 +335,8 @@ body { font-family: var(--ui-font); color: var(--ui-ink); background: var(--ui-c
   .ui-discovery-copy { padding: 24px; }
   .ui-discovery-copy > p:not(.ui-eyebrow) { margin-bottom: 16px; }
 }
+.ui-destinations { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 12px; }
+.ui-destinations a { display: inline-flex; align-items: center; gap: 8px; min-height: var(--ui-touch); padding: 10px 14px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); font-size: 13px; text-decoration: none; background: var(--ui-surface); }
+.ui-destinations a[aria-current] { border-color: var(--ui-action); color: var(--ui-action); background: var(--ui-action-soft); }
+.ui-destinations small { color: var(--ui-muted); font-size: 11px; }
+.ui-coverage-note { color: var(--ui-muted); font-size: 12px; line-height: 1.7; max-width: 840px; margin: 0 0 20px; }

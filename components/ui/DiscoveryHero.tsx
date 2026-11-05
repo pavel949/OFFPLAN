@@ -11,9 +11,9 @@ export function DiscoveryHero({ image, projectName, href, render, location }: { 
   return <section className="ui-discovery ui-enter" aria-labelledby="discovery-title">
     <div className="ui-discovery-copy">
       <p className="ui-eyebrow">Новостройки Пхукета</p>
-      <h2 id="discovery-title">Выберите проект.<br /><em>Проверьте детали.</em></h2>
-      <p>Новостройки, документы и условия покупки. Изучайте не только архитектуру — смотрите, что стоит за предложением.</p>
-      <div className="ui-cluster"><ActionLink href="#home-search">Подобрать проект <span aria-hidden="true"><ArrowIcon /></span></ActionLink><Link className="ui-text-link" href="/quick-assessment">Что проверить до покупки</Link></div>
+      <h2 id="discovery-title">Недвижимость для жизни<br /><em>и инвестиций.</em></h2>
+      <p>Сравните проекты, застройщиков и условия покупки. Изучите источники, результаты проверки и вопросы, которые нужно уточнить до сделки.</p>
+      <div className="ui-cluster"><ActionLink href="#home-search">Выбрать недвижимость <span aria-hidden="true"><ArrowIcon /></span></ActionLink><Link className="ui-text-link" href="/quick-assessment">Что проверить до покупки</Link></div>
 
     </div>
     <Link href={href} className="ui-discovery-image" aria-label={`Изучить ${projectName}`}>

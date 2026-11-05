@@ -85,3 +85,15 @@ describe("homepage buyer hierarchy", () => {
     expect(home).not.toContain('className="ie-strip"');
   });
 });
+
+describe("homepage coverage and wording", () => {
+  it("labels future coverage and keeps the buyer decision concrete", () => {
+    const home = read("components/ie/HomeExperience.tsx"), page = read("app/page.tsx");
+    expect(home).toContain("Каталог Вьетнама готовится");
+    expect(home).toContain('href="/countries/thailand#locations"');
+    expect(home).toContain('href="/countries/vietnam"');
+    expect(page).toContain("Кто строит, где находится объект");
+    expect(page).toContain("Отметка о проверке факта не означает проверку всего проекта");
+    expect(page).not.toContain("Приглашения отправлены");
+  });
+});

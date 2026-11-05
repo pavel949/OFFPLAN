@@ -30,6 +30,7 @@ export function SiteFooter() {
             <Link href="/market?tab=risk">Риски и due diligence</Link>
             <Link href="/market?tab=calc">Калькулятор доходности</Link>
             <Link href="/quick-assessment">Быстрая проверка проекта</Link>
+            <Link href="/services">Услуги и проверка проекта</Link>
             <Link href="/methodology">Методология ClearView</Link>
             <Link href="/market?tab=shortlist">Шорт-лист</Link>
           </div>
