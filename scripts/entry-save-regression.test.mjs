@@ -121,3 +121,24 @@ test('info save returns canonical developer and region IDs for repeat saves', as
   }
   assert.equal(inserts.length, 0);
 });
+
+
+// Client parsing → real server action control flow → mocked stored row.
+const { parseUnitNumber } = await import('../lib/unit-number.ts');
+test('Russian decimal area reaches the save action without a tenfold change', async () => {
+  const f = fixture();
+  const result = await f.action('fake-project', { ...unit, sqm: parseUnitNumber('35,5'), price: parseUnitNumber('1 000 000,50') });
+  assert.equal(result.ok, true);
+  assert.equal(f.writes[0].sqm, 35.5);
+  assert.equal(f.writes[0].price_thb, 1000000.5);
+});
+test('ambiguous comma grouping is rejected before any unit write', async () => {
+  const f = fixture();
+  assert.equal((await f.action('fake-project', { ...unit, price: parseUnitNumber('1,234') })).ok, false);
+  assert.equal(f.writes.length, 0);
+});
+test('save-all includes invalid blank-label rows so changes are never silently skipped', () => {
+  const ui = readFileSync(new URL('../components/admin/UnitsEditor.tsx', import.meta.url), 'utf8');
+  assert.match(ui, /function saveAll\(\) \{ persist\(rows\.filter\(\(x\) => x\.dirty\)\); \}/);
+  assert.doesNotMatch(ui, /dirty && [xr]\.label\.trim\(\)/);
+});
