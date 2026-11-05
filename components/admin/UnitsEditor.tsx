@@ -1,20 +1,20 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   adminStudioConfirmPrices, adminStudioDeleteUnit, adminStudioSaveUnit, type UnitInput,
 } from "@/app/actions/admin-studio";
 import { saveUnitRows } from "@/lib/unit-editor-save";
+import { reconcileUnitEditorRows, type UnitEditorRow as Row } from "@/lib/unit-editor-rows";
 import { parseUnitNumber } from "@/lib/unit-number";
 import type { OperatorUnitRow } from "@/app/actions/admin-brain";
 import { daysSince, freshnessOf } from "@/lib/inventory/freshness";
 
-type Row = { key: string; id?: string; label: string; bedrooms: string; floor: string; sqm: string; price: string; status: UnitInput["status"]; dirty: boolean; saved?: string; at: string | null };
-
 const toRow = (u: OperatorUnitRow): Row => ({
   key: u.id, id: u.id, label: u.label, bedrooms: u.bedrooms?.toString() ?? "", floor: u.floor?.toString() ?? "",
   sqm: u.sqm?.toString() ?? "", price: u.price_thb?.toString() ?? "", status: u.status as UnitInput["status"], dirty: false, at: u.price_updated_at,
+  baseline: JSON.stringify([u.label,u.bedrooms,u.floor,u.sqm,u.price_thb,u.status,u.price_updated_at]),
 });
 const blank = (): Row => ({ key: `n-${Math.random().toString(36).slice(2)}`, label: "", bedrooms: "", floor: "", sqm: "", price: "", status: "unknown", dirty: true, at: null });
 const num = parseUnitNumber;
@@ -27,11 +27,25 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
   const saving = useRef(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const now = Date.now();
+  useEffect(() => {
+    setRows(current => reconcileUnitEditorRows(current, initial.map(toRow)));
+  }, [initial]);
+
+  function reloadRow(row: Row) {
+    if (!confirm("Загрузить сохранённую строку вместо ваших несохранённых изменений?")) return;
+    const remote = initial.find(unit => unit.id === row.id);
+    setRows(current => remote ? current.map(item => item.key === row.key ? toRow(remote) : item)
+      : current.filter(item => item.key !== row.key));
+  }
 
   const patch = (key: string, p: Partial<Row>) => setRows((r) => r.map((x) => (x.key === key ? { ...x, ...p, dirty: true, saved: undefined } : x)));
 
   function persist(selected: Row[]) {
     if (saving.current) return;
+    if (selected.some(row => row.conflict)) {
+      setMsg({ ok: false, text: "Некоторые лоты изменились после загрузки. Сверьте и загрузите свежие строки перед сохранением." });
+      return;
+    }
     saving.current = true;
     start(async () => {
       try {
@@ -40,7 +54,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
           sqm: num(row.sqm), price: num(row.price), status: row.status,
         }), (row, saved) => {
           setRows((current) => current.map((x) => x.key === row.key ? {
-            ...x, id: saved.id, key: saved.id, dirty: false, saved: "✓",
+            ...x, id: saved.id, key: saved.id, dirty: false, saved: "✓", conflict: undefined,
             at: saved.priceUpdatedAt === undefined ? x.at : saved.priceUpdatedAt,
           } : x));
         });
@@ -60,6 +74,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
       const res = await adminStudioDeleteUnit(projectId, row.id!);
       if (!res.ok) return setMsg({ ok: false, text: res.error ?? "Ошибка" });
       setRows((r) => r.filter((x) => x.key !== row.key));
+      router.refresh();
     });
   }
   function confirmPrices() {
@@ -83,7 +98,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
       <p className="adm-hint">Дробные значения: 35,5 или 35.5. Тысячи отделяйте пробелом: 1 000 000. Неоднозначную запись вроде 1,234 замените на 1.234 или 1 234.</p>
       <div className="adm-toolbar">
         <button type="button" className="adm-btn adm-btn--line adm-btn--sm" disabled={busy} onClick={() => setRows((r) => [...r, blank()])}>+ Добавить лот</button>
-        <button type="button" className="adm-btn adm-btn--line adm-btn--sm" disabled={busy || !rows.some((r) => r.id)} onClick={confirmPrices}>✓ Цены актуальны сегодня</button>
+        <button type="button" className="adm-btn adm-btn--line adm-btn--sm" disabled={busy || rows.some((r) => r.dirty) || !rows.some((r) => r.id)} title={rows.some((r) => r.dirty) ? "Сначала сохраните или отмените изменения лотов" : "Подтвердить сохранённые цены"} onClick={confirmPrices}>✓ Цены актуальны сегодня</button>
         <span className="adm-count">Лотов: {rows.length} · свободно: {rows.filter((r) => r.status === "available").length}</span>
         <span style={{ flex: 1 }} />
         <button type="button" className="adm-btn adm-btn--sm" disabled={busy || !dirty} onClick={saveAll}>Сохранить всё{dirty ? ` (${dirty})` : ""}</button>
@@ -97,7 +112,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
               const f = freshnessOf(r.at, now);
               return (
                 <tr key={r.key}>
-                  <td><input disabled={busy} className="adm-cell" style={{ minWidth: 90 }} value={r.label} onChange={(e) => patch(r.key, { label: e.target.value })} placeholder="A-101" /></td>
+                  <td><input disabled={busy} className="adm-cell" style={{ minWidth: 90 }} value={r.label} onChange={(e) => patch(r.key, { label: e.target.value })} placeholder="A-101" />{r.conflict ? <p role="alert" className="adm-msg err">{r.conflict === "deleted" ? "Лот удалён на сервере." : "Сохранённая строка изменилась."} Ваши правки сохранены в форме. <button type="button" className="adm-btn adm-btn--line adm-btn--sm" disabled={busy} onClick={() => reloadRow(r)}>Загрузить свежую строку</button></p> : null}</td>
                   <td><input disabled={busy} className="adm-cell" style={{ width: 70 }} inputMode="numeric" value={r.bedrooms} onChange={(e) => patch(r.key, { bedrooms: e.target.value })} /></td>
                   <td><input disabled={busy} className="adm-cell" style={{ width: 70 }} inputMode="numeric" value={r.floor} onChange={(e) => patch(r.key, { floor: e.target.value })} /></td>
                   <td><input disabled={busy} className="adm-cell" style={{ width: 90 }} inputMode="decimal" value={r.sqm} onChange={(e) => patch(r.key, { sqm: e.target.value })} /></td>
@@ -115,7 +130,7 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
                     ) : "—"}
                   </td>
                   <td style={{ whiteSpace: "nowrap" }}>
-                    {r.dirty ? <button type="button" className="adm-btn adm-btn--sm" disabled={busy} onClick={() => save(r)}>Сохранить</button> : r.saved ? <span className="adm-msg ok">{r.saved}</span> : null}{" "}
+                    {r.dirty ? <button type="button" className="adm-btn adm-btn--sm" disabled={busy || !!r.conflict} onClick={() => save(r)}>Сохранить</button> : r.saved ? <span className="adm-msg ok">{r.saved}</span> : null}{" "}
                     <button type="button" className="adm-btn adm-btn--danger adm-btn--sm" disabled={busy} onClick={() => remove(r)} aria-label={`Удалить ${r.label}`}>✕</button>
                   </td>
                 </tr>
@@ -128,5 +143,6 @@ export function UnitsEditor({ projectId, initial }: { projectId: string; initial
     </section>
   );
 }
+
 
 

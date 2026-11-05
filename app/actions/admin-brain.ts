@@ -380,16 +380,22 @@ export async function adminImportProjectUnits(
     const mode = formData.get("mode") === "apply" ? "apply" : "preview";
     if (!projectId) return { ok: false, error: "Нет project_id" };
     const res = await runUnitImport({ db, projectId, text, mode, source: "operator", actorId: null });
-    if (res.ok && res.mode === "apply") {
+    const wroteRows = !!res.applied && res.applied.inserted + res.applied.updated > 0;
+    if (res.mode === "apply" && (res.ok || wroteRows)) {
+      // A partially failed import can still have committed rows. Refresh the
+      // active editor as well as the legacy inventory route in either case.
+      revalidatePath("/");
+      revalidatePath("/admin/projects");
+      revalidatePath(`/admin/projects/${projectId}`);
+      revalidatePath(`/admin/projects/${projectId}/inventory`);
+      revalidatePath("/project", "layout");
       await insertCatalogAuditLog({
         entity_type: "unit",
         entity_id: projectId,
         actor_id: null,
         action: "units_imported_by_operator",
-        diff: { ...res.applied, summary: res.summary },
-      });
-      revalidatePath("/");
-      revalidatePath(`/admin/projects/${projectId}/inventory`);
+        diff: { ...res.applied, summary: res.summary, complete: res.ok },
+      }).catch(error => console.error("[inventory] import audit failed", error));
     }
     return res;
   } catch (e) {
@@ -475,4 +481,5 @@ export async function adminRemoveInterest(projectId: string, orgId: string, kind
     return { ok: false, error: e instanceof Error ? e.message : "Ошибка" };
   }
 }
+
 

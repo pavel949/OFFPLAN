@@ -159,3 +159,45 @@ test('save-all includes invalid blank-label rows so changes are never silently s
   assert.match(ui, /function saveAll\(\) \{ persist\(rows\.filter\(\(x\) => x\.dirty\)\); \}/);
   assert.doesNotMatch(ui, /dirty && [xr]\.label\.trim\(\)/);
 });
+
+
+// Import action -> every affected admin/public surface, even after partial commits.
+const importSource = readFileSync(new URL('../app/actions/admin-brain.ts', import.meta.url), 'utf8');
+const importCode = stripTypeScriptTypes(importSource.replace(/^import[\s\S]*?from\s+['"][^'"]+['"];\s*$/gm, ''), {mode:'strip'}).replace(/^export\s+/gm,'');
+function importFixture(result, authorized = true) {
+  const paths=[], audits=[];let clients=0;
+  const action=new Function('getAdminSessionOk','hasSupabaseServiceConfig','createServiceRoleClient','runUnitImport','insertCatalogAuditLog','revalidatePath',importCode+'\nreturn adminImportProjectUnits;')(
+    async()=>authorized,()=>true,()=>{clients++;return {};},async()=>result,async row=>audits.push(row),path=>paths.push(path),
+  );
+  const fd=new FormData();fd.set('project_id','test-project');fd.set('mode','apply');
+  return {run:()=>action({ok:false},fd),paths,audits,clients:()=>clients};
+}
+test('successful and partially committed imports refresh active editor, list and public pages',async()=>{
+ for(const ok of [true,false]) {
+  const result={ok,mode:'apply',applied:{inserted:1,updated:0},...(ok?{}:{error:'Later row failed'})};const f=importFixture(result);
+  assert.deepEqual(await f.run(),result);
+  for(const path of ['/','/admin/projects','/admin/projects/test-project','/admin/projects/test-project/inventory','/project'])assert(f.paths.includes(path));
+  assert.equal(f.audits[0].diff.complete,ok);
+ }
+});
+test('preview and unsuccessful imports without acknowledged writes do not refresh or audit',async()=>{
+ for(const result of [{ok:true,mode:'preview'},{ok:false,mode:'apply',applied:{inserted:0,updated:0}}]) {
+  const f=importFixture(result);await f.run();assert.equal(f.paths.length,0);assert.equal(f.audits.length,0);
+ }
+});
+test('unauthorized import never creates a privileged client',async()=>{
+ const f=importFixture({ok:true,mode:'apply'},false);assert.equal((await f.run()).ok,false);assert.equal(f.clients(),0);assert.equal(f.paths.length,0);
+});
+
+const {reconcileUnitEditorRows}=await import('../lib/unit-editor-rows.ts');
+const editable=(id,price,dirty=false)=>({id,key:id,label:id,price,dirty,baseline:price});
+test('server-imported rows become visible without replacing unsaved edits',()=>{
+ const local={...editable('a','100',true),price:'local'};
+ const result=reconcileUnitEditorRows([local,editable('b','100')],[editable('a','100'),editable('b','200'),editable('new','300')]);
+ assert.equal(result[0].price,'local');assert.equal(result[0].conflict,undefined);assert.equal(result[1].price,'200');assert.equal(result[2].id,'new');
+});
+test('changed or deleted persisted rows flag conflicts while retaining local edits',()=>{
+ const local={...editable('a','100',true),price:'local'};
+ assert.equal(reconcileUnitEditorRows([local],[editable('a','200')])[0].conflict,'changed');
+ const deleted=reconcileUnitEditorRows([local],[])[0];assert.equal(deleted.conflict,'deleted');assert.equal(deleted.price,'local');
+});
