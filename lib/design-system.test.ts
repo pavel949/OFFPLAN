@@ -47,7 +47,7 @@ describe("semantic color compatibility", () => {
   it.each([
     ["ui-on-action", "ui-action"], ["ui-on-action", "ui-action-hover"],
     ["ui-accent-on-dark", "ui-ink"], ["ui-focus-on-dark", "ui-dark"], ["ui-on-dark-muted", "ui-dark"],
-    ["ui-ink", "ui-surface"], ["ui-error", "ui-surface"],
+    ["ui-ink", "ui-surface"], ["ui-muted", "ui-surface"], ["ui-action", "ui-surface"], ["ui-action", "ui-action-soft"], ["ui-error", "ui-surface"],
   ])("keeps %s on %s above normal-text AA contrast", (fg, bg) => {
     const a = luminance(color(fg)), b = luminance(color(bg));
     expect((Math.max(a, b) + .05) / (Math.min(a, b) + .05)).toBeGreaterThanOrEqual(4.5);
@@ -95,5 +95,15 @@ describe("homepage coverage and wording", () => {
     expect(page).toContain("Кто строит, где находится объект");
     expect(page).toContain("Отметка о проверке факта не означает проверку всего проекта");
     expect(page).not.toContain("Приглашения отправлены");
+  });
+});
+
+describe("light page-introduction contrast", () => {
+  it("overrides legacy important white tab colors in normal and hover states", () => {
+    const css = read("components/ui/system.css");
+    expect(css).toContain(".ie-sub .ie-stat small { color: var(--ui-muted); }");
+    expect(css).toContain(".ie-sub .ie-tabs a { color: var(--ui-action) !important;");
+    expect(css).toContain('.ie-sub .ie-tabs a:hover, .ie-sub .ie-tabs a[aria-current="page"] { color: var(--ui-action) !important;');
+    expect(css).toContain(".ie-sub .ie-tabs a:focus-visible { outline: 3px solid var(--ui-focus);");
   });
 });
