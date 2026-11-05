@@ -1,3 +1,4 @@
+import { PageIntro } from "@/components/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getQuickQuestions } from "@/app/actions/quick-assessment";
@@ -16,14 +17,7 @@ export default async function QuickAssessmentPage() {
   return (
     <div className="ie-page">
       <SiteHeader />
-      <section className="ie-sub">
-        <div className="ie-wrap">
-          <div className="ie-crumbs"><Link href="/">Каталог</Link> / <Link href="/methodology">Методология</Link></div>
-          <div className="ie-eyebrow" style={{ marginTop: 18 }}>ClearView</div>
-          <h1>Быстрая проверка проекта</h1>
-          <p>Отметьте, что вам известно о проекте, и получите список вопросов и документов для проверки. Ответ «не знаю» поможет увидеть пробелы. Это самопроверка по вашим ответам, а не рейтинг или подтверждённая оценка ClearView.</p>
-        </div>
-      </section>
+      <PageIntro eyebrow="ClearView · самопроверка" title="Что стоит проверить до покупки" description="15 вопросов о проекте помогут составить список документов. Ответы не становятся рейтингом: неизвестные сведения и подтверждённые факты остаются разными вещами." breadcrumbs={<><Link href="/">Каталог</Link><span>/</span><Link href="/methodology">Методология</Link></>} />
       <section className="ie-section"><div className="ie-wrap" style={{ maxWidth: 900 }}><QuickAssessment questions={questions} /></div></section>
       <SiteFooter />
     </div>

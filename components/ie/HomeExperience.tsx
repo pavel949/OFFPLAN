@@ -18,6 +18,8 @@ import {
 import type { HomeFeed } from "@/lib/home-feed";
 import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
+import { DiscoveryHero } from "@/components/ui/DiscoveryHero";
+import { projectSlug } from "@/lib/slug";
 import { ProjectTile } from "./ProjectTile";
 import { OmbudsmanLogo } from "./OmbudsmanLogo";
 const ProjectMapPanel = dynamic(()=>import("./ProjectMapPanel").then(m=>m.ProjectMapPanel),{ssr:false,loading:()=> <p role="status">Загружаем карту проектов…</p>});
@@ -105,6 +107,7 @@ export function HomeExperience({
   const mapProjects = useMemo(()=>filters.view==="map" ? list.map(toMapProject) : [],[list,filters.view]);
   void expired; // The publication clock also re-evaluates budget filtering at expiry.
   const active = hasActiveFilters(filters);
+  const featured = projects.find(p => feed.covers[p.id]);
   // Stage tab counts reflect every other active filter, so the numbers always add up.
   const stageCounts = (() => {
     const base = filterProjects(projects, { ...filters, stage: "" });
@@ -119,6 +122,7 @@ export function HomeExperience({
 
   return (
     <>
+      {featured ? <div className="ui-discovery-wrap"><DiscoveryHero image={feed.covers[featured.id].url} projectName={featured.n} href={`/project/${projectSlug(featured)}`} render={feed.covers[featured.id].render === true} location={zoneLabel(featured.zone, "ru")} /></div> : null}
       <section className="ie-hero ie-catalogue-hero" aria-labelledby="ie-h1">
         <div className="ie-wrap">
           <div className="ie-hero-copy">
@@ -137,7 +141,7 @@ export function HomeExperience({
             onSubmit={(e) => {
               e.preventDefault();
               apply({ ...(pendingFilters.current ?? filters), q: draft.trim() });
-              document.getElementById("ie-results")?.scrollIntoView({ behavior: "smooth" });
+              document.getElementById("ie-results")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
             }}
           >
             <div className="ie-search-row">

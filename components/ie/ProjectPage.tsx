@@ -4,6 +4,7 @@ import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
 import { displayDate as fmtDate } from "@/lib/display-date";
 import { LOCATION_PRECISION } from "@/lib/project-location";
 import { usePublicationExpired } from "./usePublicationExpired";
+import { FactList, PriceBlock } from "@/components/ui";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -448,14 +449,13 @@ export function ProjectPage({ project, facts, extras, developer, legacyId,sales:
         <aside className="ie-paside">
           <div className="ie-sticky">
             <div className="ie-card ie-pbox">
-              <small>{t("Цена от", "From")}</small>
-              <b>{displayPrice}</b>
-              <ul>
-                <li><span>{t("Сдача", "Handover")}</span><i>{completion}</i></li>
-                <li><span>{t("Стадия", "Stage")}</span><i>{(STEPS[stepIdx]?.[lang] ?? t("Стадия не подтверждена", "Stage not confirmed"))}</i></li>
-                <li><span>{t("В продаже", "On sale")}</span><i>{unitSales?.offers.length ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот. в прайсе","units in price list")}` : t("уточняется", "unconfirmed")}</i></li>
-                <li><span>{t("Статус реестра", "Registry status")}</span><i>L{level}</i></li>
-              </ul>
+              <PriceBlock label={t("Цена от", "From")} value={displayPrice} />
+              <FactList items={[
+                {label:t("Сдача", "Handover"),value:completion},
+                {label:t("Стадия", "Stage"),value:STEPS[stepIdx]?.[lang] ?? t("Стадия не подтверждена", "Stage not confirmed")},
+                {label:t("В продаже", "On sale"),value:unitSales?.offers.length ? `${new Set(unitSales.offers.map(o=>o.unitId)).size} ${t("лот. в прайсе","units in price list")}` : t("уточняется", "unconfirmed")},
+                {label:t("Статус реестра", "Registry status"),value:`L${level}`},
+              ]} />
               <button type="button" className="ie-btn ie-btn--gold" style={{ width: "100%", justifyContent: "center" }} onClick={() => setLeadOpen(true)}>
                 {t("Получить прайс и условия", "Get price list & terms")}
               </button>

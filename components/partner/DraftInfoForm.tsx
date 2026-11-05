@@ -84,7 +84,7 @@ export function DraftInfoForm({
         <p className="adm-lead">Когда карточка заполнена, отправьте её команде IE. Мы проверим данные и опубликуем. Для уже опубликованного проекта на сайте остаётся прежняя версия, пока мы не одобрим новую.</p>
         <form action={subAction} style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           <input type="hidden" name="project_id" value={projectId} />
-          <button className="adm-btn" style={{ background: "var(--gold)", color: "var(--ink)" }} disabled={submitting || readOnly}>{submitting ? "Отправляю…" : "Отправить на проверку"}</button>
+          <button className="adm-btn" disabled={submitting || readOnly}>{submitting ? "Отправляю…" : "Отправить на проверку"}</button>
           {sub.ok ? <span className="adm-msg ok">Отправлено. Мы ответим в ближайшие рабочие дни.</span> : null}
           {sub.error ? <span className="adm-msg err">{sub.error}</span> : null}
         </form>

@@ -1,3 +1,4 @@
+import { PriceBlock } from "@/components/ui";
 import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
 import { currentAvailability } from "@/lib/published-availability";
 import { usePublicationExpired } from "./usePublicationExpired";
@@ -56,7 +57,7 @@ export function ProjectTile({
           <span className="ie-fact">{p.minBR == null ? "Спальни уточняются" : p.minBR === 0 ? "от студии" : `от ${p.minBR} спал.`}</span>
         </div>
         <div className="ie-tile-summary">
-          <div className="ie-tile-price"><small>{publishedPrice ? "Цена от по прайсу" : "Цена от"}</small><b className={!publishedPrice ? "is-unconfirmed" : undefined}>{priceFromLabel(p)}</b>{publishedPrice ? <small>{ownershipLabel(publishedPrice.ownership)} · {publishedPrice.priceDate.split("-").reverse().join(".")}</small> : null}</div>
+          <PriceBlock label={publishedPrice ? "Цена от по прайсу" : "Цена от"} value={priceFromLabel(p)} unavailable={!publishedPrice} note={publishedPrice ? `${ownershipLabel(publishedPrice.ownership)} · ${publishedPrice.priceDate.split("-").reverse().join(".")}` : undefined} />
           <div className="ie-tile-year"><small>Сроки по данным источника</small><span>{completionLabel(p.compQ || p.compY)}</span></div>
         </div>
         <AvailabilityBadge value={avail} type={p.type} />

@@ -66,7 +66,7 @@ export function SiteHeader() {
           <span className="ie-brand-mark">IE</span>
           <span className="ie-brand-name">
             Ignatev Estate
-            <small>Проверенные новостройки ЮВА</small>
+            <small>Недвижимость · данные · проверка</small>
           </span>
         </Link>
         <nav id="ie-main-navigation" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setOpen(false); }} className={`ie-nav${open ? " is-open" : ""}`} aria-label="Основная навигация">
