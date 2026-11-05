@@ -62,5 +62,6 @@ describe("semantic color compatibility", () => {
     expect(css).toContain(".filter-btn, .svc-cta.gold, .dev-ico { background: var(--ui-action); color: var(--ui-on-action); }");
     expect(read("components/partner/DraftInfoForm.tsx")).not.toContain('background: "var(--gold)"');
     expect(read("components/catalogue/ProjectCard.tsx")).toContain('color: "var(--ui-on-action)"');
+    expect(read("components/catalogue/CalculatorPanel.tsx")).toContain('color: "var(--ui-on-action)"');
   });
 });
