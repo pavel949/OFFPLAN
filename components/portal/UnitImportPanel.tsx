@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ImportState } from "@/lib/inventory/run";
 
 const initial: ImportState = { ok: false };
@@ -21,7 +22,13 @@ export function UnitImportPanel({
   action: (prev: ImportState, fd: FormData) => Promise<ImportState>;
   operator?: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(action, initial);
+  const router = useRouter();
+  const [state, formAction, pending] = useActionState(async (previous: ImportState, fd: FormData) => {
+    const result = await action(previous, fd);
+    const wroteRows = !!result.applied && result.applied.inserted + result.applied.updated > 0;
+    if (result.mode === "apply" && (result.ok || wroteRows)) router.refresh();
+    return result;
+  }, initial);
   const [text, setText] = useState("");
   const [dirty, setDirty] = useState(false);
 
@@ -148,3 +155,4 @@ export function UnitImportPanel({
     </section>
   );
 }
+
