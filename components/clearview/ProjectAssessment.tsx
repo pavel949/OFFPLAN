@@ -1,3 +1,4 @@
+import { Disclosure } from "@/components/ui";
 import Link from "next/link";
 import { basicProjectAssessment, type BasicAssessmentInput } from "@/lib/basic-project-assessment";
 import { VENDOR_DUE_DILIGENCE } from "@/lib/vendor-due-diligence";
@@ -11,20 +12,21 @@ export function ProjectAssessment({ input, lang = "ru" }: { input: BasicAssessme
     <h2 className="ie-h2" id="basic-assessment-title">{t("Что подтверждено и чего не хватает", "Evidence and open questions")}</h2>
     <p><b>{r.status === "unavailable" ? t("Данные проверки временно недоступны", "Review data is temporarily unavailable") : r.conclusion[lang]}</b></p>
     {r.status === "unavailable" ? <p className="ie-small">{t("Часть сведений не загрузилась. Это не означает, что документы отсутствуют. Повторите попытку позже.", "Some information could not be loaded. This does not mean documents are missing. Please try again later.")}</p> : null}
-    <h3>{t("Факты с отметкой о проверке", "Facts with a recorded review")}</h3>
+    <Disclosure title={t("Факты с отметкой о проверке", "Facts with a recorded review")} count={r.reviewedFacts.length}>
     {r.reviewedFacts.length ? <ul className="ie-links">{r.reviewedFacts.map(f => <li key={f.id}>
       <a href={f.source_url} target="_blank" rel="noopener noreferrer nofollow">{f.title}</a>
       <small>{t("Источник от", "Source dated")} {f.observed_at.slice(0, 10)} · {t("проверка отмечена", "review recorded")} {f.reviewed_at!.slice(0, 10)}</small>
     </li>)}</ul> : <p className="ie-small">{t("Публичные факты с корректной датой проверки пока не представлены.", "No public facts with a valid review date are available yet.")}</p>}
+
+    </Disclosure>
     <p className="ie-small">{t("Отметка относится только к конкретному факту на указанную дату. Она не означает проверку всего проекта, актуальность на сегодня или независимое юридическое заключение.", "A review entry covers only that fact on the recorded date. It does not establish whole-project verification, current validity or an independent legal opinion.")}</p>
     {r.unreviewedFacts.length ? <details><summary>{t("Опубликовано без подтверждённой даты проверки", "Published without a valid review date")} · {r.unreviewedFacts.length}</summary><ul>{r.unreviewedFacts.map(f => <li key={f.id}><a href={f.source_url} target="_blank" rel="noopener noreferrer nofollow">{f.title}</a></li>)}</ul></details> : null}
     <h3>{t("Документы и вопросы перед сделкой", "Documents and questions before purchase")}</h3>
     <p className="ie-small">{t("Ниже указано, что не подтверждено публичными данными платформы. Это не утверждение об отсутствии документов у застройщика и не выявленное нарушение.", "These are gaps in the platform’s public evidence, not claims that the developer lacks documents or has committed a violation.")}</p>
-    {r.topics.map(topic => <details key={topic.id}>
-      <summary><b>{topic.title[lang]}</b> · {r.status === "unavailable" ? t("статус документов недоступен", "document status unavailable") : topic.sources.length ? t("есть ссылка, содержание не подтверждено", "source linked, contents not verified") : t("нужно запросить документы", "documents need to be requested")}</summary>
+    {r.topics.map(topic => <Disclosure key={topic.id} title={<><b>{topic.title[lang]}</b><br /><span>{r.status === "unavailable" ? t("статус документов недоступен", "document status unavailable") : topic.sources.length ? t("есть ссылка, содержание не подтверждено", "source linked, contents not verified") : t("нужно запросить документы", "documents need to be requested")}</span></>}>
       <p>{topic.question[lang]}</p><p className="ie-small">{topic.why[lang]}</p>
       {topic.sources.length ? <ul>{topic.sources.map(s => <li key={s.id}><a href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.title}</a></li>)}</ul> : null}
-    </details>)}
+    </Disclosure>)}
     <hr />
     <h3>{t("Отдельно: независимая проверка по заказу застройщика", "Separately: developer-commissioned independent review")}</h3>
     <p>{t("Vendor due diligence — подробное исследование проекта с раскрытием документов. Застройщик оплачивает работу, а не положительный результат.", "Vendor due diligence is a detailed examination of the project and its disclosed documents. The developer pays for the work, not a favorable outcome.")}</p>

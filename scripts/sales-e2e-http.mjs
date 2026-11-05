@@ -14,6 +14,11 @@ try{
  for(let i=0;i<80;i++){try{await fetch(base+'/admin');break;}catch{await new Promise(r=>setTimeout(r,500));}}
  const payload=Buffer.from(JSON.stringify({exp:Date.now()+3600000})).toString('base64url');const token=payload+'.'+createHmac('sha256','offplan-local-e2e-test-only').update(payload).digest('base64url');const cookie='ie_admin='+token;
  const initial=await fetch(base+route,{headers:{cookie}});const html=await initial.text();assert.equal(initial.status,200);assert.ok(html.includes('Структура и условия продажи'),'admin form renders');console.log('PASS: authenticated form and fixture loaded');
+ const systemResponse=await fetch(base+'/design-system'); const systemHtml=await systemResponse.text();
+ assert.equal(systemResponse.status,200); assert.ok(systemHtml.includes('noindex'));
+ assert.ok(systemHtml.includes('Демонстрационные состояния')); assert.ok(systemHtml.includes('ui-disclosure'));
+ assert.ok(systemHtml.includes('<summary>')); assert.ok(systemHtml.includes('<dl')); assert.ok(systemHtml.includes('<dt>'));
+ console.log('PASS: database-independent design reference renders semantic disclosures and labeled examples');
  function actionId(name,path='admin/projects/[id]'){const file=root+`/.next/server/app/${path}/page/server-reference-manifest.json`;const manifest=JSON.parse(fs.readFileSync(file));const found=Object.entries(manifest.node).find(([,v])=>v.exportedName===name);assert.ok(found,name+' action exists');return found[0];}
  async function action(name,args,path=route,auth=true){const r=await fetch(base+path,{method:'POST',headers:{'Next-Action':actionId(name),'Content-Type':'text/plain;charset=UTF-8',Accept:'text/x-component',Origin:base,...(auth?{cookie}:{})},body:JSON.stringify(args)});const t=await r.text();if(!t.includes('"ok":true'))console.log(name+' response: '+t.slice(0,500));return t;}
  const rows=await (await fetch('http://127.0.0.1:4040/rest/v1/project_sales_models')).json();const model=rows[0].model;model.fees[0].amount=86;

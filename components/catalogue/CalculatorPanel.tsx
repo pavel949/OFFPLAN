@@ -308,8 +308,8 @@ export function CalculatorPanel({
               style={{
                 display: "block",
                 textAlign: "center",
-                background: "var(--ink)",
-                color: "var(--gold)",
+                background: "var(--ui-action)",
+                color: "var(--ui-on-action)",
                 padding: 10,
                 borderRadius: "var(--rs)",
                 fontFamily: "'Josefin Sans',sans-serif",

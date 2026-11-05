@@ -1,0 +1,51 @@
+/* OFFPLAN semantic foundations. Change these, not individual page colors.
+   Legacy aliases are a compatibility bridge, not a second palette. */
+:root {
+  --ui-canvas: #f6f7f5;
+  --ui-surface: #ffffff;
+  --ui-surface-subtle: #eef1ee;
+  --ui-ink: #182b2b;
+  --ui-text: #364b4a;
+  --ui-muted: #5d6d6b;
+  --ui-border: #dce3df;
+  --ui-border-strong: #b9c8c2;
+  --ui-action: #205c50;
+  --ui-on-action: #ffffff;
+  --ui-accent-on-dark: #b5d6c8;
+  --ui-action-hover: #17473e;
+  --ui-action-soft: #e7f0eb;
+  --ui-dark: #142c2b;
+  --ui-on-dark: #f7faf7;
+  --ui-on-dark-muted: #bdceca;
+  --ui-focus: #287b68;
+  --ui-focus-on-dark: #d5f3e7;
+  --ui-warning: #835819;
+  --ui-warning-soft: #fff4df;
+  --ui-success: #286446;
+  --ui-success-soft: #e9f5ed;
+  --ui-info: #305b7b;
+  --ui-info-soft: #ebf2f7;
+  --ui-error: #a3332b;
+  --ui-error-soft: #fff0ed;
+  --ui-space-1: 4px; --ui-space-2: 8px; --ui-space-3: 12px; --ui-space-4: 16px;
+  --ui-space-6: 24px; --ui-space-8: 32px; --ui-space-12: 48px; --ui-space-16: 64px; --ui-space-24: 96px;
+  --ui-radius-control: 8px; --ui-radius-surface: 16px; --ui-radius-pill: 999px;
+  --ui-shadow-overlay: 0 24px 72px #142c2b24;
+  --ui-shadow-raised: 0 6px 24px #142c2b0a;
+  --ui-font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui-display: "Cormorant Garamond", Georgia, serif;
+  --ui-type-small: 12px; --ui-type-label: 13px; --ui-type-body: 15px;
+  --ui-type-title: clamp(28px, 3.4vw, 44px); --ui-type-display: clamp(40px, 5.5vw, 76px);
+  --ui-duration-fast: 140ms; --ui-duration-panel: 220ms; --ui-duration-enter: 480ms;
+  --ui-ease: cubic-bezier(.22,.61,.36,1);
+  --ui-content-width: 1280px; --ui-reading-width: 720px; --ui-header-height: 72px; --ui-touch: 44px;
+  --bg: var(--ui-canvas); --sur: var(--ui-surface); --sur2: var(--ui-surface-subtle); --sur3: var(--ui-canvas);
+  --ink: var(--ui-ink); --ink2: var(--ui-text); --txt2: var(--ui-muted); --txt3: var(--ui-muted);
+  --gold: var(--ui-action); --gold2: var(--ui-action-hover); --gpale: var(--ui-action-soft);
+  --bdr: var(--ui-border); --bdr2: var(--ui-border); --line: var(--ui-border);
+  --background: var(--ui-canvas); --foreground: var(--ui-ink); --panel: var(--ui-surface); --text: var(--ui-ink); --muted: var(--ui-muted); --accent: var(--ui-action);
+  --ie-night: var(--ui-dark); --ie-deep: var(--ui-dark); --ie-navy: var(--ui-text);
+  --ie-sand: var(--ui-canvas); --ie-paper: var(--ui-surface); --ie-ink: var(--ui-ink); --ie-muted: var(--ui-muted);
+  --ie-gold: var(--ui-accent-on-dark); --ie-gold-deep: var(--ui-action); --ie-gold-ink: var(--ui-action);
+  --ie-radius: var(--ui-radius-surface); --ie-shadow: var(--ui-shadow-raised); --ie-ease: var(--ui-ease);
+}

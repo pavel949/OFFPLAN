@@ -534,3 +534,13 @@
 .cv-sum i { display: grid; place-items: center; color: #fff; font-style: normal; font-size: 10px; font-weight: 800; }
 .cv-chip { display: inline-flex; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 800; background: rgba(11,27,52,.08); }
 .cv-chip.ok { background: rgba(31,138,76,.14); color: var(--grn); } .cv-chip.bad { background: rgba(200,40,40,.12); color: var(--red); } .cv-chip.warn { background: rgba(200,120,0,.14); color: var(--amb); }
+
+/* Shared-system compatibility: explicit foreground/background roles.
+   Keep these after legacy rules so route CSS load order cannot undo contrast. */
+.adm-btn:not(.adm-btn--line):not(.adm-btn--danger), .admin-btn {
+  background: var(--ui-action); color: var(--ui-on-action) !important;
+}
+.adm-btn--line { background: var(--ui-surface); color: var(--ui-ink) !important; }
+.adm-btn--danger { background: var(--ui-surface); color: var(--ui-error) !important; }
+.admin-nav-link.on { background: var(--ui-dark); color: var(--ui-on-dark); }
+.pt-bar { --gold: var(--ui-accent-on-dark); }

@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+import { PageIntro } from "@/components/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -31,18 +32,7 @@ export default async function AnalyticsPage() {
   return (
     <div className="ie-page">
       <SiteHeader />
-      <section className="ie-sub">
-        <div className="ie-wrap">
-          <div className="ie-crumbs"><Link href="/">Каталог</Link> / Аналитика</div>
-          <div className="ie-eyebrow" style={{ marginTop: 18 }}>Рынок новостроек</div>
-          <h1>Аналитика</h1>
-          <p>
-            Все проекты каталога в одной таблице: сколько их, где и кем строятся, сколько стоят и когда сдаются. Фильтруйте по локации,
-            типу, стадии, застройщику и году сдачи: показатели пересчитываются сразу. Любой проект, добавленный в каталог, попадает в
-            расчёт автоматически.
-          </p>
-        </div>
-      </section>
+      <PageIntro eyebrow="Данные каталога" title="Рынок в деталях" description="Сравнивайте проекты по локации, цене и срокам. Показатели относятся только к данным каталога; пропуски и размер выборки указаны отдельно." breadcrumbs={<><Link href="/">Каталог</Link><span>/</span><span>Аналитика</span></>} />
       <Suspense fallback={<div style={{ minHeight: 400 }} />}>
         <AnalyticsExplorer rows={rows} locNames={locNames} />
       </Suspense>
