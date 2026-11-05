@@ -48,12 +48,12 @@ export function CalculatorPanel({
       </div>
       <p className="ss">
         <span className="i-en">
-          Net yield & payback period based on real Phuket STR operating costs ·
-          Adjust all inputs for your scenario
+          Illustrative scenario based on your inputs, not a project forecast.
+          Default assumptions are not verified costs or promised returns.
         </span>
         <span className="i-ru">
-          Чистая доходность и срок окупаемости с учётом реальных операционных
-          расходов Пхукета · Меняйте параметры под ваш сценарий
+          Сценарий по вашим вводным, не прогноз по проекту. Значения по умолчанию
+          не являются проверенными расходами или обещанием доходности.
         </span>
       </p>
 
