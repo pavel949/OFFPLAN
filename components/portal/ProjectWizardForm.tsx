@@ -74,7 +74,7 @@ export function ProjectWizardForm({
     <form action={run} className="space-y-6 max-w-2xl">
       <input type="hidden" name="creation_id" value={requestId} />
       <p className="text-sm">Если сведения пока неизвестны, оставьте числовое поле пустым или выберите «Не подтверждено». Не нужно подставлять примерные значения.</p>
-      <fieldset className="space-y-3">
+      <fieldset disabled={pending} className="space-y-3">
         <legend className="font-semibold">1. Проект</legend>
         {adminMode ? (
           <label className="block text-sm">
@@ -99,7 +99,7 @@ export function ProjectWizardForm({
         </label>
       </fieldset>
 
-      <fieldset className="space-y-3">
+      <fieldset disabled={pending} className="space-y-3">
         <legend className="font-semibold">2. Расположение и тип</legend>
         <label className="block text-sm">
           Локация (район, город)
@@ -134,7 +134,7 @@ export function ProjectWizardForm({
         </label>
       </fieldset>
 
-      <fieldset className="space-y-3">
+      <fieldset disabled={pending} className="space-y-3">
         <legend className="font-semibold">3. Цена, сроки, лоты</legend>
         <label className="block text-sm">
           Цена от, млн THB (например 7.5)
@@ -164,7 +164,7 @@ export function ProjectWizardForm({
         </div>
       </fieldset>
 
-      <fieldset className="space-y-3">
+      <fieldset disabled={pending} className="space-y-3">
         <legend className="font-semibold">4. Владение и управление</legend>
         <label className="block text-sm">
           Форма владения
@@ -180,7 +180,7 @@ export function ProjectWizardForm({
         </label>
       </fieldset>
 
-      <fieldset className="space-y-3">
+      <fieldset disabled={pending} className="space-y-3">
         <legend className="font-semibold">5. Описание и источник</legend>
         <label className="block text-sm">
           Описание (факты, без оценок «лучший», «гарантированная доходность»)
@@ -198,7 +198,7 @@ export function ProjectWizardForm({
 
       {adminMode ? (
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="publish" value="yes" checked={publish} onChange={event => setPublish(event.target.checked)} /> Сразу опубликовать в каталоге (иначе останется черновиком)
+          <input type="checkbox" disabled={pending} name="publish" value="yes" checked={publish} onChange={event => setPublish(event.target.checked)} /> Сразу опубликовать в каталоге (иначе останется черновиком)
         </label>
       ) : null}
 

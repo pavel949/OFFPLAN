@@ -60,7 +60,14 @@ export async function publishCreatedProject(db: Db, input: Input): Promise<Resul
       submission = await db.from('moderation_submissions').select('id, entity_id, entity_type, status').eq('id', input.id).maybeSingle();
     }
     if (submission.error || !submission.data) return failed('Заявка на публикацию не подтверждена. Повторите эту же форму.');
-    if (submission.data.entity_id !== input.id || submission.data.entity_type !== 'project' || submission.data.status !== 'pending')
+    if (submission.data.entity_id !== input.id || submission.data.entity_type !== 'project')
+      return failed('Заявка недоступна. Проверьте её в разделе модерации.');
+    if (submission.data.status === 'approved') {
+      const verified = await db.from('catalog_projects').select('is_published, moderation_status').eq('id', input.id).single();
+      if (!verified.error && verified.data.is_published && verified.data.moderation_status === 'published')
+        return { ok: true, projectId: input.id, published: true };
+    }
+    if (submission.data.status !== 'pending')
       return failed('Заявка уже рассмотрена или недоступна. Проверьте её в разделе модерации.');
     const approval = await db.rpc('moderation_approve', { p_submission_id: submission.data.id });
     // Re-read even after an error: another request may have finished the same approval.
