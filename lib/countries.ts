@@ -77,3 +77,11 @@ export function effectiveStatus(t: LegalTopic, now = new Date()): LegalStatus {
   if (t.status === "verified" && t.validUntil && new Date(t.validUntil).getTime() < now.getTime()) return "outdated";
   return t.status;
 }
+
+/** Planned topics can contain legacy copy about work that has not been confirmed. */
+export function legalTopicSummary(t: LegalTopic): string {
+  if (t.country === "VN" && t.status === "planned") {
+    return "В планах: подготовить материалы по этой теме и передать их на юридическую проверку.";
+  }
+  return t.summary;
+}

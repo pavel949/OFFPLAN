@@ -8,7 +8,7 @@ import { SiteHeader } from "@/components/ie/SiteHeader";
 import { fmtM, summarize } from "@/lib/analytics";
 import { getProjects } from "@/lib/catalog";
 import { COUNTRY_ROLLOUT, LEGAL_LIFECYCLE, STATUS_LABEL } from "@/lib/country-content";
-import { countryOfLocation, effectiveStatus, getCountryTrees, getLegalTopics } from "@/lib/countries";
+import { countryOfLocation, effectiveStatus, getCountryTrees, getLegalTopics, legalTopicSummary } from "@/lib/countries";
 import { getHomeFeed } from "@/lib/home-feed";
 import { getRegionMeta } from "@/lib/locations";
 import { locationSlug } from "@/lib/slug";
@@ -122,7 +122,7 @@ export default async function CountryPage({ params }: Params) {
                     <span className={`ie-lstatus ie-lstatus--${lab.tone}`}>{lab.ru}</span>
                   </summary>
                   <div className="ie-pain-body">
-                    <p>{t.summary}</p>
+                    <p>{legalTopicSummary(t)}</p>
                     {t.points.length ? <ul className="ie-bul">{t.points.map((x) => <li key={x}>{x}</li>)}</ul> : null}
                     <dl className="ie-legal-meta">
                       <div><dt>Проверил</dt><dd>{t.reviewedBy ?? "пока не назначен"}</dd></div>
