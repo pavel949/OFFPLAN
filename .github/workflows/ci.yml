@@ -35,7 +35,7 @@ jobs:
         timeout-minutes: 5
 
       - name: Entry save regressions (isolated fixtures)
-        run: node --test scripts/entry-save-regression.test.mjs scripts/media-upload-regression.test.mjs
+        run: node --test scripts/entry-save-regression.test.mjs scripts/media-upload-regression.test.mjs scripts/project-creation-regression.test.mjs
 
       - name: Build
         # Public routes render at request time. Production never substitutes demo seed for the database.
@@ -63,4 +63,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: RLS regression tests (migrations + policies)
         run: supabase/tests/run.sh
+
 
