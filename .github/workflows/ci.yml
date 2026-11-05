@@ -35,7 +35,7 @@ jobs:
         timeout-minutes: 5
 
       - name: Entry save regressions (isolated fixtures)
-        run: node --test scripts/entry-save-regression.test.mjs scripts/media-upload-regression.test.mjs
+        run: node --test scripts/entry-save-regression.test.mjs scripts/media-upload-regression.test.mjs scripts/media-recovery-regression.test.mjs
 
       - name: Build
         # Public routes render at request time. Production never substitutes demo seed for the database.
