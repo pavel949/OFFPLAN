@@ -145,10 +145,11 @@ export function InfoForm({
         <button className="adm-btn" disabled={pending}>{pending ? "Сохраняю…" : "Сохранить"}</button>
         <label><input type="checkbox" name="confirm" /> Данные подтверждены застройщиком сегодня</label>
         <span className="grow" />
-        {state.ok ? <span className="adm-msg ok">Сохранено · сайт обновится сразу</span> : null}
+        {state.ok ? <span className="adm-msg ok">{project.published ? "Сохранено. Проверьте карточку на сайте." : "Сохранено в черновике. Проект ещё не опубликован."}</span> : null}
         {state.error ? <span className="adm-msg err">{state.error}</span> : null}
       </div>
     </form>
   );
 }
+
 

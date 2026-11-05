@@ -37,6 +37,9 @@ jobs:
       - name: Entry save regressions (isolated fixtures)
         run: node --test scripts/entry-save-regression.test.mjs scripts/media-upload-regression.test.mjs scripts/project-creation-regression.test.mjs scripts/media-recovery-regression.test.mjs
 
+      - name: Admin workspace regression tests
+        run: node --test scripts/admin-workspace-regression.test.mjs
+
       - name: Build
         # Public routes render at request time. Production never substitutes demo seed for the database.
         run: npm run build
@@ -63,5 +66,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: RLS regression tests (migrations + policies)
         run: supabase/tests/run.sh
+
 
 

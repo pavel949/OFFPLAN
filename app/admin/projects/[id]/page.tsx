@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
+import { projectEditingHelp } from "@/lib/admin-workspace";
 import {
   adminListInterests, adminListProjectDocuments, adminListProjectUnits, adminGetProjectPayload,
   adminImportProjectUnits,
@@ -54,9 +55,11 @@ export default async function AdminProjectEditPage({
   let project;
   try {
     project = await adminStudioGetProject(id);
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof Error && error.message === "Проект не найден") notFound();
+    throw error;
   }
+  const help = projectEditingHelp(tab);
   const p = project.payload;
   const c = project.counts;
   const badge: Record<string, { n: number | string; cls: string } | null> = {
@@ -90,12 +93,17 @@ export default async function AdminProjectEditPage({
 
       <nav className="adm-tabs" aria-label="Разделы проекта">
         {TABS.map(([k, label]) => (
-          <Link key={k} href={`/admin/projects/${id}?tab=${k}`} className={`adm-tab${tab === k ? " on" : ""}`}>
+          <Link key={k} href={`/admin/projects/${id}?tab=${k}`} aria-current={tab === k ? "page" : undefined} className={`adm-tab${tab === k ? " on" : ""}`}>
             {label}{badge[k] ? <i className={badge[k]!.cls}>{badge[k]!.n}</i> : null}
           </Link>
         ))}
       </nav>
 
+      <section className="adm-card admin-editing-help" aria-label="Как работает этот раздел">
+        <p><strong>{help.label}:</strong> {help.effect}</p>
+        <p className="adm-hint">{help.caution} <Link href="/admin/guide">Все разделы и связи →</Link></p>
+        {!project.published ? <p className="adm-hint">Этот проект сейчас не опубликован. Сохранение данных не делает его видимым покупателям.</p> : null}
+      </section>
       {tab === "info" ? <InfoTab project={project} /> : null}
       {tab === "units" ? <UnitsTab id={id} /> : null}
       {tab === "sales" ? <SalesTab id={id} /> : null}
@@ -157,7 +165,7 @@ async function NewsTab({ id }: { id: string }) {
 async function MaterialsTab({ id }: { id: string }) {
   const { data: imports, error } = await createServiceRoleClient().from("developer_import_projects").select("external_id,name").eq("catalog_project_id",id);
   if (error) throw new Error("Не удалось загрузить материалы мастер-каталога");
-  const [sources, docs] = await Promise.all([adminListSources(id).catch(() => []), adminListProjectDocuments(id).catch(() => [])]);
+  const [sources, docs] = await Promise.all([adminListSources(id), adminListProjectDocuments(id)]);
   return (
     <>
       <section className="adm-card">
@@ -177,7 +185,7 @@ async function MaterialsTab({ id }: { id: string }) {
 }
 
 async function AdvancedTab({ id }: { id: string }) {
-  const [payload, interests] = await Promise.all([adminGetProjectPayload(id), adminListInterests(id).catch(() => ({ interests: [], brokers: [] }))]);
+  const [payload, interests] = await Promise.all([adminGetProjectPayload(id), adminListInterests(id)]);
   return (
     <>
       <InterestsSection projectId={id} interests={interests.interests} brokers={interests.brokers} />
@@ -189,4 +197,5 @@ async function AdvancedTab({ id }: { id: string }) {
     </>
   );
 }
+
 

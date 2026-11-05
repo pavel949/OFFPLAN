@@ -544,3 +544,23 @@
 .adm-btn--danger { background: var(--ui-surface); color: var(--ui-error) !important; }
 .admin-nav-link.on { background: var(--ui-dark); color: var(--ui-on-dark); }
 .pt-bar { --gold: var(--ui-accent-on-dark); }
+
+
+/* Task-oriented admin navigation and editing guidance. */
+.admin-nav-group { margin-bottom: 14px; }
+.admin-nav-group-title { margin: 6px 12px; color: var(--txt2); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.admin-guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.admin-guide-grid .adm-card { margin-bottom: 0; }
+.admin-guide-grid p, .admin-editing-help p { margin: 8px 0; }
+.admin-guide-steps { padding-left: 22px; }
+.admin-guide-steps li { margin: 8px 0; }
+.admin-editing-help { border-left: 3px solid var(--gold); }
+.admin-guide-grid + .adm-card { margin-top: 16px; }
+.admin-nav-link:focus-visible, .adm-tab:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .admin-root { flex-direction: column; }
+  .admin-nav { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 16px; border-right: 0; border-bottom: 1px solid var(--bdr2); }
+  .admin-nav-title, .admin-nav-foot { grid-column: 1 / -1; }
+  .admin-nav-link { overflow-wrap: anywhere; }
+  .admin-main { padding: 20px 14px; min-width: 0; }
+}

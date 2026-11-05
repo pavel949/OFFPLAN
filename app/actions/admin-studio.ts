@@ -2,6 +2,7 @@
 
 import { preparePhotoEvidence, type PhotoUploadItem } from "@/lib/photo-upload";
 import { revalidatePath } from "next/cache";
+import { requireAdminQuery, projectIsPublished } from "@/lib/admin-workspace";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
 import { devCode } from "@/lib/project-wizard";
@@ -43,6 +44,8 @@ export async function adminStudioReference(): Promise<{
     db.from("developers").select("id, code, name_en, name_ru").order("name_en"),
     db.from("regions").select("id, jurisdiction_code, parent_id, level, name").order("sort_order"),
   ]);
+  requireAdminQuery(d, "Не удалось загрузить справочник застройщиков");
+  requireAdminQuery(r, "Не удалось загрузить справочник локаций");
   const regs = (r.data ?? []) as { id: string; jurisdiction_code: string; parent_id: string | null; level: string; name: { en?: string; ru?: string } }[];
   const regionName = new Map(regs.map((x) => [x.id, x.name?.ru || x.name?.en || ""]));
   return {
@@ -89,7 +92,8 @@ export async function adminStudioList(): Promise<StudioRow[]> {
     db.from("project_sources").select("project_id").limit(20000),
     db.from("project_updates").select("project_id").limit(20000),
   ]);
-  if (p.error) throw new Error(p.error.message);
+  requireAdminQuery(p, "Не удалось загрузить проекты");
+  for (const result of [u, ph, so, up]) requireAdminQuery(result, "Не удалось загрузить заполненность проектов. Повторите загрузку страницы.");
   const count = (rows: { project_id: string }[] | null) => {
     const m = new Map<string, number>();
     for (const r of rows ?? []) m.set(r.project_id, (m.get(r.project_id) ?? 0) + 1);
@@ -118,7 +122,7 @@ export async function adminStudioList(): Promise<StudioRow[]> {
       stK: pl.stK ?? "",
       priceFromM: pl.pN ?? 0,
       status: r.moderation_status,
-      published: r.is_published,
+      published: projectIsPublished(r),
       units: cu.get(r.id) ?? 0,
       photos: cp.get(r.id) ?? 0,
       links: cs.get(r.id) ?? 0,
@@ -154,7 +158,10 @@ export async function adminStudioGetProject(id: string): Promise<StudioProject> 
   const head = (t: string, f?: (q: any) => any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     let q = db.from(t).select("id", { count: "exact", head: true }).eq("project_id", id);
     if (f) q = f(q);
-    return q.then((r) => r.count ?? 0);
+    return q.then((r) => {
+      requireAdminQuery(r, "Не удалось загрузить состав проекта");
+      return r.count ?? 0;
+    });
   };
   const [units, photos, photosPending, links, news] = await Promise.all([
     head("project_units"),
@@ -168,7 +175,7 @@ export async function adminStudioGetProject(id: string): Promise<StudioProject> 
     id: data.id,
     slug: data.slug,
     status: data.moderation_status,
-    published: data.is_published,
+    published: projectIsPublished(data),
     payload,
     developerId: data.developer_id,
     regionId: data.region_id,
@@ -500,6 +507,8 @@ export async function adminStudioListNews(projectId: string): Promise<{ news: Ne
     db.from("project_updates").select("id, kind, title_ru, title_en, body_ru, published_at").eq("project_id", projectId).order("published_at", { ascending: false }),
     db.from("sales_campaigns").select("id, kind, label_ru, label_en, starts_at, ends_at").eq("project_id", projectId).order("created_at", { ascending: false }),
   ]);
+  requireAdminQuery(n, "Не удалось загрузить новости проекта");
+  requireAdminQuery(c, "Не удалось загрузить акции проекта");
   return {
     news: (n.data ?? []).map((r) => ({ id: r.id, kind: r.kind, title_ru: r.title_ru || r.title_en, body_ru: r.body_ru, published_at: r.published_at })),
     promos: (c.data ?? []).map((r) => ({ id: r.id, kind: r.kind, label_ru: r.label_ru || r.label_en, starts_at: r.starts_at, ends_at: r.ends_at })),
@@ -571,4 +580,5 @@ export async function adminStudioDeletePromo(projectId: string, id: string): Pro
     return { ok: false, error: msg(e) };
   }
 }
+
 
