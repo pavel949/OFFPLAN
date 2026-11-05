@@ -1,5 +1,5 @@
 import { createSign } from "node:crypto";
-import { GOOGLE_SHEET, type DriveFile } from "./pick";
+import { GOOGLE_FOLDER, GOOGLE_SHEET, type DriveFile } from "./pick";
 
 /**
  * Read-only Google Drive access through ONE platform service account. A developer shares a folder with
@@ -87,23 +87,70 @@ function mapStatus(status: number): DriveError {
 const API = "https://www.googleapis.com/drive/v3";
 export const MAX_FILE_BYTES = 2_000_000;
 
+/** Bound synchronous requests: fail rather than silently return an incomplete inventory. */
+export const MAX_FOLDER_ENTRIES = 1000;
+export const MAX_FOLDER_REQUESTS = 50;
+export const MAX_FOLDER_DEPTH = 8;
+
 export async function listFolder(folderId: string, fetchImpl: F = fetch): Promise<DriveFile[]> {
   const token = await accessToken(fetchImpl);
-  const q = `'${folderId.replace(/[^A-Za-z0-9_-]/g, "")}' in parents and trashed = false`;
-  const url =
-    `${API}/files?` +
-    new URLSearchParams({
-      q,
-      fields: "files(id,name,mimeType,modifiedTime,size)",
-      orderBy: "modifiedTime desc",
-      pageSize: "100",
-      supportsAllDrives: "true",
-      includeItemsFromAllDrives: "true",
-    });
-  const res = await fetchImpl(url, { headers: { authorization: `Bearer ${token}` } });
-  if (!res.ok) throw mapStatus(res.status);
-  const j = (await res.json()) as { files?: DriveFile[] };
-  return j.files ?? [];
+  if (!/^[A-Za-z0-9_-]+$/.test(folderId))
+    throw new DriveError("Некорректный ID папки.", "unsupported");
+  const queue = [{ id: folderId, path: "", depth: 0 }];
+  const seenFolders = new Set([folderId]);
+  const seenFiles = new Set<string>();
+  const files: DriveFile[] = [];
+  let requests = 0;
+  let entries = 0;
+  const limit = () => new DriveError(
+    "Папка превышает лимит просмотра (1000 записей, 50 запросов или 8 уровней). Укажите ссылку на меньшую подпапку. Неполный список не импортирован.",
+    "too_large",
+  );
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const folder = queue[cursor];
+    let pageToken: string | undefined;
+    const seenPages = new Set<string>();
+    do {
+      if (++requests > MAX_FOLDER_REQUESTS) throw limit();
+      const params = new URLSearchParams({
+        q: `'${folder.id}' in parents and trashed = false`,
+        fields: "nextPageToken,incompleteSearch,files(id,name,mimeType,modifiedTime,size)",
+        orderBy: "modifiedTime desc",
+        pageSize: "100",
+        supportsAllDrives: "true",
+        includeItemsFromAllDrives: "true",
+      });
+      if (pageToken) params.set("pageToken", pageToken);
+      const res = await fetchImpl(`${API}/files?${params}`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) throw mapStatus(res.status);
+      const j = (await res.json()) as { files?: DriveFile[]; nextPageToken?: string; incompleteSearch?: boolean };
+      if (j.incompleteSearch) throw new DriveError("Google вернул неполный список файлов. Повторите просмотр позже.", "failed");
+      for (const file of j.files ?? []) {
+        if (++entries > MAX_FOLDER_ENTRIES) throw limit();
+        const path = folder.path ? `${folder.path}/${file.name}` : file.name;
+        if (file.mimeType === GOOGLE_FOLDER) {
+          if (seenFolders.has(file.id)) continue;
+          if (folder.depth >= MAX_FOLDER_DEPTH) throw limit();
+          // Only actual descendants are followed. Shortcuts never widen the source's scope.
+          if (!/^[A-Za-z0-9_-]+$/.test(file.id)) throw new DriveError("Некорректный ID вложенной папки.", "failed");
+          seenFolders.add(file.id);
+          queue.push({ id: file.id, path, depth: folder.depth + 1 });
+        } else if (!seenFiles.has(file.id)) {
+          seenFiles.add(file.id);
+          files.push({ ...file, path });
+        }
+      }
+      pageToken = j.nextPageToken;
+      if (pageToken) {
+        if (seenPages.has(pageToken)) throw new DriveError("Google повторил страницу списка файлов.", "failed");
+        seenPages.add(pageToken);
+      }
+    } while (pageToken);
+  }
+  return files;
 }
 
 export async function getFileMeta(fileId: string, fetchImpl: F = fetch): Promise<DriveFile> {

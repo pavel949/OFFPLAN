@@ -83,6 +83,9 @@ export function HomeExperience({
   const [draft, setDraft] = useState(filters.q);
   useEffect(()=>setDraft(filters.q),[filters.q]);
   const [limit, setLimit] = useState(24);
+  const [moreFilters, setMoreFilters] = useState<boolean | null>(null);
+  const advancedCount = [filters.bedrooms, filters.ownership, filters.year].filter(Boolean).length;
+  const advancedOpen = moreFilters ?? advancedCount > 0;
   const filterKey = sp.toString();
   useEffect(() => setLimit(24), [filterKey]);
 
@@ -116,17 +119,15 @@ export function HomeExperience({
 
   return (
     <>
-      <section className="ie-hero" aria-labelledby="ie-h1">
-        <div className="ie-hero-sweep" />
-        <div className="ie-horizon" />
+      <section className="ie-hero ie-catalogue-hero" aria-labelledby="ie-h1">
         <div className="ie-wrap">
           <div className="ie-hero-copy">
             <div className="ie-eyebrow">Пхукет · Каталог новостроек</div>
             <h1 id="ie-h1">
-              Выберите новостройку. <em>Проверьте детали.</em>
+              Новостройки Пхукета
             </h1>
             <p className="ie-hero-sub">
-              Сравните проекты, бюджет и условия покупки. У опубликованных предложений указаны даты и источники; неизвестные сведения отмечены отдельно. Уровень проверки виден в каждой карточке.
+              Выберите район, сравните проекты и изучите условия покупки. Цены, материалы и статус проверки — в карточке каждого проекта.
             </p>
           </div>
 
@@ -157,7 +158,7 @@ export function HomeExperience({
                 Найти
               </button>
             </div>
-            <div className="ie-filters">
+            <div className="ie-filters ie-filters--primary">
               <Select id="f-zone" label="Район" value={filters.zone} onChange={set("zone")}>
                 <option value="">Все районы</option>
                 {zones.map((z) => (
@@ -182,6 +183,11 @@ export function HomeExperience({
                   </option>
                 ))}
               </Select>
+              <button type="button" className="ie-more-filters" aria-expanded={advancedOpen} aria-controls="ie-advanced-filters" onClick={() => setMoreFilters(!advancedOpen)}>
+                {advancedCount ? `Дополнительно · ${advancedCount}` : advancedOpen ? "Меньше фильтров −" : "Ещё фильтры +"}
+              </button>
+            </div>
+            <div className="ie-filters ie-filters--advanced" id="ie-advanced-filters" hidden={!advancedOpen}>
               <Select id="f-bedrooms" label="Спальни в прайсе" value={filters.bedrooms} onChange={set("bedrooms")}>
                 <option value="">Любые</option>{[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?"Студия":`${n} спал.`}</option>)}
               </Select>
@@ -197,7 +203,7 @@ export function HomeExperience({
                 ))}
               </Select>
             </div>
-            <p className="ie-filter-help">Бюджет — в тайских батах, по действующим опубликованным ценам. Спальни и владение уточняют предложения прайса. Проекты без подтверждённых условий в эти результаты не входят.</p>
+            <p className="ie-filter-help">Бюджет в ฿, только по актуальным опубликованным ценам. {advancedOpen ? "Спальни и владение — по предложениям прайса. " : ""}Проекты без подтверждённых условий не входят в результаты этих фильтров.</p>
             <div className="ie-hints">
               <span>Попробуйте:</span>
               {QUICK.map((q) => (
@@ -218,19 +224,7 @@ export function HomeExperience({
         </div>
       </section>
 
-      <div className="ie-strip">
-        <div className="ie-wrap">
-          <Link href="/protection/representative" className="ie-strip-cred" aria-label="Официальный статус: общественный представитель Уполномоченного в Таиланде">
-            <OmbudsmanLogo height={38} />
-            <em>Общественный представитель в Таиланде · приказ № 320-П</em>
-          </Link>
-          <span>Смотрите и выбирайте проекты здесь. Если нужно уточнить детали или возник конфликт с застройщиком:</span>
-          <Link href="/protection">Защита прав инвесторов →</Link>
-          <Link href="/protection/contact">Обратиться за помощью</Link>
-        </div>
-      </div>
-
-      <section className="ie-section" id="ie-results" aria-live="polite">
+      <section className="ie-section" id="ie-results">
         <div className="ie-wrap">
           <div className="ie-toolbar">
             <div className="ie-tabs" role="tablist" aria-label="Стадия проекта">
@@ -263,7 +257,7 @@ export function HomeExperience({
               </label>
             </div>
           </div>
-          <div className="ie-resultbar">
+          <div className="ie-resultbar" role="status" aria-live="polite" aria-atomic="true">
             <div>
               <b>{list.length}</b>{" "}
               <span style={{ color: "var(--ie-muted)", fontSize: 14 }}>
@@ -323,6 +317,18 @@ export function HomeExperience({
           ) : null}
         </div>
       </section>
+
+      <div className="ie-strip">
+        <div className="ie-wrap">
+          <Link href="/protection/representative" className="ie-strip-cred" aria-label="Официальный статус: общественный представитель Уполномоченного в Таиланде">
+            <OmbudsmanLogo height={38} />
+            <em>Общественный представитель в Таиланде · приказ № 320-П</em>
+          </Link>
+          <span>Смотрите и выбирайте проекты здесь. Если нужно уточнить детали или возник конфликт с застройщиком:</span>
+          <Link href="/protection">Защита прав инвесторов →</Link>
+          <Link href="/protection/contact">Обратиться за помощью</Link>
+        </div>
+      </div>
 
       <section className="ie-trustband" aria-label="О каталоге">
         <div className="ie-wrap">
