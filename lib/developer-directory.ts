@@ -18,3 +18,11 @@ export function parseDeveloperInput(fd: FormData): { ok: true; value: DeveloperI
   if (!Number.isSafeInteger(revision) || revision < 0 || (id && revision < 1)) return { ok: false, error: "Обновите страницу перед сохранением" };
   return { ok: true, value: { id, revision, name_en, name_ru, website, org_id } };
 }
+
+/** Keep a newly created record's identity through validation/server errors on later edits. */
+export function retainDeveloperIdentity(
+  previous: { id?: string; revision?: number },
+  result: { ok: boolean; error?: string; id?: string; revision?: number },
+) {
+  return result.ok ? result : { ...previous, ...result };
+}

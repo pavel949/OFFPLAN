@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ADMIN_GROUPS, PROJECT_EDITING, adminRouteActive, projectEditingHelp, projectIsPublished, requireAdminQuery } from '../lib/admin-workspace.ts';
-import { parseDeveloperInput } from '../lib/developer-directory.ts';
+import { parseDeveloperInput, retainDeveloperIdentity } from '../lib/developer-directory.ts';
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 test('navigation preserves all existing routes with one unique guide route', () => {
  const paths = ADMIN_GROUPS.flatMap(group => group.items.map(item => item.href));
@@ -53,4 +53,14 @@ test('developer fields survive form reset and repeat-save uses returned identity
  const form=read('app/admin/developers/developer-directory.tsx');
  for(const key of ['name_en','name_ru','website','org_id']) assert.ok(form.includes(`value={fields.${key}}`));
  assert.match(form,/state.revision \?\? developer\?\.admin_revision/);
+});
+
+test('created developer identity survives failed edits and corrected retry',()=>{
+ const created={ok:true,id:'00000000-0000-4000-8000-000000000001',revision:1};
+ const failed=retainDeveloperIdentity(created,{ok:false,error:'Invalid website'});
+ assert.equal(failed.id,created.id);assert.equal(failed.revision,1);assert.equal(failed.ok,false);
+ const retry=parseDeveloperInput(form({id:failed.id,revision:String(failed.revision)}));
+ assert.equal(retry.ok,true);assert.equal(retry.value.id,created.id);
+ const saved=retainDeveloperIdentity(failed,{ok:true,id:created.id,revision:2});
+ assert.equal(saved.revision,2);assert.equal(saved.error,undefined);
 });

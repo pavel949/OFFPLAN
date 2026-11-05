@@ -38,3 +38,32 @@ begin
 end $$;
 revoke all on function public.admin_save_developer_directory(uuid,integer,text,text,text,text,uuid) from public,anon,authenticated;
 grant execute on function public.admin_save_developer_directory(uuid,integer,text,text,text,text,uuid) to service_role;
+
+-- A pending moderation snapshot or JSON import may contain an obsolete name.
+-- Canonicalize only the explicitly linked identity at the write boundary; keep
+-- moderation snapshots untouched as evidence of what was actually submitted.
+create or replace function public.canonicalize_linked_project_developer()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+declare
+  developer_name text;
+  developer_code text;
+begin
+  if new.developer_id is null then return new; end if;
+  select name_en, code into developer_name, developer_code
+    from public.developers where id=new.developer_id;
+  if not found then return new; end if; -- The FK rejects nonexistent identities.
+  if jsonb_typeof(new.payload)='object' then
+    new.payload := new.payload || jsonb_build_object('dev',developer_name,'dt',developer_code);
+  end if;
+  if jsonb_typeof(new.draft_payload)='object' then
+    new.draft_payload := new.draft_payload || jsonb_build_object('dev',developer_name,'dt',developer_code);
+  end if;
+  return new;
+end $$;
+revoke all on function public.canonicalize_linked_project_developer() from public,anon,authenticated;
+-- Alphabetically after catalog_projects_guard: authorization checks see the
+-- original proposed write before this identity-only normalization.
+drop trigger if exists catalog_projects_sync_developer on public.catalog_projects;
+create trigger catalog_projects_sync_developer
+  before insert or update of payload,draft_payload,developer_id on public.catalog_projects
+  for each row execute function public.canonicalize_linked_project_developer();

@@ -2,7 +2,7 @@
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminSaveDeveloper, type DeveloperSaveState } from "@/app/actions/developer-directory";
-import type { DirectoryDeveloper } from "@/lib/developer-directory";
+import { retainDeveloperIdentity, type DirectoryDeveloper } from "@/lib/developer-directory";
 
 type Org = { id: string; name_ru: string };
 function DeveloperForm({ developer, orgs, done }: { developer?: DirectoryDeveloper; orgs: Org[]; done?: () => void }) {
@@ -12,7 +12,7 @@ function DeveloperForm({ developer, orgs, done }: { developer?: DirectoryDevelop
   const [state, action, pending] = useActionState(async (previous: DeveloperSaveState, fd: FormData) => {
     const result = await adminSaveDeveloper(previous, fd);
     if (result.ok) router.refresh();
-    return result;
+    return retainDeveloperIdentity(previous, result);
   }, { ok: false } as DeveloperSaveState);
   // Successful create keeps its returned ID: another click edits the same record, never creates a duplicate.
   return <form action={action} className="adm-grid">
