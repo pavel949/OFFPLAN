@@ -1,3 +1,5 @@
+"use client";
+
 import { PriceBlock } from "@/components/ui";
 import { completionLabel, ownershipLabel } from "@/lib/buyer-display";
 import { currentAvailability } from "@/lib/published-availability";
