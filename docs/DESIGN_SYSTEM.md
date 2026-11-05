@@ -34,3 +34,8 @@ Mobbin references were unavailable behind a paid plan; no Mobbin screen audit is
 Run lint, TypeScript, unit tests and production build. Browser review must cover desktop and narrow responsive widths, keyboard navigation, disclosure controls, missing images/prices, long translated facts, catalogue filters/map, assessment and inquiry cancellation without submission. Record limitations honestly. Real mobile/device and field performance validation remain distinct from responsive browser zoom.
 
 Performance goals, not measured results: LCP <=2.5s, INP <=200ms, CLS <=0.1 at p75. Keep media aspect ratios reserved, load offscreen photos lazily, avoid heavy motion libraries. Existing remote images are unoptimized because source compatibility is not guaranteed; measure actual image weight before claiming these goals are met.
+
+## Product language
+Use plain, precise Russian familiar to buyers and investors. Explain the next action and what the person will receive. Prefer «район», «условия покупки», «наличие квартир и вилл», «источник» and «расходы на содержание» over internal terms. Answer: where, what, who builds, how to buy, and what happens after purchase. Avoid promotional superlatives or institutional endorsement. The desired calm clarity does not imply government affiliation.
+
+Separate published information, dated fact checks, whole-project reports and unknowns. Do not call the entire catalogue verified. Show future country coverage as preparation, and never imply that developer invitations have already been sent or that all data is maintained by developers. Current homepage country navigation distinguishes the Phuket catalogue from Thai regional reference pages and the planned Vietnam section.

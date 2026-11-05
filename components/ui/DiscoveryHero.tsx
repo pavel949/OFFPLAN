@@ -10,11 +10,11 @@ function ArrowIcon() {
 export function DiscoveryHero({ image, projectName, href, render, location }: { image: string; projectName: string; href: string; render: boolean; location: string }) {
   return <section className="ui-discovery ui-enter" aria-labelledby="discovery-title">
     <div className="ui-discovery-copy">
-      <p className="ui-eyebrow">Ignatev Estate · Пхукет</p>
-      <h2 id="discovery-title">Место для жизни.<br /><em>Основа для решения.</em></h2>
-      <p>Новостройки, документы и условия покупки. Изучайте не только архитектуру — смотрите, что стоит за предложением.</p>
-      <div className="ui-cluster"><ActionLink href="#ie-results">Изучить проекты <span aria-hidden="true"><ArrowIcon /></span></ActionLink><Link className="ui-text-link" href="/analytics">Открыть аналитику</Link></div>
-      <div className="ui-discovery-principles"><span>01 · Проект</span><span>02 · Условия</span><span>03 · Проверка</span></div>
+      <p className="ui-eyebrow">Новостройки Пхукета</p>
+      <h2 id="discovery-title">Недвижимость для жизни<br /><em>и инвестиций.</em></h2>
+      <p>Сравните проекты, застройщиков и условия покупки. Изучите источники, результаты проверки и вопросы, которые нужно уточнить до сделки.</p>
+      <div className="ui-cluster"><ActionLink href="#home-search">Выбрать недвижимость <span aria-hidden="true"><ArrowIcon /></span></ActionLink><Link className="ui-text-link" href="/quick-assessment">Что проверить до покупки</Link></div>
+
     </div>
     <Link href={href} className="ui-discovery-image" aria-label={`Изучить ${projectName}`}>
       <Image src={image} alt={projectName} fill sizes="(max-width: 800px) 100vw, 58vw" priority unoptimized referrerPolicy="no-referrer" />
