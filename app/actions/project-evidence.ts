@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { evidenceSchema } from "@/lib/project-evidence";
 import { catalogProjectSchema } from "@/lib/schema";
 import { parseWizardForm } from "@/lib/project-wizard";
+import { creationIdFromForm, createOrRecoverProject, publishCreatedProject } from "@/lib/project-creation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import {
@@ -12,7 +13,7 @@ import {
   hasSupabaseServiceConfig,
 } from "@/lib/supabase/service";
 import { preparePhotoEvidence, type PhotoUploadBatch } from "@/lib/photo-upload";
-type State = { ok: boolean; error?: string };
+type State = { ok: boolean; error?: string; projectId?: string };
 export async function submitProjectEvidence(
   _: State,
   f: FormData,
@@ -189,21 +190,12 @@ export async function createPartnerProjectFromWizard(
     return { ok: false, error: "Проекты добавляет владелец организации" };
   const parsed = parseWizardForm(f);
   if (!parsed.ok) return { ok: false, error: parsed.error };
-  const { data, error } = await db
-    .from("catalog_projects")
-    .insert({
-      slug: `draft-${randomUUID()}`,
-      org_id: profile.org_id,
-      payload: parsed.payload,
-      draft_payload: parsed.payload,
-      is_published: false,
-      moderation_status: "draft",
-    })
-    .select("id")
-    .single();
-  if (error) return { ok: false, error: error.message };
+  const creationId = creationIdFromForm(f);
+  if (!creationId) return { ok: false, error: "Обновите страницу создания проекта перед отправкой." };
+  const created = await createOrRecoverProject(db, { id: creationId, orgId: profile.org_id, payload: parsed.payload });
+  if (!created.ok) return created;
   revalidatePath("/partner/projects");
-  redirect(`/partner/projects/${data.id}/materials`);
+  redirect(`/partner/projects/${created.projectId}/materials`);
 }
 
 /** Operator (IE admin) creates a project, optionally for a developer organisation, optionally publishing at once. */
@@ -216,42 +208,23 @@ export async function adminCreateProjectFromWizard(
     return { ok: false, error: "Не задан SUPABASE_SERVICE_ROLE_KEY" };
   const parsed = parseWizardForm(f);
   if (!parsed.ok) return { ok: false, error: parsed.error };
+  const creationId = creationIdFromForm(f);
+  if (!creationId) return { ok: false, error: "Обновите страницу создания проекта перед отправкой." };
   const orgId = String(f.get("org_id") ?? "").trim() || null;
-  const publish = f.get("publish") === "yes";
   const db = createServiceRoleClient();
-  const { data, error } = await db
-    .from("catalog_projects")
-    .insert({
-      slug: `draft-${randomUUID()}`,
-      org_id: orgId,
-      payload: parsed.payload,
-      draft_payload: parsed.payload,
-      is_published: false,
-      moderation_status: "draft",
-    })
-    .select("id")
-    .single();
-  if (error) return { ok: false, error: error.message };
-  if (publish) {
-    const { data: sub, error: sErr } = await db
-      .from("moderation_submissions")
-      .insert({
-        entity_type: "project",
-        entity_id: data.id,
-        submitted_by: null,
-        snapshot: parsed.payload,
-        status: "pending",
-      })
-      .select("id")
-      .single();
-    if (sErr) return { ok: false, error: sErr.message };
-    const { error: aErr } = await db.rpc("moderation_approve", {
-      p_submission_id: sub.id,
-    });
-    if (aErr) return { ok: false, error: aErr.message };
-    revalidatePath("/");
+  if (orgId) {
+    const org = await db.from("orgs").select("id").eq("id", orgId).eq("kind", "developer").maybeSingle();
+    if (org.error || !org.data) return { ok: false, error: "Выберите организацию застройщика из списка." };
   }
+  const input = { id: creationId, orgId, payload: parsed.payload };
+  const created = await createOrRecoverProject(db, input);
+  if (!created.ok) return created;
   revalidatePath("/admin/projects");
-  redirect(`/admin/projects/${data.id}`);
+  if (f.get("publish") === "yes" && !created.published) {
+    const publication = await publishCreatedProject(db, input);
+    if (!publication.ok) return publication;
+    revalidatePath("/");
+    revalidatePath("/project", "layout");
+  }
+  redirect(`/admin/projects/${created.projectId}`);
 }
-

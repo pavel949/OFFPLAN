@@ -192,7 +192,9 @@ export function taxLabel(
 }
 
 export function zoneLabel(zone: string, lang: "ru" | "en"): string {
+  if (zone === "Location unconfirmed") return lang === "ru" ? "Локация уточняется" : "Location unconfirmed";
   if (zone === "Phuket") return lang === "ru" ? "Пхукет · район уточняется" : "Phuket · district unconfirmed";
   const z = (ZONE_LABELS as Record<string, { ru: string; en: string }>)[zone];
   return z ? z[lang] : zone;
 }
+
