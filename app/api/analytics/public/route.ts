@@ -43,14 +43,14 @@ export async function POST(req: Request) {
   };
   try {
     const text = await req.text();
-    if (text.length > MAX_BODY_BYTES) {
+    if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) {
       return NextResponse.json({ ok: false }, { status: 413 });
     }
     body = JSON.parse(text) as typeof body;
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  if (!body.name || !ALLOWED.has(body.name)) {
+  if (!body || typeof body.name !== "string" || !ALLOWED.has(body.name)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   if (pid != null && pid !== "") {
     const uuidRe =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRe.test(pid)) {
+    if (typeof pid !== "string" || !uuidRe.test(pid)) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
   }
