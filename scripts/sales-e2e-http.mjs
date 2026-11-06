@@ -2,17 +2,28 @@
 // SQL constraints/RLS are exercised separately by supabase/tests/run.sh.
 import fs from 'node:fs';
 import {spawn} from 'node:child_process';
-import {createHmac} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
+import {verifyEmailLogin,verifySameRequestRefresh} from './auth-e2e-http.mjs';
+import {verifyRoutes,verifyApiGuards} from './operational-smoke.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url));
 await import('./sales-e2e-mock.mjs');
-const child=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--turbopack','--hostname','127.0.0.1','-p','3031'],{cwd:root,env:{...process.env,ADMIN_SECRET:'offplan-local-e2e-test-only',NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:4040',NEXT_PUBLIC_SUPABASE_ANON_KEY:'local-test-key',SUPABASE_SERVICE_ROLE_KEY:'local-test-service',RESEND_API_KEY:'',LEAD_NOTIFY_EMAIL:'',TURNSTILE_SECRET_KEY:'',NEXT_PUBLIC_TURNSTILE_SITE_KEY:''},stdio:['ignore','pipe','pipe']});
+const child=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--turbopack','--hostname','127.0.0.1','-p','3031'],{cwd:root,env:{...process.env,ADMIN_SECRET:'offplan-local-e2e-test-only',NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:4040',NEXT_PUBLIC_SUPABASE_ANON_KEY:'local-test-key',SUPABASE_SERVICE_ROLE_KEY:'local-test-service',RESEND_API_KEY:'',LEAD_NOTIFY_EMAIL:'',STRIPE_SECRET_KEY:'',STRIPE_WEBHOOK_SECRET:'',ANALYTICS_INGEST_SECRET:'local-test-analytics',TURNSTILE_SECRET_KEY:'',NEXT_PUBLIC_TURNSTILE_SITE_KEY:''},stdio:['ignore','pipe','pipe']});
 let logs='';child.stdout.on('data',c=>logs+=c);child.stderr.on('data',c=>logs+=c);
 const base='http://127.0.0.1:3031',pid='00000000-0000-4000-8000-000000990001',route=`/admin/projects/${pid}?tab=sales`;
 try{
  for(let i=0;i<80;i++){try{await fetch(base+'/admin');break;}catch{await new Promise(r=>setTimeout(r,500));}}
- const payload=Buffer.from(JSON.stringify({exp:Date.now()+3600000})).toString('base64url');const token=payload+'.'+createHmac('sha256','offplan-local-e2e-test-only').update(payload).digest('base64url');const cookie='ie_admin='+token;
+ const signIn = async password => {
+  const form = new FormData();form.set('_1_password',password);form.set('0',JSON.stringify([{ok:false},'$K1']));
+  return fetch(base+'/admin',{method:'POST',headers:{'Next-Action':actionId('loginAdmin','admin'),Accept:'text/x-component',Origin:base},body:form,redirect:'manual'});
+ };
+ const rejected=await signIn('wrong-local-password');assert.ok((await rejected.text()).includes('Неверный пароль'));
+ const accepted=await signIn('offplan-local-e2e-test-only');
+ const cookie=accepted.headers.getSetCookie().find(v=>v.startsWith('ie_admin='))?.split(';',1)[0];
+ assert.ok(cookie,'real admin login issued a session');
+ console.log('PASS: actual admin login rejects wrong password and establishes a session');
+ await verifyEmailLogin(base);
+ await verifySameRequestRefresh(base);
  const initial=await fetch(base+route,{headers:{cookie}});const html=await initial.text();assert.equal(initial.status,200);assert.ok(html.includes('Структура и условия продажи'),'admin form renders');console.log('PASS: authenticated form and fixture loaded');
  const systemResponse=await fetch(base+'/design-system'); const systemHtml=await systemResponse.text();
  assert.equal(systemResponse.status,200); assert.ok(systemHtml.includes('noindex'));
@@ -53,6 +64,8 @@ try{
  const access=jwtPart({alg:'HS256',typ:'JWT'})+'.'+jwtPart({sub:owner,exp:Math.floor(Date.now()/1000)+3600,aud:'authenticated',role:'authenticated'})+'.local-test-signature';
  const partnerCookie='sb-127-auth-token=base64-'+Buffer.from(JSON.stringify({access_token:access,refresh_token:'local-refresh-only',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user:{id:owner}})).toString('base64url');
  const partnerRoute=`/partner/projects/${pid}/inventory`;
+ await verifyRoutes(base, {admin:cookie,partner:partnerCookie,projectId:pid});
+ await verifyApiGuards(base, cookie);
  const partnerPage=await fetch(base+partnerRoute,{headers:{cookie:partnerCookie}});const partnerHtml=await partnerPage.text();
  assert.equal(partnerPage.status,200);assert.ok(partnerHtml.includes('Отправить новую версию на проверку'),'owner receives shared sales editor');
  assert.ok(!partnerHtml.includes('Local fixture'),'operator private evidence absent from partner RSC/HTML');
@@ -75,5 +88,30 @@ try{
  const unchanged=await (await fetch('http://127.0.0.1:4040/rest/v1/project_sales_models?order=revision.desc')).json();assert.equal(unchanged[0].model.offers[0].price,1100000);
  console.log('PASS: owner reservation removes public offer immediately without changing commercial price');
 
+
+ const submitForm=async (name,manifestPath,url,values,session)=>{
+  const form=new FormData();for(const [k,v] of Object.entries(values))form.set('_1_'+k,v);
+  form.set('0',JSON.stringify([{ok:false},'$K1']));
+  return (await fetch(base+url,{method:'POST',headers:{'Next-Action':actionId(name,manifestPath),Accept:'text/x-component',Origin:base,...(session?{cookie:session}:{})},body:form})).text();
+ };
+ const leadPath=`/admin/leads/${leads[0].id}`;
+ const leadPatch={id:leads[0].id,status:'contacted',notes:'Isolated smoke note'};
+ assert.ok((await submitForm('updateLeadFromForm','admin/leads/[id]',leadPath,leadPatch)).includes('"ok":false'));
+ assert.ok((await submitForm('updateLeadFromForm','admin/leads/[id]',leadPath,leadPatch,cookie)).includes('"ok":true'));
+ const updatedLead=await (await fetch(base+leadPath,{headers:{cookie}})).text();
+ assert.ok(updatedLead.includes('Isolated smoke note'));
+ assert.equal((await (await fetch('http://127.0.0.1:4040/rest/v1/leads')).json())[0].status,'contacted');
+ console.log('PASS: operator updates an inquiry and the status survives reload');
+ const inventoryPath=`/admin/projects/${pid}/inventory`;
+ const importForm={project_id:pid,text:'unit,price,status\nB202,2400000,available',mode:'preview'};
+ const inventoryAction=(values,session)=>submitForm('adminImportProjectUnits','admin/projects/[id]/inventory',inventoryPath,values,session);
+ const readUnits=async()=> (await (await fetch('http://127.0.0.1:4040/rest/v1/project_units')).json());
+ assert.ok((await inventoryAction(importForm,cookie)).includes('"inserts":1'));
+ assert.ok(!(await readUnits()).some(unit=>unit.label==='B202'),'preview must not write inventory');
+ assert.ok((await inventoryAction({...importForm,mode:'apply'})).includes('"ok":false'));
+ assert.ok((await inventoryAction({...importForm,mode:'apply'},cookie)).includes('"inserted":1'));
+ assert.ok((await inventoryAction({...importForm,mode:'apply'},cookie)).includes('"inserted":0'));
+ assert.equal((await readUnits()).filter(unit=>unit.label==='B202').length,1);
+ console.log('PASS: inventory preview, unauthorized apply, explicit import and duplicate retry');
  console.log('HTTP_E2E_ALL_PASSED');
 }catch(e){console.error('FAIL',e.message);console.error(logs.slice(-6000));process.exitCode=1;}finally{child.kill('SIGTERM');setTimeout(()=>process.exit(process.exitCode??0),500);}
