@@ -219,6 +219,7 @@ export async function adminListProjectDocuments(
     .from("project_documents")
     .select("id, kind, title, storage_path, mime, file_size, notes, created_at")
     .eq("project_id", projectId)
+    .not("storage_path", "like", "%/price-monitor/%")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as ProjectDocRow[];
@@ -280,18 +281,24 @@ export async function adminDeleteProjectDocument(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const supabase = await requireAdmin();
-    const { data: row } = await supabase
+    const { data: row, error: lookupError } = await supabase
       .from("project_documents")
       .select("storage_path")
       .eq("id", docId)
+      .eq("project_id", projectId)
       .maybeSingle();
-    if (row?.storage_path) {
+    if (lookupError) throw lookupError;
+    if (!row || row.storage_path.includes("/price-monitor/")) {
+      return { ok: false, error: "Документ не найден или относится к архиву прайсов." };
+    }
+    if (row.storage_path) {
       await supabase.storage.from("project-docs").remove([row.storage_path]);
     }
     const { error } = await supabase
       .from("project_documents")
       .delete()
-      .eq("id", docId);
+      .eq("id", docId)
+      .eq("project_id", projectId);
     if (error) return { ok: false, error: error.message };
     revalidatePath(`/admin/projects/${projectId}`);
     return { ok: true };

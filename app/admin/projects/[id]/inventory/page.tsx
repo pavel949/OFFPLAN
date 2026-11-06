@@ -53,6 +53,11 @@ export default async function AdminProjectInventoryPage({
         {sum.stale} · цены скрыты: {sum.expired}
       </p>
 
+      <p className="mb-4">
+        <Link href={`/admin/projects/${id}/inventory/price-lists`} className="text-sm underline">
+          Проверка прайсов застройщика
+        </Link>
+      </p>
       <div className="mb-8">
         <UnitImportPanel projectId={id} action={adminImportProjectUnits} operator />
       </div>
