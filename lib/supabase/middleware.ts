@@ -15,8 +15,8 @@ export async function updateSession(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet, responseHeaders) {
-        // Next.js 15+: mutating request.cookies in middleware throws → 500.
-        // Session refresh must go only on the response (Supabase SSR pattern).
+        // The same request must see the refreshed session, as well as the browser.
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options),

@@ -82,7 +82,7 @@ Additional domains: `project_evidence` (photos, amenities, costs and sales-stage
 
 ## Middleware
 
-All non-static routes run **`updateSession`** (Supabase SSR cookies; session refresh on response only — Next.js 15 safe pattern).
+Non-static routes use Supabase SSR. Middleware forwards refreshed cookies to both the current server request and the browser. Email links return to `/partner`, `/account` or `/registry/review`. Middleware rewrites their one-time code to `/auth/callback` before page authorization, and the server exchanges the code and redirects to the clean URL. Keep the three destination URLs allowed in the Supabase redirect settings. The browser that requested the link must hold its PKCE verifier.
 
 ## Cursor / VS Code: preview inside the editor
 
