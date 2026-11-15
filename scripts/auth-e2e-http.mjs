@@ -15,6 +15,7 @@ export async function verifyEmailLogin(base) {
     ["/partner", "partner-code", "Мои проекты"],
     ["/account", "account-code", "Личный кабинет"],
     ["/registry/review", "registry-code", "Кабинет эксперта реестра"],
+    ["/owner/methodology", "platform-owner-code", "+ Новый черновик"],
   ]) {
     const incoming = `${base}${path}?code=${code}`;
     const exchange = await fetch(incoming, {
@@ -30,6 +31,13 @@ export async function verifyEmailLogin(base) {
     assert.equal(page.status, 200, path);
     assert.ok((await page.text()).includes(content), `authenticated content for ${path}`);
 
+    if (path === "/account") {
+      const deniedOwner = await fetch(base + "/owner/methodology", { headers: { cookie }, redirect: "manual" });
+      assert.equal(new URL(deniedOwner.headers.get("location"), base).pathname, "/owner/login");
+      const retry = await fetch(base + "/owner/login", { headers: { cookie }, redirect: "manual" });
+      assert.equal(retry.status, 200, "ordinary signed-in users can stay on the owner login page");
+    }
+
     const reused = await fetch(incoming, {
       headers: { cookie: verifier }, redirect: "manual",
     });
@@ -44,7 +52,7 @@ export async function verifyEmailLogin(base) {
 
   const denied = await fetch(base + "/account", { redirect: "manual" });
   assert.equal(new URL(denied.headers.get("location"), base).pathname, "/login");
-  console.log("PASS: email-link callback opens partner, investor and registry sessions; reused codes and external redirects denied");
+  console.log("PASS: email-link callback opens partner, investor, registry and platform-owner sessions; reused codes and external redirects denied");
 }
 
 export async function verifySameRequestRefresh(base) {

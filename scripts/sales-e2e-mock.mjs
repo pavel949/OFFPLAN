@@ -15,18 +15,20 @@ m.offers=[salesModelBase.shape.offers.element.parse({id:randomUUID(),name:'Test 
 const owner='00000000-0000-4000-8000-000000990011';
 const buyer='00000000-0000-4000-8000-000000990012';
 const reviewer='00000000-0000-4000-8000-000000990013';
+const platformOwner='00000000-0000-4000-8000-000000990014';
 const users = {
  [owner]: {id:owner,role:'partner',partner_role:'owner',org_id:project.org_id},
  [buyer]: {id:buyer,role:'buyer',org_id:null},
  [reviewer]: {id:reviewer,role:'reviewer',org_id:null},
+ [platformOwner]: {id:platformOwner,role:'buyer',org_id:null},
 };
-const sessionUser = id => ({id,aud:'authenticated',role:'authenticated',email:`local-${users[id].role}@example.invalid`,app_metadata:{},user_metadata:{}});
+const sessionUser = id => ({id,aud:'authenticated',role:'authenticated',email:`local-${users[id].role}@example.invalid`,email_confirmed_at:today,app_metadata:{},user_metadata:{}});
 const part = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 const issueSession = id => ({
  access_token:`${part({alg:'HS256',typ:'JWT'})}.${part({sub:id,exp:Math.floor(Date.now()/1000)+3600,aud:'authenticated',role:'authenticated'})}.local-test-signature`,
  refresh_token:`fresh-${id}`,expires_in:3600,token_type:'bearer',user:sessionUser(id),
 });
-const codes = new Map([['partner-code',owner],['account-code',buyer],['registry-code',reviewer]]);
+const codes = new Map([['partner-code',owner],['account-code',buyer],['registry-code',reviewer],['platform-owner-code',platformOwner]]);
 let expiredRefreshUsed = false;
 const tables={profiles:Object.values(users),catalog_projects:[project],public_catalog_projects:[project],jurisdictions:[{code:'TH',currency:'THB'}],project_units:[{id:uid,project_id:pid,label:'A101',status:'unknown',price_thb:null,currency:'THB'}],project_sales_models:[{project_id:pid,revision:1,model:m,created_at:new Date().toISOString()}],project_sales_publications:[],leads:[]};
 http.createServer(async(req,res)=>{
@@ -46,13 +48,13 @@ http.createServer(async(req,res)=>{
   if(id){res.end(JSON.stringify(issueSession(id)));return;}
   res.writeHead(400);res.end(JSON.stringify({code:'invalid_grant',msg:'Fixture code or refresh token invalid'}));return;
  }
+ let id;
+ try{id=JSON.parse(Buffer.from(req.headers.authorization?.split('.')[1]??'','base64url')).sub;}catch{}
  if(url.pathname==='/auth/v1/user'){
-  let id;
-  try{id=JSON.parse(Buffer.from(req.headers.authorization?.split('.')[1]??'','base64url')).sub;}catch{}
   if(!users[id]){res.writeHead(401);res.end(JSON.stringify({code:'bad_jwt',msg:'Invalid fixture user'}));return;}
   res.end(JSON.stringify(sessionUser(id)));return;
  }
- if(url.pathname.includes('/rpc/')){res.end(JSON.stringify(table==='consume_rate_limit'?{ok:true,retry_after_ms:0}:null));return;}
+ if(url.pathname.includes('/rpc/')){res.end(JSON.stringify(table==='consume_rate_limit'?{ok:true,retry_after_ms:0}:table==='is_platform_owner'?id===platformOwner:null));return;}
  let rows=tables[table]??[];
  const filter=r=>[...url.searchParams].every(([k,v])=>!v.startsWith('eq.')||String(r[k])===v.slice(3));
  if(req.method==='POST'){

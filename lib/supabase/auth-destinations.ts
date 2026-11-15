@@ -2,6 +2,7 @@ const loginPages = {
   "/partner": "/partner/login",
   "/account": "/login",
   "/registry/review": "/registry/login",
+  "/owner/methodology": "/owner/login",
 } as const;
 
 export type AuthDestination = keyof typeof loginPages;

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 export async function verifyRoutes(base, { admin, partner, projectId }) {
   const publicPaths = [
     "/", "/market", "/developers", "/countries", "/locations", "/guide", "/privacy", "/login",
-    "/methodology", "/quick-assessment", "/registry", "/registry/login", "/services", "/design-system",
+    "/methodology", "/quick-assessment", "/registry", "/registry/login", "/owner/login", "/services", "/design-system",
     "/protection", "/protection/contact", "/protection/how-it-works", "/protection/problems",
     "/protection/representative", "/offline-map/app", "/robots.txt", "/sitemap.xml",
     "/project/e2e-sales-test-999",
@@ -12,7 +12,7 @@ export async function verifyRoutes(base, { admin, partner, projectId }) {
     "/admin", "/admin/catalog", "/admin/developers", "/admin/projects", "/admin/projects/new",
     "/admin/moderation", "/admin/evidence", "/admin/imports", "/admin/ingest/whatsapp",
     "/admin/leads", "/admin/deals", "/admin/commissions", "/admin/corrections", "/admin/settings",
-    "/admin/readiness", "/admin/guide", "/admin/methodology",
+    "/admin/readiness", "/admin/guide",
     ...["info", "units", "sales", "photos", "news", "materials", "advanced"]
       .map((tab) => `/admin/projects/${projectId}?tab=${tab}`),
     `/admin/projects/${projectId}/inventory`,
@@ -47,12 +47,15 @@ export async function verifyRoutes(base, { admin, partner, projectId }) {
     }));
   }
   assert.deepEqual(failures, []);
+  const legacyMethodology = await fetch(base + "/admin/methodology", { headers: { cookie: admin }, redirect: "manual" });
+  assert.equal(legacyMethodology.status, 307);
+  assert.equal(new URL(legacyMethodology.headers.get("location"), base).pathname, "/owner/methodology");
   const locked = await fetch(base + "/admin/leads");
   const lockedHtml = await locked.text();
   assert.ok(lockedHtml.includes("Пароль администратора"));
   assert.ok(!lockedHtml.includes("e2e@example.invalid"));
   for (const [path, target] of [
-    ["/partner/projects", "/partner/login"], ["/account", "/login"], ["/registry/review", "/registry/login"],
+    ["/partner/projects", "/partner/login"], ["/account", "/login"], ["/registry/review", "/registry/login"], ["/owner/methodology", "/owner/login"],
   ]) {
     const response = await fetch(base + path, { redirect: "manual" });
     assert.ok([303, 307, 308].includes(response.status), path);
