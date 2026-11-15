@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { requireOwner } from "@/lib/owner";
 import { CLEARVIEW_V22, ATLAS_V21, isCvConfig, nextVersion, validateConfig, type CvConfig } from "@/lib/clearview/config";
 import { createServiceRoleClient, hasSupabaseServiceConfig } from "@/lib/supabase/service";
 
 type Res = { ok: boolean; error?: string };
+/** Only the platform owner (a signed-in person recognised by the database) edits methodology. */
 async function admin() {
-  if (!(await getAdminSessionOk())) throw new Error("Нужен вход в панель IE");
+  await requireOwner();
   if (!hasSupabaseServiceConfig()) throw new Error("Не задан SUPABASE_SERVICE_ROLE_KEY");
   return createServiceRoleClient();
 }
@@ -15,14 +16,14 @@ const msg = (e: unknown) => (e instanceof Error ? e.message : "Ошибка");
 
 export type VersionRow = {
   id: string; version: string; title: string; status: "draft" | "review" | "published" | "retired";
-  config_hash: string | null; change_summary: string; published_at: string | null; submitted_at: string | null;
+  config_hash: string | null; approval_mode: "dual" | "owner" | null; change_summary: string; published_at: string | null; submitted_at: string | null;
   created_at: string; approvals: number; returns: number;
 };
 
 export async function cvListVersions(): Promise<VersionRow[]> {
   const db = await admin();
   const [v, a] = await Promise.all([
-    db.from("cv_methodology_versions").select("id, version, title, status, config_hash, change_summary, published_at, submitted_at, created_at").eq("jurisdiction_code", "TH").order("created_at", { ascending: false }),
+    db.from("cv_methodology_versions").select("id, version, title, status, config_hash, approval_mode, change_summary, published_at, submitted_at, created_at").eq("jurisdiction_code", "TH").order("created_at", { ascending: false }),
     db.from("cv_methodology_approvals").select("version_id, decision"),
   ]);
   if (v.error) throw new Error(v.error.message);
@@ -58,7 +59,7 @@ export async function cvCreateDraft(): Promise<Res & { id?: string }> {
       jurisdiction_code: "TH", version, title: `ClearView ${version}`, config: { ...config, version, title: `ClearView ${version}` }, based_on: pub?.id ?? null,
     }).select("id").single();
     if (error) return { ok: false, error: error.message };
-    revalidatePath("/admin/methodology");
+    revalidatePath("/owner/methodology");
     return { ok: true, id: data.id };
   } catch (e) {
     return { ok: false, error: msg(e) };
@@ -84,7 +85,7 @@ export async function cvDeleteDraft(id: string): Promise<Res> {
     const db = await admin();
     const { error } = await db.from("cv_methodology_versions").delete().eq("id", id).eq("status", "draft");
     if (error) return { ok: false, error: error.message };
-    revalidatePath("/admin/methodology");
+    revalidatePath("/owner/methodology");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: msg(e) };
@@ -101,8 +102,34 @@ export async function cvSubmit(id: string, config: CvConfig, summary: string): P
     if (saved.error) return { ok: false, error: saved.error.message };
     const { error } = await db.rpc("cv_submit_for_review", { p_id: id, p_summary: summary });
     if (error) return { ok: false, error: error.message };
-    revalidatePath("/admin/methodology");
+    revalidatePath("/owner/methodology");
     revalidatePath("/registry/methodology");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: msg(e) };
+  }
+}
+
+/**
+ * The owner publishes alone. This is a recorded, public choice: the version carries approval_mode = 'owner',
+ * so the site never claims that two independent analysts approved it.
+ */
+export async function cvPublishNow(id: string, config: CvConfig, summary: string): Promise<Res> {
+  try {
+    const owner = await requireOwner();
+    if (!hasSupabaseServiceConfig()) return { ok: false, error: "Не задан SUPABASE_SERVICE_ROLE_KEY" };
+    const db = createServiceRoleClient();
+    if (!isCvConfig(config)) return { ok: false, error: "Некорректная структура методологии" };
+    const v = validateConfig(config);
+    if (!v.ok) return { ok: false, error: `Исправьте ошибки: ${v.errors[0]}` };
+    if (summary.trim().length < 20) return { ok: false, error: "Опишите изменение (20+ символов): оно станет публичным" };
+    const saved = await db.from("cv_methodology_versions").update({ config, title: config.title.slice(0, 200) }).eq("id", id).in("status", ["draft"]);
+    if (saved.error) return { ok: false, error: saved.error.message };
+    const { error } = await db.rpc("cv_owner_publish", { p_id: id, p_email: owner.email, p_summary: summary.trim() });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/owner/methodology");
+    revalidatePath("/methodology");
+    revalidatePath("/quick-assessment");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: msg(e) };

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { cvDeleteDraft, cvSaveDraft, cvSubmit } from "@/app/actions/cv-methodology";
+import { cvDeleteDraft, cvPublishNow, cvSaveDraft, cvSubmit } from "@/app/actions/cv-methodology";
 import { BENCHMARKS } from "@/lib/clearview/benchmarks";
 import { validateConfig, type CvConfig, type Mod, type Tier } from "@/lib/clearview/config";
 import { TIER_ORDER, TIER_RU, assess } from "@/lib/clearview/engine";
@@ -47,8 +47,8 @@ export function diffConfig(base: CvConfig, next: CvConfig): string[] {
 }
 
 export function MethodologyStudio({
-  id, initial, baseline, baselineLabel, status, mode = "edit", children,
-}: { id: string; initial: CvConfig; baseline: CvConfig; baselineLabel: string; status: string; mode?: "edit" | "review"; children?: React.ReactNode }) {
+  id, initial, baseline, baselineLabel, status, mode = "edit", ownerPublish = false, children,
+}: { ownerPublish?: boolean; id: string; initial: CvConfig; baseline: CvConfig; baselineLabel: string; status: string; mode?: "edit" | "review"; children?: React.ReactNode }) {
   const router = useRouter();
   const [cfg, setCfg] = useState<CvConfig>(initial);
   const [tab, setTab] = useState<Tab>("domains");
@@ -88,11 +88,19 @@ export function MethodologyStudio({
       if (r.ok) router.refresh();
     });
   }
+  function publishNow() {
+    if (!confirm("Опубликовать версию сейчас без утверждения вторым аналитиком? Публично будет указано, что версия выпущена владельцем платформы единолично. После публикации версия неизменяема.")) return;
+    start(async () => {
+      const r = await cvPublishNow(id, cfg, summary);
+      setMsg(r.ok ? { ok: true, text: "Версия опубликована владельцем. Отпечаток появился на сайте." } : { ok: false, text: r.error ?? "Ошибка" });
+      if (r.ok) router.refresh();
+    });
+  }
   function remove() {
     if (!confirm("Удалить этот черновик?")) return;
     start(async () => {
       const r = await cvDeleteDraft(id);
-      if (r.ok) router.push("/admin/methodology");
+      if (r.ok) router.push("/owner/methodology");
       else setMsg({ ok: false, text: r.error ?? "Ошибка" });
     });
   }
@@ -338,10 +346,11 @@ export function MethodologyStudio({
             {editable ? (
               <>
                 <div className="adm-field"><label>Что изменилось и зачем (для аналитиков)</label><textarea value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Например: растянута шкала, добавлены ограничения по слабым областям" style={{ minHeight: 80 }} /></div>
-                <p className="adm-hint" style={{ margin: "8px 0" }}>Версию опубликуют два независимых аналитика. После публикации она неизменяема, а её отпечаток появится на сайте.</p>
+                <p className="adm-hint" style={{ margin: "8px 0" }}>Версию можно отправить двум независимым аналитикам или, как владелец платформы, опубликовать сразу. Во втором случае на сайте будет прямо указано, что версия выпущена владельцем единолично. После публикации она неизменяема, а её отпечаток появится на сайте.</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button type="button" className="adm-btn adm-btn--line" disabled={busy || !dirty} onClick={save}>Сохранить черновик</button>
                   <button type="button" className="adm-btn" disabled={busy || !validation.ok || summary.trim().length < 20} onClick={submit}>Отправить на утверждение</button>
+                  {ownerPublish ? <button type="button" className="adm-btn" disabled={busy || !validation.ok || summary.trim().length < 20} onClick={publishNow}>Опубликовать сразу (владелец)</button> : null}
                   <button type="button" className="adm-btn adm-btn--danger adm-btn--sm" disabled={busy} onClick={remove}>Удалить</button>
                 </div>
               </>

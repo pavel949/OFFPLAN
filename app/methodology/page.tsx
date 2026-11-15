@@ -14,11 +14,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/methodology" },
 };
 
-type Ver = { version: string; status: string; config_hash: string | null; published_at: string | null; change_summary: string };
+type Ver = { approval_mode: string | null; version: string; status: string; config_hash: string | null; published_at: string | null; change_summary: string };
 async function versions(): Promise<Ver[]> {
   if (!hasSupabasePublicConfig()) return [];
   try {
-    const { data } = await createAnonClient().from("cv_methodology_versions").select("version, status, config_hash, published_at, change_summary").order("published_at", { ascending: false });
+    const { data } = await createAnonClient().from("cv_methodology_versions").select("version, status, approval_mode, config_hash, published_at, change_summary").order("published_at", { ascending: false });
     return (data ?? []) as Ver[];
   } catch { return []; }
 }
@@ -98,12 +98,13 @@ export default async function MethodologyPage() {
         <section>
           <h2>Версии правил и их отпечатки</h2>
           <p className="cv-lead">Отпечаток публикуется в момент выпуска версии и указывается в каждом отчёте. Он доказывает, что формула, по которой оценён проект, не менялась.</p>
-          {vers.length === 0 ? <p className="cv-lead">Первая версия проходит утверждение независимыми аналитиками и скоро будет опубликована.</p> : (
+          {vers.length === 0 ? <p className="cv-lead">Первая версия готовится к публикации.</p> : (
             <div style={{ display: "grid", gap: 10 }}>
               {vers.map((v) => (
                 <div className="cv-card" key={v.version}>
                   <h3>Версия {v.version} {v.status === "published" ? <span className="cv-pill" style={{ marginLeft: 8 }}>действует</span> : null}</h3>
                   <p>{v.published_at ? `Опубликована ${new Date(v.published_at).toLocaleDateString("ru-RU")}. ` : ""}{v.change_summary}</p>
+                  <p>Утверждение: {v.approval_mode === "owner" ? "владелец платформы единолично" : v.approval_mode === "dual" ? "два независимых аналитика" : "не указано"}.</p>
                   <p className="cv-hash">SHA-256: {v.config_hash}</p>
                 </div>
               ))}

@@ -1,6 +1,11 @@
 -- ClearView methodology versions: private content, two-reviewer publication, immutability.
 grant all on all tables in schema public to anon, authenticated, service_role;
-\i supabase/migrations/20261104140000_cv_methodology.sql
+-- the blanket grant above re-opens everything; re-apply the migration's privilege model for the private tables
+revoke all on public.cv_methodology_versions from anon, authenticated;
+revoke all on public.cv_methodology_approvals from anon, authenticated;
+revoke all on public.platform_owners from anon, authenticated;
+grant select (id, jurisdiction_code, version, title, status, config_hash, change_summary, published_at, retired_at, approval_mode)
+  on public.cv_methodology_versions to anon, authenticated;
 
 create or replace function pg_temp.as_user(uid uuid, r text) returns void language plpgsql as $$
 begin

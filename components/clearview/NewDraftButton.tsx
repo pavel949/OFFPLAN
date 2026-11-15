@@ -12,7 +12,7 @@ export function NewDraftButton() {
     <>
       <button type="button" className="adm-btn" disabled={busy} onClick={() => start(async () => {
         const r = await cvCreateDraft();
-        if (r.ok && r.id) router.push(`/admin/methodology/${r.id}`);
+        if (r.ok && r.id) router.push(`/owner/methodology/${r.id}`);
         else setErr(r.error ?? "Ошибка");
       })}>{busy ? "Создаю…" : "+ Новый черновик"}</button>
       {err ? <span className="adm-msg err" style={{ marginLeft: 10 }}>{err}</span> : null}
