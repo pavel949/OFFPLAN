@@ -24,11 +24,13 @@ export default async function AdminProjectsPage() {
       <div className="adm-head">
         <div>
           <h1>Проекты каталога</h1>
-          <p className="adm-sub">Откройте проект, чтобы внести данные: основное, лоты и цены, фото, новости, ссылки. Красные нули показывают, чего не хватает.</p>
+          <p className="adm-sub">Откройте проект, чтобы внести данные: основное, лоты и цены, фото, новости, ссылки. Заполненность показывает наличие данных, а не их достоверность.</p>
         </div>
         <Link href="/admin/projects/new" className="adm-btn">+ Новый проект</Link>
       </div>
+      <p className="adm-hint"><Link href="/admin/guide">Что можно править и как изменения попадают на сайт →</Link></p>
       {err ? <p className="adm-msg err">{err}</p> : <ProjectsTable rows={rows} />}
     </div>
   );
 }
+

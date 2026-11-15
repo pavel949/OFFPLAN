@@ -171,9 +171,14 @@ export const QUICK_QUESTIONS: QuickQuestion[] = [
     unk("4.1", "4.8"),
   ], { autofill: "gis" }),
   q("penalty", "D5", "Есть ли в договоре неустойка застройщика за просрочку сдачи?", [
-    { id: "yes", label: "Да", effects: [{ item: "2.5", state: "absent" }, { item: "5.3", state: "absent" }] },
+    { id: "yes", label: "Да", effects: [{ item: "2.5", state: "absent" }] },
     { id: "no", label: "Нет", effects: [{ item: "2.5", state: "present" }] },
-    unk("2.5", "5.3"),
+    unk("2.5"),
+  ], { autofill: "document" }),
+  q("cancellation", "D5", "Есть ли право расторгнуть договор и вернуть платежи при задержке сдачи больше 6 месяцев?", [
+    { id: "yes", label: "Да, прямо предусмотрено договором", effects: [{ item: "5.3", state: "absent" }] },
+    { id: "no", label: "Нет", effects: [{ item: "5.3", state: "present" }] },
+    unk("5.3"),
   ], { autofill: "document" }),
   q("rental", "D6", "Как проект предлагает получать доход от аренды?", [
     { id: "none", label: "Аренда не обещается", effects: [] },

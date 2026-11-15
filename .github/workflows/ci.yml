@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -29,6 +29,16 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Sales HTTP integration (isolated API)
+        run: npm run test:sales-http
+        timeout-minutes: 5
+
+      - name: Entry save regressions (isolated fixtures)
+        run: node --test scripts/entry-save-regression.test.mjs scripts/media-upload-regression.test.mjs scripts/project-creation-regression.test.mjs scripts/media-recovery-regression.test.mjs
+
+      - name: Admin workspace regression tests
+        run: node --test scripts/admin-workspace-regression.test.mjs
 
       - name: Build
         # Public routes render at request time. Production never substitutes demo seed for the database.
@@ -56,3 +66,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: RLS regression tests (migrations + policies)
         run: supabase/tests/run.sh
+
+
+

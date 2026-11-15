@@ -1,25 +1,14 @@
-import { CLEARVIEW_V22, type CvConfig, type QuickQuestion, type Tier } from "./config";
-import {
-  TIER_ORDER, assess, fromState, type AssessmentInput, type ItemInput, type Stage,
-} from "./engine";
+import { CLEARVIEW_V22, type CvConfig } from "./config";
+import { applies, type ItemState, type Stage } from "./engine";
 import type { DomainCode, Gate } from "./registry";
 
-/**
- * Public quick self-check. It runs on the server; the client only ever receives `PublicQuickResult`, which
- * deliberately contains no composite score, no weights and no per-item numbers: with those, anyone could tune answers
- * (or evidence) to a target instead of fixing the underlying risk.
- */
 export type Respondent = "developer" | "buyer";
-export type Level = 1 | 2 | 3 | 4 | 5;
 export type Impact = "high" | "medium" | "low";
-
 export interface PublicQuickResult {
-  /** Lowest and highest tier consistent with the unanswered questions. */
-  tierRange: { low: Tier; high: Tier };
-  /** True when a hard-fail condition was answered "yes": the tier is REJECT regardless of anything else. */
   blocked: boolean;
   flags: { gate: Gate; text: string }[];
-  domains: { code: DomainCode; ru: string; level: Level }[];
+  unresolvedGates: { gate: Gate; text: string }[];
+  domains: { code: DomainCode; ru: string; status: "risk_reported" | "needs_verification" | "not_assessed" }[];
   answered: number;
   total: number;
   coverage: "low" | "medium" | "high";
@@ -65,121 +54,73 @@ export const ACTION_RU: Record<string, string> = {
   "6.4": "Получить отельную лицензию или перейти на аренду от 30 дней",
 };
 
-const levelOf = (score: number): Level => (score >= 85 ? 5 : score >= 70 ? 4 : score >= 55 ? 3 : score >= 40 ? 2 : 1);
 
-export function impactOf(delta: number): Impact {
-  return delta >= 2.5 ? "high" : delta >= 0.8 ? "medium" : "low";
-}
-
-type Answers = Record<string, string | undefined>;
-
-function build(questions: QuickQuestion[], answers: Answers, respondent: Respondent, stage: Stage, cfg: CvConfig) {
-  const ev = respondent === "developer" ? "developer" : "analyst";
-  const items: Record<string, ItemInput> = {};
-  const gates: Partial<Record<Gate, "clear" | "triggered" | "unknown">> = {};
-  const facts: AssessmentInput["facts"] = {};
-  let rental: "none" | "str" | "ltr" = "none";
-  let answered = 0;
-  const unjudged: string[] = [];
-  const present: string[] = [];
-  for (const qn of questions) {
-    const opt = qn.options.find((o) => o.id === answers[qn.id]);
-    if (!opt) continue;
-    answered++;
-    if (qn.id === "rental") rental = opt.id === "ltr" ? "ltr" : opt.id.startsWith("str") ? "str" : "none";
-    for (const e of opt.effects) {
-      const item = cfg.items.find((i) => i.code === e.item);
-      if (!item) continue;
-      items[e.item] = fromState(item, e.state, ev, "none", cfg);
-      if (e.state === "unknown") unjudged.push(e.item);
-      if (e.state === "present" || e.state === "partial") present.push(e.item);
-    }
-    for (const [g, v] of Object.entries(opt.gates ?? {})) gates[g as Gate] = v;
-    if (opt.facts?.d4Halt90) facts.d4Halt90 = true;
-  }
-  return { items, gates, facts, scope: { stage, rentalThesis: rental }, answered, unjudged, present };
-}
-
-/** The pessimistic and optimistic completion of unanswered items, used to turn gaps into a tier range. */
-function bound(base: ReturnType<typeof build>, mode: "best" | "worst", cfg: CvConfig, respondent: Respondent): AssessmentInput {
-  const ev = respondent === "developer" ? "developer" : "analyst";
-  const items = { ...base.items };
-  const gates = { ...base.gates };
-  // Only items the wizard can ask about are bracketed; the rest stay neutral (a short self-check cannot speak for them).
-  const asked = new Set(cfg.quick.flatMap((q) => q.options.flatMap((o) => o.effects.map((e) => e.item))));
-  for (const it of cfg.items) {
-    if (items[it.code]?.judged || !asked.has(it.code)) continue;
-    items[it.code] = fromState(it, mode === "best" ? "absent" : "present", ev, "none", cfg);
-  }
-  for (const g of Object.keys(cfg.gates) as Gate[]) if (!gates[g] || gates[g] === "unknown") gates[g] = "clear";
-  return { scope: base.scope, items, gates, facts: base.facts, options: { gateUnknown: "incomplete" } };
-}
-
+/** A checklist of claims, never a rating. Missing answers and unknown answers are equivalent.
+ * No registry defaults, simulated gate clearance or evidence-weighted scores reach this result.
+ */
 export function runQuick(
-  answers: Answers,
+  answers: Record<string, string | undefined>,
   opts: { respondent: Respondent; stage: Stage },
   cfg: CvConfig = CLEARVIEW_V22,
 ): PublicQuickResult {
-  const questions = cfg.quick;
-  const base = build(questions, answers, opts.respondent, opts.stage, cfg);
-
-  const triggered = (Object.entries(base.gates) as [Gate, string][]).filter(([, v]) => v === "triggered").map(([g]) => g);
-  const flags = triggered.map((g) => ({ gate: g, text: GATE_RU[g] }));
-  const blocked = triggered.length > 0;
-
-  const best = assess(bound(base, "best", cfg, opts.respondent), cfg);
-  const worst = assess(bound(base, "worst", cfg, opts.respondent), cfg);
-  let high: Tier = (best.tier ?? "CAUTION") as Tier;
-  let low: Tier = (worst.tier ?? "CAUTION") as Tier;
-  if (blocked) { high = "REJECT"; low = "REJECT"; }
-  if (TIER_ORDER.indexOf(low) > TIER_ORDER.indexOf(high)) low = high;
-  // A self-check built on claims can never reach the top: that needs verification by registries and third parties.
-  const claimCap: Tier = "SILVER";
-  if (TIER_ORDER.indexOf(high) > TIER_ORDER.indexOf(claimCap)) high = claimCap;
-  if (TIER_ORDER.indexOf(low) > TIER_ORDER.indexOf(high)) low = high;
-
-  // Domain levels from the neutral case: unanswered items keep their registry defaults.
-  const expected = assess(
-    { scope: base.scope, items: base.items, gates: Object.fromEntries((Object.keys(cfg.gates) as Gate[]).map((g) => [g, base.gates[g] === "triggered" ? "triggered" : "clear"])), facts: base.facts },
-    cfg,
-  );
-  const domains = cfg.domains.map((d) => ({ code: d.code, ru: d.ru, level: levelOf(expected.domainScores[d.code]) }));
-
-  // Next steps: what verifying each open or risky item would be worth, as a class only.
-  const current = assess(bound(base, "worst", cfg, opts.respondent), cfg);
-  const steps: { text: string; impact: Impact; domain: DomainCode; rank: number }[] = [];
-  const candidates = new Set([...base.unjudged, ...base.present]);
-  for (const code of candidates) {
-    const item = cfg.items.find((i) => i.code === code);
+  const states = new Map<string, ItemState>();
+  const gates: Partial<Record<Gate, "clear" | "triggered" | "unknown">> = {};
+  const selected = new Map(cfg.quick.map(q => [q.id, q.options.find(o => o.id === answers[q.id])]));
+  let answered = 0;
+  for (const q of cfg.quick) {
+    const option = selected.get(q.id);
+    // Seed all asked items as unknown, including skipped questions.
+    for (const o of q.options) for (const e of o.effects) if (!states.has(e.item)) states.set(e.item, "unknown");
+    if (!option || option.id === "unknown") continue;
+    answered++;
+    for (const e of option.effects) states.set(e.item, e.state);
+    Object.assign(gates, option.gates);
+  }
+  // Risk 2.1 is a conjunction, not two competing assignments. A known false operand
+  // resolves it; otherwise either missing operand leaves it unknown.
+  const escrow = selected.get("escrow")?.id;
+  const frontload = selected.get("frontload")?.id;
+  states.set("2.1", escrow === "escrow" || frontload === "low" ? "absent"
+    : escrow === "developer" && frontload === "high" ? "present" : "unknown");
+  // Same legal owner does not establish beneficial ownership or exclude nominees.
+  if (answers.owner === "same") { delete gates.G1; states.set("3.6", "unknown"); }
+  // A prelaunch answer is not evidence that a permit exists.
+  if (answers.permit === "prelaunch") states.set("4.3", "unknown");
+  const rental = selected.get("rental")?.id;
+  const rentalThesis = rental?.startsWith("str") ? "str" : rental === "ltr" ? "ltr" : "none";
+  const scope = { stage: opts.stage, rentalThesis } as const;
+  const relevantGates = (Object.keys(cfg.gates) as Gate[]).filter(g => g !== "G10" || !rental || rental === "unknown" || rentalThesis === "str");
+  const flags = relevantGates.filter(g => gates[g] === "triggered").map(gate => ({ gate, text: GATE_RU[gate] }));
+  const unresolvedGates = relevantGates.filter(g => !gates[g] || gates[g] === "unknown").map(gate => ({ gate, text: GATE_RU[gate] }));
+  const domains: PublicQuickResult["domains"] = cfg.domains.map(d => {
+    const items = cfg.items.filter(i => i.domain === d.code && applies(i, scope));
+    const reported = items.some(i => states.get(i.code) === "present" || states.get(i.code) === "partial");
+    const asked = items.some(i => states.has(i.code));
+    return { code: d.code, ru: d.ru, status: reported ? "risk_reported" : asked ? "needs_verification" : "not_assessed" };
+  });
+  const steps: PublicQuickResult["nextSteps"] = [];
+  const gateItems = new Set<string>();
+  for (const { gate } of [...flags, ...unresolvedGates]) {
+    const item = cfg.items.find(i => i.gate === gate);
     if (!item) continue;
-    const verified = { ...bound(base, "worst", cfg, opts.respondent) };
-    verified.items = { ...verified.items, [code]: fromState(item, "absent", "registry", "none", cfg) };
-    const after = assess(verified, cfg);
-    const delta = (after.composite ?? 0) - (current.composite ?? 0);
-    steps.push({ text: ACTION_RU[code] ?? `Подтвердить документом: ${item.title}`, impact: impactOf(delta), domain: item.domain, rank: delta });
+    gateItems.add(item.code);
+    steps.push({ text: `${gates[gate] === "triggered" ? "Приоритетная проверка заявленного стоп-условия" : "Не проверено стоп-условие"}: ${GATE_RU[gate]}. ${ACTION_RU[item.code] ?? "Запросить независимое документальное подтверждение до сделки"}.`, impact: "high", domain: item.domain });
   }
-  steps.sort((a, b) => b.rank - a.rank);
-  let nextSteps: PublicQuickResult["nextSteps"] = steps.slice(0, 5).map(({ rank, ...rest }) => { void rank; return rest; });
-  if (!blocked && TIER_ORDER.indexOf(high) >= TIER_ORDER.indexOf("SILVER")) {
-    nextSteps = [
-      { text: "Подтвердить заявленное документами из реестров и письмами банка и юридического лица кондо: самооценка по словам не поднимается выше «Серебра»", impact: "high" as const, domain: "D3" as DomainCode },
-      ...nextSteps,
-    ].slice(0, 5);
+  // Priority is triage urgency, not a promised improvement in a score. Hard stops
+  // remain high priority even though a rejected assessment has no composite.
+  for (const state of ["present", "partial", "unknown"] as const) {
+    for (const [code, value] of states) {
+      const item = cfg.items.find(i => i.code === code);
+      if (value !== state || gateItems.has(code) || !item || !applies(item, scope)) continue;
+      steps.push({ text: ACTION_RU[code] ?? `Запросить документы по вопросу: ${item.title}`, impact: state === "unknown" ? "medium" : "high", domain: item.domain });
+    }
   }
-
-  const total = questions.length;
-  const share = base.answered / total;
+  const total = cfg.quick.length;
+  const share = total ? answered / total : 0;
   return {
-    tierRange: { low, high },
-    blocked,
-    flags,
-    domains,
-    answered: base.answered,
-    total,
+    blocked: flags.length > 0, flags, unresolvedGates, domains, answered, total,
     coverage: share >= 0.85 ? "high" : share >= 0.55 ? "medium" : "low",
-    nextSteps,
-    note: "Это предварительная самооценка по вашим ответам. Она не является оценкой ClearView и не заменяет проверку документов и юридическую консультацию.",
+    nextSteps: steps,
+    note: "Это предварительный список вопросов по вашим ответам, а не оценка ClearView или рекомендация покупать. Документы здесь не проверяются. Полнота ответов не означает полноту доказательств; отсутствие выявленного риска не означает безопасность проекта. Перед сделкой нужна независимая юридическая проверка.",
   };
 }
-
-

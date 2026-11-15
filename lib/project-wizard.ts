@@ -16,8 +16,8 @@ import {
  * here. Editorial fields (rating, risk tier, BUY/WATCH/AVOID text) are never taken from the form:
  * they stay at neutral placeholders until the IE team sets them during review.
  */
-const num = (min: number, max: number) =>
-  z.coerce.number().finite().min(min).max(max);
+const optionalNumber = (schema: z.ZodType<number, unknown>) =>
+  z.preprocess(value => value == null || (typeof value === "string" && !value.trim()) ? null : value, schema.nullable());
 
 export const wizardSchema = z.object({
   n: z.string().trim().min(2, "Укажите название проекта").max(200),
@@ -26,12 +26,12 @@ export const wizardSchema = z.object({
   seg: z.enum(SEGMENTS),
   type: z.enum(PROPERTY_TYPES),
   /** Starting price in millions of THB (e.g. 7.5). */
-  priceFromM: num(0.1, 100_000),
+  priceFromM: optionalNumber(z.coerce.number().finite().positive().max(100_000)),
   /** Total number of units in the project. */
-  unitsTotal: z.coerce.number().int().min(1).max(100_000),
-  minBR: z.coerce.number().int().min(0).max(20),
+  unitsTotal: optionalNumber(z.coerce.number().int().min(1).max(100_000)),
+  minBR: optionalNumber(z.coerce.number().int().min(0).max(20)),
   stK: z.enum(STATUS_KEYS),
-  compY: z.coerce.number().int().min(1990).max(2100),
+  compY: optionalNumber(z.coerce.number().int().min(1990).max(2100)),
   compQ: z.string().trim().max(60).default(""),
   beach: z.enum(BEACH_KEYS),
   own: z.enum(OWNERSHIP_KEYS),
@@ -53,7 +53,7 @@ export function devCode(dev: string): string {
 }
 
 export function priceLabel(m: number): string {
-  const v = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, "");
+  const v = String(m);
   return `฿${v}M+`;
 }
 
@@ -67,17 +67,17 @@ export function buildPayloadFromWizard(i: WizardInput) {
     zone: i.zone,
     seg: i.seg,
     type: i.type,
-    pT: priceLabel(i.priceFromM),
-    pN: i.priceFromM,
+    pT: i.priceFromM == null ? "POA" : priceLabel(i.priceFromM),
+    pN: i.priceFromM ?? 0,
     pU: "",
     sqmP: "н/д",
-    units: String(i.unitsTotal),
+    units: i.unitsTotal == null ? "" : String(i.unitsTotal),
     unitSzM2: "",
     minBR: i.minBR,
     stK: i.stK,
     stT: taxLabel("stK", i.stK, "ru"),
     compY: i.compY,
-    compQ: i.compQ || String(i.compY),
+    compQ: i.compQ || (i.compY == null ? "" : String(i.compY)),
     beach: i.beach,
     own: i.own,
     mgmt: i.mgmt,
@@ -85,8 +85,8 @@ export function buildPayloadFromWizard(i: WizardInput) {
     yield: "н/д",
     yN: 0,
     // Editorial fields stay neutral until IE reviews the project.
-    rat: 0,
-    risk: 2,
+    rat: null,
+    risk: null,
     desc: i.desc,
     tags: ["Заявлено застройщиком"],
     bdg: [] as string[],
@@ -102,6 +102,7 @@ export function parseWizardForm(f: FormData):
   | { ok: false; error: string } {
   const raw: Record<string, unknown> = {};
   for (const k of Object.keys(wizardSchema.shape)) raw[k] = f.get(k) ?? "";
+  if (raw.zone === "__unknown") raw.zone = "Location unconfirmed";
   if (raw.zone === "__other") raw.zone = String(f.get("zoneOther") ?? "").trim();
   const r = wizardSchema.safeParse(raw);
   if (!r.success) {
@@ -114,3 +115,4 @@ export function parseWizardForm(f: FormData):
     return { ok: false, error: e instanceof Error ? e.message : "Не удалось собрать карточку" };
   }
 }
+

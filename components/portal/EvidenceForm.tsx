@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { submitProjectEvidence } from "@/app/actions/project-evidence";
 
+import { MediaFields, mediaDetails, emptyMediaMetadata } from "./MediaFields";
+
 const COSTS: [string, string][] = [
   ["cam", "Управляющая компания (общие расходы)"],
   ["utilities", "Коммунальные услуги"],
@@ -21,8 +23,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, "-").replace(/^-|-$/g, "").slice(0, 60) || "item";
 
 /** Plain-language form: the technical `details` payload is assembled here, never typed by the developer. */
-export function EvidenceForm({ projectId }: { projectId: string }) {
+export function EvidenceForm({ projectId, units=[] }: { projectId: string; units?:{id:string;label:string}[] }) {
   const [state, action, pending] = useActionState(submitProjectEvidence, { ok: false } as { ok: boolean; error?: string });
+  const [media,setMedia] = useState(emptyMediaMetadata);
   const [kind, setKind] = useState("amenity");
   const [v, setV] = useState<Record<string, string>>({ currency: "THB", basis: "unit", period: "month", cost: "cam", stage: "selling" });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setV((x) => ({ ...x, [k]: e.target.value }));
@@ -43,7 +46,7 @@ export function EvidenceForm({ projectId }: { projectId: string }) {
     factKey = "sales-stage";
     title = STAGES.find(([k]) => k === v.stage)?.[1] ?? "Стадия продаж";
   } else {
-    details = { url: v.url ?? "", caption: v.caption ?? "" };
+    details = { url: v.url ?? "", caption: v.caption ?? "", ...mediaDetails(media) };
     title = v.caption ?? "";
     factKey = `photo-${slug(v.caption ?? "")}-${Date.now().toString(36)}`;
   }
@@ -62,7 +65,7 @@ export function EvidenceForm({ projectId }: { projectId: string }) {
             <option value="amenity">Инфраструктура и преимущества (бассейн, спа, охрана…)</option>
             <option value="operating_cost">Расходы на содержание</option>
             <option value="sales">Стадия продаж</option>
-            <option value="photo">Фото по ссылке</option>
+            <option value="photo">Фото, визуализация или план по ссылке</option>
           </select>
         </div>
 
@@ -86,7 +89,8 @@ export function EvidenceForm({ projectId }: { projectId: string }) {
         </>) : null}
 
         {kind === "photo" ? (<>
-          <div className="adm-field c6"><label>Ссылка на фото (https)</label><input type="url" value={v.url ?? ""} onChange={set("url")} required placeholder="https://" /></div>
+          <div className="adm-field c12"><MediaFields value={media} onChange={setMedia} units={units} disabled={pending}/></div>
+          <div className="adm-field c6"><label>Ссылка на изображение (https)</label><input type="url" value={v.url ?? ""} onChange={set("url")} required placeholder="https://" /></div>
           <div className="adm-field c6"><label>Подпись</label><input value={v.caption ?? ""} onChange={set("caption")} required placeholder="Фасад, блок A" /></div>
         </>) : null}
 

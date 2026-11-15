@@ -77,14 +77,13 @@ describe("catalog source selection", () => {
     await expect(getProjects()).rejects.toBeInstanceOf(CatalogUnavailableError);
   });
 
-  it("production: DB error after a good read serves the last-known-good copy, not the seed", async () => {
+  it("production: DB error after a good read cannot resurrect an unpublished cached row", async () => {
     vi.stubEnv("NODE_ENV", "production");
     result = { data: [{ payload: dbRow }], error: null };
     const { getProjects } = await load();
     await getProjects();
     result = new Error("network down");
-    const rows = await getProjects();
-    expect(rows.map((r) => r.id)).toEqual([9001]);
+    await expect(getProjects()).rejects.toThrow("Catalogue database is unavailable");
   });
 
   it("production: an empty published set is the truth, not a reason to resurrect the seed", async () => {

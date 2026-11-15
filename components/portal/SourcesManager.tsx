@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { usePreservedForm } from "@/components/forms/use-preserved-form";
 import {
   CADENCE_LABEL_RU,
   SOURCE_CADENCE,
@@ -48,8 +50,29 @@ export function SourcesManager({
   api: Api;
   drive?: DriveApi;
 }) {
-  const [state, action, pending] = useActionState(api.add, { ok: false });
+  const router = useRouter();
+  const { state, onSubmit, formRef, pending } = usePreservedForm(async (previous, data) => {
+    const result = await api.add(previous, data);
+    if (result.ok) router.refresh();
+    return result;
+  });
   const [busy, start] = useTransition();
+  const busyRef = useRef(false);
+  const [operationError, setOperationError] = useState("");
+  const run = (operation: () => Promise<{ ok: boolean; error?: string }>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setOperationError("");
+    start(async () => {
+      try {
+        const result = await operation();
+        if (result.ok) router.refresh();
+        else setOperationError(result.error || "Не удалось выполнить действие.");
+      } catch {
+        setOperationError("Не удалось получить результат. Обновите список перед повторной попыткой.");
+      } finally { busyRef.current = false; }
+    });
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -60,6 +83,7 @@ export function SourcesManager({
         вы последний раз подтверждали актуальность.
       </p>
 
+      {operationError ? <p role="alert">{operationError}</p> : null}
       <ul className="space-y-2">
         {sources.length === 0 ? (
           <li className="text-sm text-[var(--muted,#666)]">Пока нет ни одной ссылки.</li>
@@ -115,7 +139,7 @@ export function SourcesManager({
                           className="admin-btn"
                           disabled={busy}
                           onClick={() =>
-                            start(async () => void (await drive.setSync!(s.id, projectId, !s.sync_enabled)))
+                            run(() => drive.setSync!(s.id, projectId, !s.sync_enabled))
                           }
                         >
                           {s.sync_enabled ? "Выключить синхронизацию" : "Включить синхронизацию"}
@@ -129,7 +153,7 @@ export function SourcesManager({
                 <button
                   className="admin-btn"
                   disabled={busy}
-                  onClick={() => start(async () => void (await api.confirm(s.id, projectId)))}
+                  onClick={() => run(() => api.confirm(s.id, projectId))}
                 >
                   Подтвердить актуальность
                 </button>
@@ -138,7 +162,7 @@ export function SourcesManager({
                   disabled={busy}
                   onClick={() => {
                     if (confirm("Удалить ссылку?"))
-                      start(async () => void (await api.remove(s.id, projectId)));
+                      run(() => api.remove(s.id, projectId));
                   }}
                 >
                   Удалить
@@ -149,7 +173,8 @@ export function SourcesManager({
         })}
       </ul>
 
-      <form action={action} className="space-y-3 border border-[var(--bdr,#ddd)] rounded-lg p-4">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-3 border border-[var(--bdr,#ddd)] rounded-lg p-4">
+        <fieldset disabled={pending} className="space-y-3" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <h2 className="font-semibold">Добавить ссылку</h2>
         <input type="hidden" name="project_id" value={projectId} />
         <label className="block text-sm">
@@ -204,7 +229,9 @@ export function SourcesManager({
         <p role="status" className="text-sm">
           {state.ok ? "Сохранено" : state.error}
         </p>
+      </fieldset>
       </form>
     </div>
   );
 }
+

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { STATUS_RU, type PartnerProject } from "@/lib/partner-projects";
 
 /** Where each checklist step is done in the developer cabinet. */
-export const TAB_OF: Record<string, string> = { units: "/inventory", photo: "/facts", photos: "/facts", links: "/materials", news: "/updates" };
+export const TAB_OF: Record<string, string> = { price: "/inventory", units: "/inventory", photo: "/facts", photos: "/facts", links: "/materials", news: "/updates" };
 
 export function ProjectsList({ projects, isOwner }: { projects: PartnerProject[]; isOwner: boolean }) {
   return (

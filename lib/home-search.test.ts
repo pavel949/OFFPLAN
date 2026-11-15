@@ -55,3 +55,12 @@ describe("url state", () => {
     expect(filtersFromParams(new URLSearchParams("sort=hack")).sort).toBe("rating");
   });
 });
+
+
+it("unknown prices are excluded from budgets and sort after known prices", () => {
+  const rows = [...all, mk({ id: 4, pN: 0, pT: "POA" })];
+  expect(filterProjects(rows, { ...EMPTY_FILTERS, budget: "30" }).map(p => p.id)).not.toContain(4);
+  for (const sort of ["price-asc", "price-desc"]) {
+    expect(filterProjects(rows, { ...EMPTY_FILTERS, sort }).at(-1)?.id).toBe(4);
+  }
+});

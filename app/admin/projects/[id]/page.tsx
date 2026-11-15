@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
+import { projectEditingHelp } from "@/lib/admin-workspace";
 import {
   adminListInterests, adminListProjectDocuments, adminListProjectUnits, adminGetProjectPayload,
   adminImportProjectUnits,
@@ -13,6 +16,8 @@ import { InfoForm } from "@/components/admin/InfoForm";
 import { NewsPanel } from "@/components/admin/NewsPanel";
 import { PhotosManager } from "@/components/admin/PhotosManager";
 import { UnitsEditor } from "@/components/admin/UnitsEditor";
+import { SalesModelEditor } from "@/components/admin/SalesModelEditor";
+import { adminGetSalesModel } from "@/app/actions/sales-model";
 import { SourcesManager } from "@/components/portal/SourcesManager";
 import { UnitImportPanel } from "@/components/portal/UnitImportPanel";
 import { hasSupabaseServiceConfig } from "@/lib/supabase/service";
@@ -24,6 +29,7 @@ import { ProjectPayloadForm } from "../project-payload-form";
 const TABS = [
   ["info", "Основное"],
   ["units", "Лоты и цены"],
+  ["sales", "Структура и условия"],
   ["photos", "Фото"],
   ["news", "Новости и акции"],
   ["materials", "Материалы"],
@@ -37,6 +43,7 @@ export default async function AdminProjectEditPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  if (!(await getAdminSessionOk())) return null;
   const { id } = await params;
   const wanted = (await searchParams).tab;
   const tab = TABS.some(([k]) => k === wanted) ? wanted! : "info";
@@ -48,14 +55,17 @@ export default async function AdminProjectEditPage({
   let project;
   try {
     project = await adminStudioGetProject(id);
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof Error && error.message === "Проект не найден") notFound();
+    throw error;
   }
+  const help = projectEditingHelp(tab);
   const p = project.payload;
   const c = project.counts;
   const badge: Record<string, { n: number | string; cls: string } | null> = {
     info: null,
     units: { n: c.units, cls: c.units ? "ok" : "warn" },
+    sales: null,
     photos: { n: c.photos + (c.photosPending ? `+${c.photosPending}` : ""), cls: c.photos ? "ok" : "warn" },
     news: { n: c.news, cls: c.news ? "ok" : "" },
     materials: { n: c.links, cls: c.links ? "ok" : "warn" },
@@ -83,14 +93,20 @@ export default async function AdminProjectEditPage({
 
       <nav className="adm-tabs" aria-label="Разделы проекта">
         {TABS.map(([k, label]) => (
-          <Link key={k} href={`/admin/projects/${id}?tab=${k}`} className={`adm-tab${tab === k ? " on" : ""}`}>
+          <Link key={k} href={`/admin/projects/${id}?tab=${k}`} aria-current={tab === k ? "page" : undefined} className={`adm-tab${tab === k ? " on" : ""}`}>
             {label}{badge[k] ? <i className={badge[k]!.cls}>{badge[k]!.n}</i> : null}
           </Link>
         ))}
       </nav>
 
+      <section className="adm-card admin-editing-help" aria-label="Как работает этот раздел">
+        <p><strong>{help.label}:</strong> {help.effect}</p>
+        <p className="adm-hint">{help.caution} <Link href="/admin/guide">Все разделы и связи →</Link></p>
+        {!project.published ? <p className="adm-hint">Этот проект сейчас не опубликован. Сохранение данных не делает его видимым покупателям.</p> : null}
+      </section>
       {tab === "info" ? <InfoTab project={project} /> : null}
       {tab === "units" ? <UnitsTab id={id} /> : null}
+      {tab === "sales" ? <SalesTab id={id} /> : null}
       {tab === "photos" ? <PhotosTab id={id} /> : null}
       {tab === "news" ? <NewsTab id={id} /> : null}
       {tab === "materials" ? <MaterialsTab id={id} /> : null}
@@ -132,8 +148,13 @@ async function UnitsTab({ id }: { id: string }) {
   );
 }
 
+async function SalesTab({ id }: { id: string }) {
+  const data = await adminGetSalesModel(id);
+  return <>{data.actor?.startsWith("partner:") && data.publication?.revision!==data.revision ? <div className="adm-card"><h2>Новая версия от застройщика ждёт проверки</h2><p>Версия {data.revision}. Проверьте изменённые цены, наличие, источники и срок действия. Публикация ниже заменит действующие условия только после вашего подтверждения.</p></div> : null}<SalesModelEditor projectId={id} initial={data.model} initialRevision={data.revision} units={data.units} initialPublication={data.publication} /></>;
+}
+
 async function PhotosTab({ id }: { id: string }) {
-  return <PhotosManager projectId={id} photos={await adminStudioListPhotos(id)} />;
+  return <PhotosManager projectId={id} photos={await adminStudioListPhotos(id)} units={await adminListProjectUnits(id)} />;
 }
 
 async function NewsTab({ id }: { id: string }) {
@@ -142,11 +163,14 @@ async function NewsTab({ id }: { id: string }) {
 }
 
 async function MaterialsTab({ id }: { id: string }) {
-  const [sources, docs] = await Promise.all([adminListSources(id).catch(() => []), adminListProjectDocuments(id).catch(() => [])]);
+  const { data: imports, error } = await createServiceRoleClient().from("developer_import_projects").select("external_id,name").eq("catalog_project_id",id);
+  if (error) throw new Error("Не удалось загрузить материалы мастер-каталога");
+  const [sources, docs] = await Promise.all([adminListSources(id), adminListProjectDocuments(id)]);
   return (
     <>
       <section className="adm-card">
         <h3>Материалы застройщика (ссылки)</h3>
+        {imports?.map(p => <p key={p.external_id}><Link href={`/admin/imports/${p.external_id}`}>Паспорт, исторические цены, лоты и документы {p.name} →</Link></p>)}
         <p className="adm-lead">Сайт проекта, папка с брошюрой и рендерами, прайс-лист, Telegram-канал. Файлы копировать не нужно: достаточно ссылки с доступом по ссылке.</p>
         <SourcesManager
           projectId={id}
@@ -161,7 +185,7 @@ async function MaterialsTab({ id }: { id: string }) {
 }
 
 async function AdvancedTab({ id }: { id: string }) {
-  const [payload, interests] = await Promise.all([adminGetProjectPayload(id), adminListInterests(id).catch(() => ({ interests: [], brokers: [] }))]);
+  const [payload, interests] = await Promise.all([adminGetProjectPayload(id), adminListInterests(id)]);
   return (
     <>
       <InterestsSection projectId={id} interests={interests.interests} brokers={interests.brokers} />
@@ -173,3 +197,5 @@ async function AdvancedTab({ id }: { id: string }) {
     </>
   );
 }
+
+

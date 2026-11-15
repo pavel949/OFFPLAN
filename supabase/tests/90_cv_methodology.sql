@@ -2,8 +2,12 @@
 grant all on all tables in schema public to anon, authenticated, service_role;
 -- the blanket grant above re-opens everything; re-apply the migration's privilege model for the private tables
 revoke all on public.cv_methodology_versions from anon, authenticated;
+revoke insert, update, truncate on public.cv_methodology_versions from service_role;
+grant insert (jurisdiction_code, version, title, config, based_on),
+      update (config, title) on public.cv_methodology_versions to service_role;
 revoke all on public.cv_methodology_approvals from anon, authenticated;
-revoke all on public.platform_owners from anon, authenticated;
+revoke insert, update, delete, truncate on public.cv_methodology_approvals from service_role;
+revoke all on public.platform_owners from anon, authenticated, service_role;
 grant select (id, jurisdiction_code, version, title, status, config_hash, change_summary, published_at, retired_at, approval_mode)
   on public.cv_methodology_versions to anon, authenticated;
 

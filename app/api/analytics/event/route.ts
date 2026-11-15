@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  if (!body.name) return NextResponse.json({ ok: false }, { status: 400 });
+  if (!body || typeof body.name !== "string" || !body.name.trim()) return NextResponse.json({ ok: false }, { status: 400 });
   await recordAnalyticsEvent({
     name: body.name,
     project_id: body.project_id ?? null,

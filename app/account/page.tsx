@@ -21,7 +21,7 @@ export default async function AccountPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/partner/login");
+    redirect("/login");
   }
 
   let favorites: { project_id: string }[] = [];

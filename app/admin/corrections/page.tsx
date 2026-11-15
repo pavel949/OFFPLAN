@@ -1,3 +1,4 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import Link from "next/link";
 import {
   createServiceRoleClient,
@@ -12,6 +13,7 @@ const statusRu: Record<string, string> = {
 };
 
 export default async function AdminCorrectionsPage() {
+  if (!(await getAdminSessionOk())) return null;
   let rows: {
     id: string;
     project_id: string;
@@ -23,17 +25,14 @@ export default async function AdminCorrectionsPage() {
   }[] = [];
 
   if (hasSupabaseServiceConfig()) {
-    try {
       const supabase = createServiceRoleClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("correction_requests")
         .select("id, project_id, org_id, message, status, created_at, admin_note")
         .order("created_at", { ascending: false })
         .limit(200);
+      if (error) throw new Error("Не удалось загрузить очередь");
       rows = (data ?? []) as typeof rows;
-    } catch {
-      rows = [];
-    }
   }
 
   return (

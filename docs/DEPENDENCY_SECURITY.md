@@ -1,0 +1,7 @@
+# Проверка зависимостей 2026-11-04
+
+Next.js и eslint-config-next обновлены с 15.5.14 до 15.5.29 в пределах текущей основной версии. Zod обновлён до 4.6.7. Точечные overrides фиксируют исправленные версии транзитивных postcss, nanoid, source-map-js, sharp, qs, ws и brace-expansion. Они нужны, поскольку lockfile и диапазоны родительских пакетов сохраняли уязвимые версии; обновление одного Next.js не обновило sharp автоматически.
+
+Источники: [Next.js 15.5.29](https://github.com/vercel/next.js/releases/tag/v15.5.29), [Next.js image optimization advisory](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw), [sharp / librsvg advisory](https://github.com/lovell/sharp/security/advisories/GHSA-wq5f-xc86-pv6w). Остальные версии выбраны по диапазонам advisories в `npm audit`. Overrides необходимо пересматривать при следующем обновлении родительских зависимостей, а не хранить бессрочно.
+
+После обновления `npm audit --omit=dev` сообщает 0 предупреждений на дату проверки. Совместимый `npm audit fix` обновил также dev-дерево; полный аудит оставляет 14 moderate предупреждений в dev-зависимостях, без high/critical. Автоматические обновления с `--force` и потенциально несовместимые замены major-версий не применялись. Это не доказательство отсутствия неизвестных уязвимостей. Проверена нативная обработка JPEG/PNG/WebP через sharp 0.35.5: создание, уменьшение и повторное чтение. Проверки приложения и CI остаются обязательными. Production-ключи, политики доступа и данные это изменение не затрагивает.

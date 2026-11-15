@@ -35,7 +35,7 @@ export function DraftInfoForm({
               <Field label="Тип объекта" cls="c4"><select name="type" defaultValue={p.type}><Opts kind="type" keys={PROPERTY_TYPES} /></select></Field>
               <Field label="Сегмент" cls="c4"><select name="seg" defaultValue={p.seg}><Opts kind="seg" keys={SEGMENTS} /></select></Field>
               <Field label="Стадия" cls="c4"><select name="stK" defaultValue={p.stK}><Opts kind="stK" keys={STATUS_KEYS} /></select></Field>
-              <Field label="Год сдачи" cls="c4" required><input name="compY" type="number" min={1990} max={2100} defaultValue={p.compY} required /></Field>
+              <Field label="Год сдачи" cls="c4" hint="Пусто — срок неизвестен"><input name="compY" type="number" min={1990} max={2100} defaultValue={p.compY ?? ""} /></Field>
               <Field label="Срок сдачи (текстом)" cls="c4" hint="Например: Q4 2027"><input name="compQ" defaultValue={p.compQ} /></Field>
             </div>
           </section>
@@ -47,7 +47,7 @@ export function DraftInfoForm({
               <Field label="Цена за м² (текстом)" cls="c3" hint="Например: 180,000–250,000"><input name="sqmP" defaultValue={p.sqmP} /></Field>
               <Field label="Всего лотов в проекте" cls="c3"><input name="units" defaultValue={p.units} /></Field>
               <Field label="Площади лотов, м²" cls="c3" hint="Например: 35–120 sqm"><input name="unitSzM2" defaultValue={p.unitSzM2} /></Field>
-              <Field label="Мин. число спален" cls="c3"><input name="minBR" type="number" min={0} max={20} defaultValue={p.minBR} /></Field>
+              <Field label="Мин. число спален" cls="c3"><input name="minBR" type="number" min={0} max={20} defaultValue={p.minBR ?? ""} /></Field>
               <Field label="Пометка к цене" cls="c3" hint="Необязательно"><input name="pU" defaultValue={p.pU} /></Field>
             </div>
           </section>
@@ -84,7 +84,7 @@ export function DraftInfoForm({
         <p className="adm-lead">Когда карточка заполнена, отправьте её команде IE. Мы проверим данные и опубликуем. Для уже опубликованного проекта на сайте остаётся прежняя версия, пока мы не одобрим новую.</p>
         <form action={subAction} style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           <input type="hidden" name="project_id" value={projectId} />
-          <button className="adm-btn" style={{ background: "var(--gold)", color: "var(--ink)" }} disabled={submitting || readOnly}>{submitting ? "Отправляю…" : "Отправить на проверку"}</button>
+          <button className="adm-btn" disabled={submitting || readOnly}>{submitting ? "Отправляю…" : "Отправить на проверку"}</button>
           {sub.ok ? <span className="adm-msg ok">Отправлено. Мы ответим в ближайшие рабочие дни.</span> : null}
           {sub.error ? <span className="adm-msg err">{sub.error}</span> : null}
         </form>

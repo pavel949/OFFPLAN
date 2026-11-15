@@ -1,3 +1,4 @@
+import { projectPriceM } from "./buyer-display";
 import { SEGMENTS, taxLabel, zoneLabel } from "./taxonomy";
 import type { CatalogProject } from "./types";
 
@@ -6,22 +7,28 @@ import type { CatalogProject } from "./types";
  * plus explicit filters. Pure functions, no I/O; the UI keeps this state in the URL.
  */
 export type HomeFilters = {
+  view: string;
   q: string;
   zone: string;
   type: string;
   stage: string;
   budget: string;
   year: string;
+  bedrooms: string;
+  ownership: string;
   sort: string;
 };
 
 export const EMPTY_FILTERS: HomeFilters = {
+  view: "list",
   q: "",
   zone: "",
   type: "",
   stage: "",
   budget: "",
   year: "",
+  bedrooms: "",
+  ownership: "",
   sort: "rating",
 };
 
@@ -82,7 +89,8 @@ export function parseQuery(raw: string): ParsedQuery {
   return out;
 }
 
-function haystack(p: CatalogProject): string {
+export type SearchProject = Pick<CatalogProject, "id" | "n" | "dev" | "dt" | "zone" | "seg" | "type" | "tags" | "stK" | "compY" | "pN" | "sales">;
+function haystack(p: SearchProject): string {
   return norm(
     [
       p.n,
@@ -97,26 +105,29 @@ function haystack(p: CatalogProject): string {
   );
 }
 
-const STAGE_MATCH: Record<string, (p: CatalogProject) => boolean> = {
+const STAGE_MATCH: Record<string, (p: SearchProject) => boolean> = {
+  unknown: (p) => p.stK === "unknown",
   offplan: (p) => p.stK === "offplan",
   building: (p) => p.stK === "building",
   ready: (p) => p.stK === "ready",
 };
 
-export function filterProjects(all: CatalogProject[], f: HomeFilters): CatalogProject[] {
+export function filterProjects<T extends SearchProject>(all: T[], f: HomeFilters): T[] {
   const pq = parseQuery(f.q);
   const budget = f.budget ? Number(f.budget) : pq.maxPriceM;
   const type = f.type || pq.type;
   const year = f.year ? Number(f.year) : pq.year;
+  const desiredBedrooms = f.bedrooms || (pq.minBR != null ? String(pq.minBR) : "");
   const stageFn = f.stage ? STAGE_MATCH[f.stage] : undefined;
 
   const list = all.filter((p) => {
     if (f.zone && p.zone !== f.zone) return false;
     if (type && p.type !== type) return false;
     if (stageFn && !stageFn(p)) return false;
-    if (budget != null && Number.isFinite(budget) && p.pN > budget) return false;
+    const price = projectPriceM(p, f.ownership, desiredBedrooms);
+    if ((f.ownership || desiredBedrooms) && !(price > 0)) return false;
+    if (budget != null && Number.isFinite(budget) && (!(price > 0) || price > budget)) return false;
     if (year != null && p.compY !== year) return false;
-    if (pq.minBR != null && p.minBR > pq.minBR) return false;
     if (pq.terms.length) {
       const h = haystack(p);
       if (!pq.terms.every((t) => h.includes(t))) return false;
@@ -126,11 +137,13 @@ export function filterProjects(all: CatalogProject[], f: HomeFilters): CatalogPr
 
   const by = f.sort;
   return [...list].sort((a, b) => {
-    if (by === "price-asc") return a.pN - b.pN;
-    if (by === "price-desc") return b.pN - a.pN;
-    if (by === "year") return a.compY - b.compY || a.pN - b.pN;
-    // default: editorial rating, unrated (0) last
-    return (b.rat || -1) - (a.rat || -1) || a.pN - b.pN;
+    const ap=projectPriceM(a,f.ownership,desiredBedrooms),bp=projectPriceM(b,f.ownership,desiredBedrooms);
+    if ((by === "price-asc" || by === "price-desc") && (!(ap > 0) || !(bp > 0))) return Number(!(ap > 0)) - Number(!(bp > 0));
+    if (by === "price-asc") return ap - bp;
+    if (by === "price-desc") return bp - ap;
+    if (by === "year") return (a.compY ?? Infinity) - (b.compY ?? Infinity) || a.pN - b.pN;
+    // Keep the legacy URL sort key, but use a neutral catalogue order.
+    return a.id - b.id;
   });
 }
 
@@ -138,12 +151,15 @@ export function filtersFromParams(p: URLSearchParams): HomeFilters {
   const get = (k: string) => p.get(k) ?? "";
   const sort = get("sort");
   return {
+    view: get("view") === "map" ? "map" : "list",
     q: get("q"),
     zone: get("zone"),
     type: get("type"),
     stage: get("stage"),
     budget: get("budget"),
     year: get("year"),
+    bedrooms: get("bedrooms"),
+    ownership: get("ownership"),
     sort: (SORTS as readonly string[]).includes(sort) ? sort : "rating",
   };
 }
@@ -158,7 +174,7 @@ export function filtersToParams(f: HomeFilters): URLSearchParams {
 
 export function hasActiveFilters(f: HomeFilters): boolean {
   return (Object.keys(EMPTY_FILTERS) as (keyof HomeFilters)[]).some(
-    (k) => k !== "sort" && !!f[k],
+    (k) => k !== "sort" && k !== "view" && !!f[k],
   );
 }
 
@@ -166,5 +182,7 @@ export const SEGMENT_KEYS = SEGMENTS;
 
 /** "฿315M+" style price; falls back to the stored label. */
 export function priceFromLabel(p: CatalogProject): string {
+  const price = projectPriceM(p);
+  if (!(price > 0) || p.pT === "POA") return "Цена уточняется";
   return p.pT || (p.pN ? `฿${p.pN}M+` : "по запросу");
 }

@@ -11,6 +11,7 @@ export function freshnessOf(iso: string | null | undefined, now = Date.now()): F
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return "expired";
   const days = (now - t) / DAY;
+  if (days < 0) return "expired";
   if (days <= FRESH_DAYS) return "fresh";
   if (days <= EXPIRED_DAYS) return "stale";
   return "expired";

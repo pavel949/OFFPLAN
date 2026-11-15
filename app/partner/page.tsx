@@ -30,20 +30,21 @@ export default async function PartnerDashboardPage() {
       <div className="pt-hero">
         <div>
           <h1>Здравствуйте{prof.full_name ? `, ${prof.full_name.split(" ")[0]}` : ""}</h1>
-          <p>Держите данные проектов актуальными: покупатели видят только подтверждённые цены и свежие фото.</p>
+          <p>Держите данные проектов актуальными: публикуйте датированные условия и материалы с понятным источником.</p>
         </div>
         {isOwner ? <Link className="adm-btn" href="/partner/projects/new">+ Добавить проект</Link> : null}
       </div>
 
       {expired.length ? (
         <div className="pt-warn">
-          <b>Цены устарели в проектах: {expired.map((p) => p.name).join(", ")}.</b> Цены старше 30 дней скрыты в каталоге. Откройте проект, вкладку «Лоты и цены», и подтвердите актуальность.
+          <b>Нет доступных опубликованных предложений: {expired.map((p) => p.name).join(", ")}.</b> Условия могут отсутствовать, устареть или требовать проверки. Это не означает, что проект распродан. Откройте «Лоты и цены», внесите датированные условия и отправьте новую версию команде IE.
         </div>
       ) : null}
 
       <ProjectsList projects={projects} isOwner={isOwner} />
 
       <div className="pt-tiles">
+        <Link className="pt-tile" href="/partner/analytics"><b>Результаты витрины</b><span>Просмотры, интерес, заявки и отметки ответа.</span></Link>
         <Link className="pt-tile" href="/partner/leads"><b>Заявки покупателей</b><span>Кто интересуется вашими проектами и что просит.</span></Link>
         <Link className="pt-tile" href="/partner/deals"><b>Сделки и комиссии</b><span>Статус сделок по вашим проектам.</span></Link>
         <Link className="pt-tile" href="/partner/corrections"><b>Попросить исправить карточку</b><span>Если на сайте неверные данные, сообщите команде.</span></Link>

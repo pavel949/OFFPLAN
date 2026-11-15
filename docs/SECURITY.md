@@ -8,7 +8,7 @@
 - Public pages read through the **anon** client, so RLS is the real boundary for anonymous traffic.
 - RLS cannot hide columns, so the base table `catalog_projects` has **no** public policy. Anonymous (and buyer) reads go through the view `public_catalog_projects`, which never exposes `draft_payload` and neutralises `payload.rec / recText`. Child tables use `is_public_project()`. CI asserts this (`10_rls_hardening.sql`).
 - Moderation approve / reject and correction grant are single-transaction SQL functions (`moderation_approve`, `moderation_reject`, `correction_grant`), callable by `service_role` only.
-- Catalogue source: seed JSON is used only when Supabase is not configured (dev/demo). With a configured DB a failed read serves the last-known-good copy and otherwise fails (production) — the build fails rather than shipping seed data.
+- Catalogue source: seed JSON is used only when Supabase is not configured (dev/demo). In production a failed read fails the request instead of serving cached rows that may since have been unpublished.
 
 Run locally: `PGHOST=… PGUSER=postgres supabase/tests/run.sh` (scratch database, plain Postgres).
 
@@ -16,7 +16,7 @@ Run locally: `PGHOST=… PGUSER=postgres supabase/tests/run.sh` (scratch databas
 | Variable | Purpose |
 |---|---|
 | `ADMIN_SECRET` (≥16 chars) | admin panel login (rate-limited) |
-| `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | captcha on lead form (verification fails closed when the secret is set) |
+| `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | optional additional captcha; configure both keys, partial configuration fails closed |
 | `RESEND_API_KEY`, `NOTIFY_FROM`, `LEAD_NOTIFY_EMAIL` | new-lead email to the sales team |
 | `NEXT_PUBLIC_SITE_URL` | canonical URLs, sitemap, OpenGraph |
 | `NEXT_PUBLIC_LEGAL_ENTITY`, `NEXT_PUBLIC_LEGAL_EMAIL` | data controller shown on /privacy |
@@ -26,6 +26,6 @@ Run locally: `PGHOST=… PGUSER=postgres supabase/tests/run.sh` (scratch databas
 `X-OFFPLAN-Signature: sha256=HMAC_SHA256(secret, "<X-OFFPLAN-Timestamp>.<raw body>")`; reject timestamps older than 5 minutes. Only public `https` endpoints are called; 3 attempts with backoff.
 
 ## Known limits (not solved by code alone)
-- Rate limiting is per instance; add Vercel Firewall rules for `/admin`, lead form and `/api/analytics/*`.
+- Admin login and lead submission use the service-only Supabase `consume_rate_limit` RPC, shared across instances and failing closed on outages. Other endpoints still use local limits where implemented. Add Vercel Firewall rules for broader denial-of-service protection.
 - Admin is still a single shared secret (no per-user identity ⇒ audit `actor_id` is null for admin actions). Move to Supabase Auth + MFA.
 - `/privacy` is a template and must be reviewed by counsel before launch.

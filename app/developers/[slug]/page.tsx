@@ -59,7 +59,7 @@ export default async function DeveloperPage({ params }: Params) {
             <div className="ie-stat"><b>{dev.projects.length}</b><small>проектов</small></div>
             <div className="ie-stat"><b>{dev.completed}</b><small>сдано</small></div>
             <div className="ie-stat"><b>{dev.inProgress}</b><small>в работе</small></div>
-            {hasAvail ? <div className="ie-stat"><b>{availableTotal}</b><small>лотов в продаже</small></div> : null}
+            {hasAvail ? <div className="ie-stat"><b>{availableTotal}</b><small>лотов в опубликованных прайсах · неполный набор</small></div> : null}
             <div className="ie-stat"><b>L{best}</b><small>{LEVEL_TEXT[best as 0 | 1 | 2].ru}</small></div>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap" }}>

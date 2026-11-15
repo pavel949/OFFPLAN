@@ -55,6 +55,10 @@ describe("parseInventoryText", () => {
     expect(parseInventoryText(big).errors[0].message).toContain("Слишком много");
     expect(parseInventoryText("").errors).toHaveLength(1);
   });
+  it("does not invent availability when an imported status is absent",()=>{
+    const r=parseInventoryText("label,price,status\nA101,1000000,\nA102,,уточняется");
+    expect(r.errors).toEqual([]);expect(r.rows.map(r=>r.status)).toEqual(["unknown","unknown"]);
+  });
 });
 
 describe("freshness", () => {
@@ -141,9 +145,10 @@ describe("applyUnitPlan", () => {
           const rec: { patch: Record<string, unknown>; id?: unknown } = { patch };
           calls.updates.push(rec);
           const chain = {
+            select: async () => ({ error: null, data: [{ id: rec.id }] }),
             eq: (col: string, v: unknown) => {
               if (col === "id") rec.id = v;
-              return col === "project_id" ? Promise.resolve({ error: null }) : chain;
+              return chain;
             },
           };
           return chain;

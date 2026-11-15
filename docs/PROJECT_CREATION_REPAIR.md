@@ -1,0 +1,11 @@
+# Project creation: unknown facts and interrupted requests
+
+The wizard no longer guesses the district, completion year, minimum bedrooms, beach distance, investment focus, segment, rating or risk. Empty optional numeric inputs remain unknown; price uses the existing POA/zero-sentinel catalogue representation. A real zero-bedroom studio remains distinct from an unknown bedroom count. A location must be selected explicitly, including the explicit unconfirmed choice. Price labels preserve entered precision.
+
+Creation uses a server-generated UUID held stable for the lifetime of the form. The project primary key and draft slug use that ID. Repeated or concurrent requests insert at most one project. A lost insert response is reconciled by reading the same ID and organization; changed payloads are not silently overwritten. Entered form values remain controlled on validation/publication errors.
+
+Admin immediate publication remains optional and explicitly requested. It is a separate stage, not a fictitious transaction: the review record reuses the same UUID, approval is confirmed by reading project status, and errors retain the saved project's link. Rejected reviews are not automatically resubmitted or approved. A later failed stage does not delete the successfully saved draft.
+
+No production migration is required for these changes. They rely on existing primary keys and moderation/RLS rules. Eight isolated Node fixture checks cover repeat/concurrent creation, lost responses, organization boundaries, changed payloads, and review retry behavior. Schema tests cover unknown and invalid numeric input. Full CI and browser verification are separate gates.
+
+Remaining limits: reloading/opening a completely new creation form generates a new request ID; this is not content-based duplicate detection. The legacy raw-JSON creation action and on-the-fly developer/location writes are not made transactional by this increment. Browser action/reset behavior and real authenticated database transport must still be verified in an authorized test environment. Unknown locations remain unconfirmed and must not be treated as map coordinates. Saving or publishing a project does not confirm legacy prices or publish separate commercial offers.

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const text = String(body.text ?? "").slice(0, 8000);
+  const text = typeof body?.text === "string" ? body.text.slice(0, 8000) : "";
   if (!text.trim()) {
     return NextResponse.json({ error: "text required" }, { status: 400 });
   }

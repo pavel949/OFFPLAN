@@ -11,6 +11,7 @@ import {
   serviceAccount,
 } from "@/lib/drive/client";
 import { isExcel, isImportable, rankFiles, type DriveFile } from "@/lib/drive/pick";
+import { materialManifest, type DriveMaterial } from "@/lib/drive/manifest";
 import { parseDriveUrl } from "@/lib/drive/url";
 import { runUnitImport, type ImportState } from "@/lib/inventory/run";
 import { insertCatalogAuditLog } from "@/lib/marketplace/audit";
@@ -25,6 +26,7 @@ export type DriveListState = {
   error?: string;
   files?: (DriveFile & { importable: boolean; excel: boolean })[];
   serviceAccountEmail?: string | null;
+  materials?: DriveMaterial[];
 };
 
 type Ctx = {
@@ -95,6 +97,7 @@ async function list(scope: "partner" | "admin", sourceId: string): Promise<Drive
     return {
       ok: true,
       serviceAccountEmail: serviceAccount()?.client_email ?? null,
+      materials: materialManifest(files),
       files: files.map((f) => ({ ...f, importable: isImportable(f), excel: isExcel(f) })),
     };
   } catch (e) {
@@ -134,15 +137,15 @@ async function importFile(scope: "partner" | "admin", f: FormData): Promise<Impo
       actorId: ctx.userId,
     });
     if (res.ok && res.mode === "apply") {
-      // bookkeeping needs the trusted client: developers cannot write sync fields themselves
+      // Sync records ingestion, not verification. Only explicit source confirmation may
+      // update confirmed_at/confirmed_by, even when the imported file has changed.
+      // Bookkeeping needs the trusted client: developers cannot write sync fields themselves
       const admin = createServiceRoleClient();
       await admin
         .from("project_sources")
         .update({
           last_synced_at: new Date().toISOString(),
           last_sync_note: `${file.name}: +${res.applied?.inserted ?? 0} / ~${res.applied?.updated ?? 0}`.slice(0, 500),
-          confirmed_at: new Date().toISOString(),
-          confirmed_by: ctx.userId,
         })
         .eq("id", sourceId);
       void insertCatalogAuditLog({

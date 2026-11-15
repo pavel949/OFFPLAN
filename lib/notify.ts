@@ -1,3 +1,4 @@
+import { leadSalesLines } from "./leads/sales-summary";
 /**
  * Transactional email via Resend REST API. No-op (returns false) when not configured.
  * Env: RESEND_API_KEY, NOTIFY_FROM (e.g. "OFFPLAN <leads@yourdomain>"), LEAD_NOTIFY_EMAIL.
@@ -30,9 +31,13 @@ export async function notifyNewLead(lead: {
   phone: string;
   message: string;
   projectName: string | null;
+  salesSelection?:unknown;
 }): Promise<void> {
   const to = process.env.LEAD_NOTIFY_EMAIL;
-  if (!to) return;
+  if (!to) {
+    console.error("[notify] lead email is not configured; review new leads in admin", lead.id);
+    return;
+  }
   const ok = await sendEmail({
     to: to.split(",").map((s) => s.trim()).filter(Boolean),
     subject: `New lead: ${lead.name}${lead.projectName ? ` — ${lead.projectName}` : ""}`,
@@ -42,6 +47,7 @@ export async function notifyNewLead(lead: {
       `Email: ${lead.email}`,
       `Phone: ${lead.phone || "-"}`,
       `Project: ${lead.projectName ?? "-"}`,
+      ...leadSalesLines(lead.salesSelection),
       "",
       lead.message || "(no message)",
     ].join("\n"),

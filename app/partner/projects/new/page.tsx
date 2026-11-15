@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { createPartnerProjectFromWizard } from "@/app/actions/project-evidence";
 import { getRegionMeta } from "@/lib/locations";
@@ -29,7 +30,7 @@ export default async function NewProject() {
         Заполните основные сведения за 2–3 минуты. Проект сохранится как черновик: потом вы добавите
         ссылки на материалы, прайс-лист и отправите проект на проверку команде IE.
       </p>
-      <ProjectWizardForm
+      <ProjectWizardForm creationId={randomUUID()}
         action={createPartnerProjectFromWizard}
         zones={zones.length ? zones : undefined}
         developerName={org?.name_ru || org?.name_en || ""}
@@ -37,3 +38,4 @@ export default async function NewProject() {
     </div>
   );
 }
+

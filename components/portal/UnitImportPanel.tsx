@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ImportState } from "@/lib/inventory/run";
 
 const initial: ImportState = { ok: false };
@@ -21,7 +22,13 @@ export function UnitImportPanel({
   action: (prev: ImportState, fd: FormData) => Promise<ImportState>;
   operator?: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(action, initial);
+  const router = useRouter();
+  const [state, formAction, pending] = useActionState(async (previous: ImportState, fd: FormData) => {
+    const result = await action(previous, fd);
+    const wroteRows = !!result.applied && result.applied.inserted + result.applied.updated > 0;
+    if (result.mode === "apply" && (result.ok || wroteRows)) router.refresh();
+    return result;
+  }, initial);
   const [text, setText] = useState("");
   const [dirty, setDirty] = useState(false);
 
@@ -35,7 +42,7 @@ export function UnitImportPanel({
       <p className="text-sm text-[var(--muted)]">
         Скопируйте таблицу из Excel и вставьте ниже или загрузите CSV. Обязательные столбцы:{" "}
         <b>Лот</b> и <b>Цена</b>. Необязательные: Спальни, Этаж, Площадь, Валюта, Статус
-        (свободен / бронь / продан), ID. Сначала запускается проверка, ничего не записывается, пока
+        (свободен / бронь / продан / уточняется), ID. Пустой статус означает «уточняется». Сначала запускается проверка, ничего не записывается, пока
         вы не нажмёте «Применить». Лоты, которых нет в файле, не удаляются.{" "}
         <a
           className="underline"
@@ -140,11 +147,12 @@ export function UnitImportPanel({
         </div>
       ) : null}
 
-      {state.ok && state.mode === "apply" && state.applied ? (
+      {state.mode === "apply" && state.applied ? (
         <p className="text-sm text-[var(--grn)]">
-          Готово: добавлено {state.applied.inserted}, обновлено {state.applied.updated}.
+          {state.ok ? "Готово" : "Подтверждено сохранение"}: добавлено {state.applied.inserted}, обновлено {state.applied.updated}.
         </p>
       ) : null}
     </section>
   );
 }
+

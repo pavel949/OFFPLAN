@@ -3,7 +3,8 @@
 import { headers } from "next/headers";
 import { verifyCaptcha } from "@/lib/captcha";
 import { CONSENT_VERSION } from "@/lib/legal";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { serverRateLimit } from "@/lib/server-rate-limit";
+import { clientIp } from "@/lib/rate-limit";
 import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { leadSubmitSchema } from "@/lib/leads/schema";
 import {
@@ -13,6 +14,7 @@ import {
   updateLeadUnified,
 } from "@/lib/leads/unified";
 import type { LeadRecord, LeadStatus } from "@/lib/leads/types";
+import {resolveSalesSelection} from "@/lib/sales-public-query";
 
 async function assertAdmin(): Promise<boolean> {
   return getAdminSessionOk();
@@ -22,12 +24,14 @@ export type SubmitLeadState = { ok: boolean; error?: string };
 
 const ERR = {
   ru: {
+    unavailable: "Приём заявок временно недоступен. Повторите попытку позже.",
     tooMany: "Слишком много запросов. Пожалуйста, повторите попытку позже.",
     captcha: "Не удалось пройти проверку на робота. Попробуйте ещё раз.",
     invalid: "Проверьте заполнение формы и отметьте согласие на обработку данных.",
     save: "Не удалось сохранить заявку. Повторите попытку или напишите нам напрямую.",
   },
   en: {
+    unavailable: "Requests are temporarily unavailable. Please try again later.",
     tooMany: "Too many requests. Please try again later.",
     captcha: "Captcha verification failed. Please retry.",
     invalid: "Please check the form fields and tick the consent box.",
@@ -62,9 +66,8 @@ export async function submitLead(
   const loc = formData.get("locale") === "en" ? "en" : "ru";
   const E = ERR[loc];
   const ip = clientIp(await headers());
-  if (!rateLimit(`lead:ip:${ip}`, 5, 10 * 60 * 1000).ok) {
-    return { ok: false, error: E.tooMany };
-  }
+  const ipLimit = await serverRateLimit(`lead:ip:${ip}`, 5, 10 * 60 * 1000);
+  if (!ipLimit.ok) return { ok: false, error: ipLimit.unavailable ? E.unavailable : E.tooMany };
   const captchaOk = await verifyCaptcha(
     String(formData.get("cf-turnstile-response") ?? ""),
     ip,
@@ -86,6 +89,8 @@ export async function submitLead(
     message: formData.get("message"),
     projectId,
     projectName: pn === "" ? null : pn,
+    offerId: formData.get("offerId") || undefined,
+    salesRevision: formData.get("salesRevision") ? Number(formData.get("salesRevision")) : undefined,
     locale: formData.get("locale"),
     consent: formData.get("consent") === "on" ? true : undefined,
   };
@@ -97,10 +102,14 @@ export async function submitLead(
     // Field messages are Russian; English visitors get the generic English message.
     return { ok: false, error: loc === "ru" && first ? first : E.invalid };
   }
-  if (!rateLimit(`lead:email:${parsed.data.email.toLowerCase()}`, 3, 60 * 60 * 1000).ok) {
-    return { ok: false, error: E.tooMany };
-  }
+  const emailLimit = await serverRateLimit(`lead:email:${parsed.data.email.toLowerCase()}`, 3, 60 * 60 * 1000);
+  if (!emailLimit.ok) return { ok: false, error: emailLimit.unavailable ? E.unavailable : E.tooMany };
   const utm = parseUtmJson(String(formData.get("utm_json") ?? ""));
+  let selection: Awaited<ReturnType<typeof resolveSalesSelection>> | null=null;
+  if(parsed.data.offerId && parsed.data.salesRevision && parsed.data.projectId!=null) {
+    try {selection=await resolveSalesSelection(parsed.data.projectId,parsed.data.offerId,parsed.data.salesRevision);}
+    catch {return {ok:false,error:loc==="ru"?"Условия предложения изменились или юнит недоступен. Обновите страницу и выберите предложение заново.":"The offer changed or is unavailable. Refresh the page and select an offer again."};}
+  }
   try {
     await appendLeadUnified({
       name: parsed.data.name,
@@ -108,7 +117,8 @@ export async function submitLead(
       phone: parsed.data.phone ?? "",
       message: parsed.data.message ?? "",
       projectId: parsed.data.projectId ?? null,
-      projectName: parsed.data.projectName ?? null,
+      projectName: selection?.projectName ?? parsed.data.projectName ?? null,
+      ...(selection?{salesSelection:selection.offer}:{}),
       locale: parsed.data.locale,
       utm,
       consentVersion: CONSENT_VERSION,
@@ -140,7 +150,9 @@ export async function adminUpdateLead(
   if (!(await assertAdmin())) {
     return { ok: false, error: "Unauthorized" };
   }
-  const next = await updateLeadUnified(id, patch);
+  let next;
+  try { next = await updateLeadUnified(id, patch); }
+  catch { return { ok: false, error: "Не удалось сохранить изменения. Повторите попытку." }; }
   if (!next) return { ok: false, error: "Лид не найден" };
   return { ok: true };
 }
@@ -165,7 +177,9 @@ export async function updateLeadFromForm(
   if (!allowed.includes(status)) {
     return { ok: false, error: "Некорректный статус" };
   }
-  const next = await updateLeadUnified(id, { status, notes });
+  let next;
+  try { next = await updateLeadUnified(id, { status, notes }); }
+  catch { return { ok: false, error: "Не удалось сохранить изменения. Повторите попытку." }; }
   if (!next) return { ok: false, error: "Лид не найден" };
   return { ok: true };
 }

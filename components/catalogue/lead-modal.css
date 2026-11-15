@@ -217,3 +217,8 @@
 .lead-modal-consent a {
   text-decoration: underline;
 }
+
+.lead-modal { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.lead-modal-x { min-width: 36px; min-height: 36px; }
+.lead-modal-selection { margin: 12px 0; padding: 12px; border: 1px solid var(--bdr); border-radius: 8px; line-height: 1.65; overflow-wrap: anywhere; background: var(--sur2); }
+.lead-modal-btn:disabled { opacity: .65; cursor: wait; }

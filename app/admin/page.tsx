@@ -1,3 +1,5 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
+import { productionReadiness } from "@/lib/production-readiness";
 import Link from "next/link";
 import { leadStatsUnified, listLeadsUnified } from "@/lib/leads/unified";
 
@@ -10,12 +12,14 @@ const statusRu: Record<string, string> = {
 };
 
 export default async function AdminDashboardPage() {
+  if (!(await getAdminSessionOk())) return null;
   const stats = await leadStatsUnified();
   const recent = (await listLeadsUnified()).slice(0, 8);
 
   return (
     <div>
       <h1 className="serif text-2xl mb-1">Обзор</h1>
+      <section className="adm-card"><h2>С чего начать</h2><p>Изменить каталог: <Link href="/admin/projects">откройте проект</Link>. Обработать обращение: <Link href="/admin/leads">заявки клиентов</Link>.</p><p><Link href="/admin/guide">Что и где редактировать, что увидит покупатель →</Link></p></section>
       <div className="flex flex-wrap gap-3 mb-6 text-sm">
         <Link className="admin-btn py-2 px-3 no-underline" href="/admin/projects">
           Проекты каталога
@@ -28,10 +32,12 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
       <p className="text-[var(--txt2)] text-sm mb-6">
-        Лиды с сайта и статусы обработки. При Supabase — лиды в БД; иначе{" "}
-        <code>data/leads.json</code>.
+        Заявки с сайта и статусы обработки. Новые заявки требуют ответа менеджера.
       </p>
 
+      {!productionReadiness().find(c => c.id === "email")?.ready && (
+        <p role="status" className="admin-err mb-4">Уведомления по email ещё не подключены. Проверяйте новые заявки здесь вручную. <Link href="/admin/readiness">Проверить настройки</Link></p>
+      )}
       <div className="admin-stat-grid">
         <div className="admin-stat">
           <div className="admin-stat-v">{stats.total}</div>
@@ -111,3 +117,4 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
+

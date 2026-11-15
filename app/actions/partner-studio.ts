@@ -33,8 +33,8 @@ export async function partnerSaveDraftFields(projectId: string, _prev: Res, fd: 
     // Editorial fields stay as they are.
     const f = new FormData();
     for (const [k, v] of fd.entries()) f.append(k, v);
-    f.set("rat", String(existing.rat));
-    f.set("risk", String(existing.risk));
+    f.set("rat", existing.rat == null ? "" : String(existing.rat));
+    f.set("risk", existing.risk == null ? "" : String(existing.risk));
     f.set("rec", existing.rec);
     f.set("recText", existing.recText);
     const parsed = parseStudioForm(f);

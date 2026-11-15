@@ -9,9 +9,8 @@ export function SiteFooter() {
           <div>
             <h4>Ignatev Estate</h4>
             <p>
-              Платформа проверенных и надёжных новостроек Пхукета и Юго-Восточной Азии: цены, этапы
-              стройки и наличие лотов обновляются застройщиками, проверка проектов ведётся независимым
-              реестром.
+              Платформа новостроек Пхукета и Юго-Восточной Азии. Источники данных, даты обновления
+              и статус проверки указаны в карточке каждого проекта.
             </p>
             <p>
               Ignatev Estate Co., Ltd
@@ -31,6 +30,7 @@ export function SiteFooter() {
             <Link href="/market?tab=risk">Риски и due diligence</Link>
             <Link href="/market?tab=calc">Калькулятор доходности</Link>
             <Link href="/quick-assessment">Быстрая проверка проекта</Link>
+            <Link href="/services">Услуги и проверка проекта</Link>
             <Link href="/methodology">Методология ClearView</Link>
             <Link href="/market?tab=shortlist">Шорт-лист</Link>
           </div>

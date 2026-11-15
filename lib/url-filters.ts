@@ -2,6 +2,7 @@ import type { FilterState, SortKey } from "./filters";
 import { defaultFilterState } from "./filters";
 
 const SORTS: SortKey[] = [
+  "name",
   "rating",
   "comp_asc",
   "risk",

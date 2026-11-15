@@ -15,7 +15,7 @@ export default async function PartnerProjectsPage() {
   return (
     <>
       <div className="pt-hero">
-        <div><h1>Мои проекты</h1><p>Изменения в карточке проходят проверку команды IE. Цены, лоты и новости публикуются сразу, фото после быстрой проверки.</p></div>
+        <div><h1>Мои проекты</h1><p>Изменения карточки и новые версии цен проверяет команда IE. Бронь и продажа сразу скрывают предложение. Материалы и новости ведутся отдельно.</p></div>
         {isOwner ? <Link className="adm-btn" href="/partner/projects/new">+ Добавить проект</Link> : null}
       </div>
       <ProjectsList projects={await listOrgProjects(db, prof.org_id)} isOwner={isOwner} />

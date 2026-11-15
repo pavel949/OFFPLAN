@@ -6,6 +6,7 @@ export type LeadStatus =
   | "lost";
 
 export interface LeadRecord {
+  salesSelection?: import("@/lib/sales-public").PublicOffer;
   id: string;
   createdAt: string;
   updatedAt: string;

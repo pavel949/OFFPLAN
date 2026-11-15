@@ -1,7 +1,9 @@
+import { getAdminSessionOk } from "@/lib/admin-server-auth";
 import { listLeadsUnified } from "@/lib/leads/unified";
 import { LeadsTable } from "./leads-table";
 
 export default async function AdminLeadsPage() {
+  if (!(await getAdminSessionOk())) return null;
   const leads = await listLeadsUnified();
 
   return (

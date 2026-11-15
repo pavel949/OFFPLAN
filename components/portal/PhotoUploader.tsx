@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { PhotoUploadRecovery, usePhotoUploadRecovery } from "@/components/shared/PhotoUploadRecovery";
+import { LocalPhotoPreview } from "@/components/shared/LocalPhotoPreview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { submitUploadedPhotos } from "@/app/actions/project-evidence";
+import { preflightUploadedPhotos, submitUploadedPhotos } from "@/app/actions/project-evidence";
 
-type Item = { file: File; caption: string };
+import { MediaFields, mediaDetails, emptyMediaMetadata, type MediaMetadata } from "./MediaFields";
+import { photoUploadFailure } from "@/lib/photo-upload";
+type Item = { file: File; caption: string; metadata: MediaMetadata };
 const MAX = 8 * 1024 * 1024;
 
 /** Developers pick image files, add captions; files go straight to Storage, then are queued for review. */
-export function PhotoUploader({ projectId }: { projectId: string }) {
+export function PhotoUploader({ projectId, units = [] }: { projectId: string; units?: {id:string;label:string}[] }) {
   const [items, setItems] = useState<Item[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const {recovery,ready,recoveryError,saveRecovery,completeRecovery} = usePhotoUploadRecovery(projectId,"partner");
+  const active = useRef(false);
+  const [blocked, setBlocked] = useState(false);
+  const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -20,73 +28,92 @@ export function PhotoUploader({ projectId }: { projectId: string }) {
     let skipped = 0;
     for (const f of Array.from(files)) {
       if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size > MAX) skipped++;
-      else next.push({ file: f, caption: "" });
+      else next.push({ file: f, caption: "", metadata: {...emptyMediaMetadata,sort_order:items.length+next.length} });
     }
     setItems((cur) => [...cur, ...next].slice(0, 40));
     setMsg(skipped ? { ok: false, text: `Пропущено файлов: ${skipped} (нужен JPG/PNG/WebP до 8 МБ)` } : null);
   }
 
   async function send() {
-    const sb = createSupabaseBrowserClient();
-    if (!sb) return setMsg({ ok: false, text: "Нет подключения к базе" });
+    if (active.current || blocked) return;
+    if (!ready || recovery || recoveryError) return;
+    active.current = true;
     setBusy(true);
     setMsg(null);
-    const done: { path: string; caption: string }[] = [];
-    for (const it of items) {
-      const ext = it.file.type === "image/png" ? "png" : it.file.type === "image/webp" ? "webp" : "jpg";
-      const path = `${projectId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await sb.storage.from("project-photos").upload(path, it.file, {
-        contentType: it.file.type,
-        cacheControl: "31536000",
-      });
-      if (error) {
-        setBusy(false);
-        return setMsg({ ok: false, text: `Не удалось загрузить «${it.file.name}»: ${error.message}` });
+    let uploaded = 0;
+    let writing = false;
+    let phase: "upload" | "register" = "upload";
+    try {
+      const sb = createSupabaseBrowserClient();
+      if (!sb) throw new Error("Нет подключения к базе");
+      const batch = items.map(it => ({path:`${projectId}/${crypto.randomUUID()}.${it.file.type === "image/png" ? "png" : it.file.type === "image/webp" ? "webp" : "jpg"}`,caption:it.caption,details:mediaDetails(it.metadata)}));
+      const checked = await preflightUploadedPhotos({projectId,observedAt:date,items:batch});
+      if (!checked.ok) throw new Error(checked.error ?? "Проверьте материалы");
+      // Preserve paths even if a network response is lost. Never replay this batch blindly.
+      saveRecovery({projectId,observedAt:date,items:batch});
+      setUploadedPaths(batch.map(x=>x.path));
+      for (let i=0;i<items.length;i++) {
+        writing = true;
+        const {error} = await sb.storage.from("project-photos").upload(batch[i].path,items[i].file,{contentType:items[i].file.type,cacheControl:"31536000"});
+        if (error) throw new Error(error.message);
+        uploaded++;
       }
-      done.push({ path, caption: it.caption });
+      phase = "register";
+      const r = await submitUploadedPhotos({projectId,observedAt:date,items:batch});
+      if (!r.ok) throw new Error(r.error ?? "Ошибка регистрации");
+      completeRecovery();
+      setItems([]);
+      setUploadedPaths([]);
+      setMsg({ok:true,text:`Отправлено на проверку: ${r.saved}. После одобрения материалы появятся на странице проекта.`});
+    } catch(e) {
+      const reason = e instanceof Error ? e.message : "Соединение прервано";
+      if (writing) setBlocked(true);
+      setMsg({ok:false,text:writing ? photoUploadFailure(uploaded,items.length,phase,reason) : reason});
+    } finally {
+      active.current = false;
+      setBusy(false);
     }
-    const r = await submitUploadedPhotos({ projectId, observedAt: date, items: done });
-    setBusy(false);
-    if (!r.ok) return setMsg({ ok: false, text: r.error ?? "Ошибка" });
-    setItems([]);
-    setMsg({ ok: true, text: `Отправлено на проверку: ${r.saved}. После одобрения фото появятся на странице проекта.` });
   }
 
   return (
     <section className="rounded-lg border border-[var(--bdr)] p-4 space-y-3">
       <h2 className="text-sm font-bold uppercase tracking-wide">Загрузить фотографии</h2>
       <p className="text-sm text-[var(--muted)]">
-        Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз). Укажите дату съёмки: фотоотчёт показывается с датой.
-        Первое одобренное фото станет обложкой проекта.
+        Хранилище фотографий публично по ссылке сразу после загрузки; документы для проверки здесь размещать нельзя. Выберите файлы (JPG, PNG, WebP до 8 МБ, до 40 за раз). Укажите дату материала и его тип: фото, визуализация или план. Загружайте только материалы, которые вы вправе публиковать.
+        Обложку и порядок можно выбрать ниже; изменения публикуются после проверки.
       </p>
-      <input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
+      <input type="file" multiple disabled={busy || blocked || !ready || !!recovery || !!recoveryError} accept="image/jpeg,image/png,image/webp" onChange={(e) => pick(e.target.files)} className="text-sm" />
       <label className="block text-xs">
-        Дата съёмки
-        <input type="date" value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
+        Дата материала
+        <input type="date" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} value={date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} className="admin-inp" />
       </label>
       {items.length ? (
         <ul className="space-y-2">
           {items.map((it, i) => (
-            <li key={i} className="flex gap-3 items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={URL.createObjectURL(it.file)} alt="" className="w-16 h-12 object-cover rounded" />
+            <li key={i} className="space-y-3 border border-[var(--bdr)] rounded-lg p-3"><div className="flex gap-3 items-center flex-wrap">
+              <LocalPhotoPreview file={it.file} className="w-16 h-12 object-cover rounded" />
               <input
                 className="admin-inp mb-0 flex-1"
+                disabled={busy || blocked || !ready || !!recovery || !!recoveryError}
                 placeholder="Подпись: например, «Фасад, блок A»"
                 value={it.caption}
                 onChange={(e) => setItems((cur) => cur.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
               />
-              <button type="button" className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
+              <button type="button" disabled={busy || blocked || !ready || !!recovery || !!recoveryError} className="text-sm underline" onClick={() => setItems((cur) => cur.filter((_, j) => j !== i))}>
                 убрать
-              </button>
+              </button></div>
+              <MediaFields value={it.metadata} onChange={metadata=>setItems(cur=>cur.map((x,j)=>j===i?{...x,metadata}:x))} disabled={busy || blocked || !ready || !!recovery || !!recoveryError} units={units}/>
             </li>
           ))}
         </ul>
       ) : null}
-      <button type="button" className="admin-btn py-2 px-3" disabled={busy || !items.length} onClick={send}>
+      <button type="button" className="admin-btn py-2 px-3" disabled={busy || blocked || !ready || !!recovery || !!recoveryError || !items.length} onClick={send}>
         {busy ? "Загрузка…" : `Отправить на проверку${items.length ? ` (${items.length})` : ""}`}
       </button>
+      <PhotoUploadRecovery recovery={recovery} mode="partner" error={recoveryError} busy={busy} onResolved={()=>{completeRecovery();setItems([]);setBlocked(false);setUploadedPaths([]);}}/>
+      {blocked && uploadedPaths.length ? <details><summary>Пути файлов для проверки</summary><ul>{uploadedPaths.map(path=><li key={path}>{path}</li>)}</ul></details> : null}
       {msg ? <p role="status" className={msg.ok ? "text-sm text-[var(--grn)]" : "text-sm text-[var(--red)]"}>{msg.text}</p> : null}
     </section>
   );
 }
+

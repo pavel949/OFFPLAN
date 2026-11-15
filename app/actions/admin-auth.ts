@@ -8,7 +8,8 @@ import {
   safeEqual,
   signAdminToken,
 } from "@/lib/admin-session";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { serverRateLimit } from "@/lib/server-rate-limit";
+import { clientIp } from "@/lib/rate-limit";
 
 export async function loginAdmin(
   _prev: { ok?: boolean; error?: string } | undefined,
@@ -21,13 +22,13 @@ export async function loginAdmin(
   if (process.env.NODE_ENV === "production" && secret.length < 16) {
     return { ok: false, error: "ADMIN_SECRET слишком короткий (минимум 16 символов)" };
   }
-  // 5 attempts / 15 min per IP (best effort; add a WAF rule for the real limit).
+  // 5 attempts / 15 min per IP across all application instances.
   const ip = clientIp(await headers());
-  const rl = rateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000);
+  const rl = await serverRateLimit(`admin-login:${ip}`, 5, 15 * 60 * 1000);
   if (!rl.ok) {
     return {
       ok: false,
-      error: `Слишком много попыток. Повторите через ${Math.ceil(rl.retryAfterMs / 60000)} мин.`,
+      error: rl.unavailable ? "Вход временно недоступен. Повторите позже." : `Слишком много попыток. Повторите через ${Math.ceil(rl.retryAfterMs / 60000)} мин.`,
     };
   }
   const password = String(formData.get("password") ?? "");

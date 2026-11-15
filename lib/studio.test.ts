@@ -15,6 +15,16 @@ function fieldsOf(p: typeof base, over: Record<string, unknown> = {}) {
 }
 
 describe("studio", () => {
+  it("preserves blank unknown numbers through an unrelated editor save", () => {
+    const unknown = { ...base, compY: null, compQ: "", minBR: null, rat: null, risk: null };
+    const fields = fieldsOf(unknown, { compY: "", minBR: "", rat: "", risk: "" });
+    const merged = mergeStudioFields(unknown, fields, { dev: base.dev, dt: base.dt, zone: base.zone });
+    expect(merged.compY).toBeNull();
+    expect(merged.compQ).toBe("");
+    expect(merged.minBR).toBeNull();
+    expect(merged.rat).toBeNull();
+    expect(merged.risk).toBeNull();
+  });
   it("round-trips an untouched project without changing it", () => {
     const merged = mergeStudioFields(base, fieldsOf(base), { dev: base.dev, dt: base.dt, zone: base.zone });
     expect(merged).toEqual(base);

@@ -1,8 +1,11 @@
 "use client";
+import { usePublicationExpired } from "./usePublicationExpired";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { toMapProject } from "@/lib/project-map";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BUDGET_STEPS,
   EMPTY_FILTERS,
@@ -15,22 +18,26 @@ import {
 import type { HomeFeed } from "@/lib/home-feed";
 import { taxLabel, zoneLabel } from "@/lib/taxonomy";
 import type { CatalogProject } from "@/lib/types";
+import { DiscoveryHero } from "@/components/ui/DiscoveryHero";
+import { projectSlug } from "@/lib/slug";
+import { projectSelectionSearch } from "@/lib/unit-selection";
 import { ProjectTile } from "./ProjectTile";
-import { OmbudsmanLogo } from "./OmbudsmanLogo";
+const ProjectMapPanel = dynamic(()=>import("./ProjectMapPanel").then(m=>m.ProjectMapPanel),{ssr:false,loading:()=> <p role="status">Загружаем карту проектов…</p>});
 
 const STAGES: [string, string][] = [
   ["", "Все"],
   ["offplan", "Старт продаж"],
   ["building", "Строится"],
-  ["ready", "Сдан"],
+  ["ready", "Построенные"],
+  ["unknown", "Стадия уточняется"],
 ];
 
 const QUICK = [
   "вилла до 30 млн",
   "кондо у пляжа",
   "2 спальни 2027",
-  "Layan",
-  "Bang Tao",
+  "Лаян",
+  "Банг-Тао",
   "сдан",
 ];
 
@@ -60,68 +67,88 @@ function Select({
 export function HomeExperience({
   projects,
   feed,
-  stats,
 }: {
   projects: CatalogProject[];
   feed: HomeFeed;
-  stats: { projects: number; developers: number; verified: number; updatedLabel: string };
 }) {
+  const expiry = Object.values(feed.availability).map(v=>v.expiresAt).filter(v=>Date.parse(v)>Date.now()).sort()[0];
+  const expired = usePublicationExpired(expiry);
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const filters = useMemo(() => filtersFromParams(new URLSearchParams(sp.toString())), [sp]);
+  const pendingFilters = useRef<HomeFilters | null>(null);
+  useEffect(()=>{if(pendingFilters.current && filtersToParams(pendingFilters.current).toString()===sp.toString()) pendingFilters.current=null;},[sp]);
+  useEffect(()=>{const clear=()=>{pendingFilters.current=null;};window.addEventListener("popstate",clear);return()=>window.removeEventListener("popstate",clear);},[]);
   const [draft, setDraft] = useState(filters.q);
-  const [limit, setLimit] = useState(24);
+  useEffect(()=>setDraft(filters.q),[filters.q]);
+  const initialLimit = hasActiveFilters(filters) ? 24 : 6;
+  const [showDiscovery] = useState(() => !hasActiveFilters(filters) && filters.view !== "map");
+  const [limit, setLimit] = useState(initialLimit);
+  const [moreFilters, setMoreFilters] = useState<boolean | null>(null);
+  const advancedCount = [filters.bedrooms, filters.ownership, filters.year].filter(Boolean).length;
+  const advancedOpen = moreFilters ?? advancedCount > 0;
   const filterKey = sp.toString();
-  useEffect(() => setLimit(24), [filterKey]);
+  useEffect(() => setLimit(initialLimit), [filterKey, initialLimit]);
 
   const apply = useCallback(
     (next: HomeFilters) => {
+      pendingFilters.current = next;
       const qs = filtersToParams(next).toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname],
   );
-  const set = (k: keyof HomeFilters) => (v: string) => apply({ ...filters, [k]: v });
+  const set = (k: keyof HomeFilters) => (v: string) => apply({ ...(pendingFilters.current ?? filters), [k]: v });
 
   const zones = useMemo(() => [...new Set(projects.map((p) => p.zone))].sort(), [projects]);
-  const years = useMemo(() => [...new Set(projects.map((p) => p.compY))].sort(), [projects]);
-  const list = useMemo(() => filterProjects(projects, filters), [projects, filters]);
+  const years = useMemo(() => [...new Set(projects.map((p) => p.compY).filter((y): y is number => y != null))].sort(), [projects]);
+  const list = useMemo(()=>{void expired;return filterProjects(projects, filters);},[projects,filters,expired]);
+  const mapProjects = useMemo(()=>filters.view==="map" ? list.map(toMapProject) : [],[list,filters.view]);
+  void expired; // The publication clock also re-evaluates budget filtering at expiry.
   const active = hasActiveFilters(filters);
+  const featured = projects.find(p => feed.covers[p.id]);
   // Stage tab counts reflect every other active filter, so the numbers always add up.
-  const stageCounts = useMemo(() => {
+  const stageCounts = (() => {
     const base = filterProjects(projects, { ...filters, stage: "" });
     return {
       "": base.length,
       offplan: base.filter((p) => p.stK === "offplan").length,
       building: base.filter((p) => p.stK === "building").length,
       ready: base.filter((p) => p.stK === "ready").length,
+      unknown: base.filter((p) => p.stK === "unknown").length,
     } as Record<string, number>;
-  }, [projects, filters]);
+  })();
 
   return (
     <>
-      <section className="ie-hero" aria-labelledby="ie-h1">
-        <div className="ie-hero-sweep" />
-        <div className="ie-horizon" />
+      {featured && showDiscovery ? <div className="ui-discovery-wrap"><DiscoveryHero image={feed.covers[featured.id].url} projectName={featured.n} href={`/project/${projectSlug(featured)}`} render={feed.covers[featured.id].render === true} location={zoneLabel(featured.zone, "ru")} /></div> : null}
+      <section id="home-search" className="ie-hero ie-catalogue-hero" aria-labelledby="ie-h1">
         <div className="ie-wrap">
           <div className="ie-hero-copy">
-            <div className="ie-eyebrow">Пхукет · Юго-Восточная Азия · {stats.updatedLabel}</div>
+            <div className="ie-eyebrow">Пхукет · Каталог новостроек</div>
             <h1 id="ie-h1">
-              Новостройки, которым можно <em>доверять</em>
+              Новостройки Пхукета
             </h1>
             <p className="ie-hero-sub">
-              Живые прайс-листы, наличие лотов и фотоотчёты со строек: всё от застройщиков, под контролем независимого реестра проверки.
+              Выберите район, тип недвижимости и бюджет. В карточке проекта указаны застройщик, условия предложения, источники и статус проверки.
             </p>
           </div>
+
+          <nav className="ui-destinations" aria-label="Страны и направления">
+            <a href="#home-search" aria-current="location">Таиланд · Пхукет</a>
+            <Link href="/countries/thailand#locations">Другие регионы Таиланда</Link>
+            <Link href="/countries/vietnam">Вьетнам <small>Раздел готовится</small></Link>
+          </nav>
+          <p className="ui-coverage-note">В этом каталоге представлены Пхукет и соседние районы. Бангкок, Паттайя и Хуахин доступны в разделе о Таиланде; наличие проектов указано на странице региона. Каталог Вьетнама готовится.</p>
 
           <form
             className="ie-search"
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
-              apply({ ...filters, q: draft.trim() });
-              document.getElementById("ie-results")?.scrollIntoView({ behavior: "smooth" });
+              apply({ ...(pendingFilters.current ?? filters), q: draft.trim() });
+              document.getElementById("ie-results")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
             }}
           >
             <div className="ie-search-row">
@@ -142,7 +169,7 @@ export function HomeExperience({
                 Найти
               </button>
             </div>
-            <div className="ie-filters">
+            <div className="ie-filters ie-filters--primary">
               <Select id="f-zone" label="Район" value={filters.zone} onChange={set("zone")}>
                 <option value="">Все районы</option>
                 {zones.map((z) => (
@@ -167,6 +194,17 @@ export function HomeExperience({
                   </option>
                 ))}
               </Select>
+              <button type="button" className="ie-more-filters" aria-expanded={advancedOpen} aria-controls="ie-advanced-filters" onClick={() => setMoreFilters(!advancedOpen)}>
+                {advancedCount ? `Дополнительно · ${advancedCount}` : advancedOpen ? "Меньше фильтров −" : "Ещё фильтры +"}
+              </button>
+            </div>
+            <div className="ie-filters ie-filters--advanced" id="ie-advanced-filters" hidden={!advancedOpen}>
+              <Select id="f-bedrooms" label="Спальни в прайсе" value={filters.bedrooms} onChange={set("bedrooms")}>
+                <option value="">Любые</option>{[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n===0?"Студия":`${n} спал.`}</option>)}
+              </Select>
+              <Select id="f-ownership" label="Владение в прайсе" value={filters.ownership} onChange={set("ownership")}>
+                <option value="">Любое</option><option value="leasehold">Leasehold</option><option value="freehold">Freehold</option>
+              </Select>
               <Select id="f-year" label="Сдача" value={filters.year} onChange={set("year")}>
                 <option value="">Любой год</option>
                 {years.map((y) => (
@@ -176,6 +214,7 @@ export function HomeExperience({
                 ))}
               </Select>
             </div>
+            <p className="ie-filter-help">Бюджет в ฿, только по актуальным опубликованным ценам. {advancedOpen ? "Спальни и владение — по предложениям прайса. " : ""}Проекты без подтверждённых условий не входят в результаты этих фильтров.</p>
             <div className="ie-hints">
               <span>Попробуйте:</span>
               {QUICK.map((q) => (
@@ -196,40 +235,32 @@ export function HomeExperience({
         </div>
       </section>
 
-      <div className="ie-strip">
-        <div className="ie-wrap">
-          <Link href="/protection/representative" className="ie-strip-cred" aria-label="Официальный статус: общественный представитель Уполномоченного в Таиланде">
-            <OmbudsmanLogo height={38} />
-            <em>Общественный представитель в Таиланде · приказ № 320-П</em>
-          </Link>
-          <span>Смотрите и выбирайте проекты здесь. Если нужно уточнить детали или возник конфликт с застройщиком:</span>
-          <Link href="/protection">Защита прав инвесторов →</Link>
-          <Link href="/protection/contact">Обратиться за помощью</Link>
-        </div>
-      </div>
-
-      <section className="ie-section" id="ie-results" aria-live="polite">
+      <section className="ie-section" id="ie-results">
         <div className="ie-wrap">
           <div className="ie-toolbar">
             <div className="ie-tabs" role="tablist" aria-label="Стадия проекта">
-              {STAGES.map(([k, label]) => (
+              {STAGES.filter(([k]) => k !== "unknown" || stageCounts.unknown > 0).map(([k, label]) => (
                 <button
                   key={k || "all"}
                   type="button"
                   role="tab"
                   aria-selected={filters.stage === k}
                   className={`ie-tab${filters.stage === k ? " is-on" : ""}`}
-                  onClick={() => apply({ ...filters, stage: k })}
+                  onClick={() => apply({ ...(pendingFilters.current ?? filters), stage: k })}
                 >
                   {label} <i>{stageCounts[k]}</i>
                 </button>
               ))}
             </div>
             <div className="ie-toolbar-right">
+              <div className="ie-map-mode" role="group" aria-label="Представление каталога">
+                <button type="button" aria-pressed={filters.view!=="map"} onClick={()=>set("view")("list")}>Список</button>
+                <button type="button" aria-pressed={filters.view==="map"} onClick={()=>set("view")("map")}>Карта</button>
+              </div>
               <label className="ie-sort">
                 <span>Порядок</span>
                 <select value={filters.sort} onChange={(e) => set("sort")(e.target.value)} aria-label="Порядок сортировки">
-                  <option value="rating">Рекомендуем</option>
+                  <option value="rating">Порядок каталога</option>
                   <option value="price-asc">Сначала дешевле</option>
                   <option value="price-desc">Сначала дороже</option>
                   <option value="year">Скорее сдача</option>
@@ -237,7 +268,7 @@ export function HomeExperience({
               </label>
             </div>
           </div>
-          <div className="ie-resultbar">
+          <div className="ie-resultbar" role="status" aria-live="polite" aria-atomic="true">
             <div>
               <b>{list.length}</b>{" "}
               <span style={{ color: "var(--ie-muted)", fontSize: 14 }}>
@@ -250,37 +281,39 @@ export function HomeExperience({
                 className="ie-btn ie-btn--line"
                 onClick={() => {
                   setDraft("");
-                  apply(EMPTY_FILTERS);
+                  apply({...EMPTY_FILTERS,view:filters.view});
                 }}
               >
                 Сбросить фильтры
               </button>
             ) : null}
           </div>
-          {list.length ? (
+          {list.some(p=>p.stK==="ready" && p.compY!=null && p.compY<new Date().getFullYear()-5) ? <p className="ie-small">Здесь также есть ранее построенные проекты для изучения истории застройщиков. Год постройки не означает, что в проекте сейчас продаются юниты. Для новых строек выберите соответствующую стадию.</p> : null}
+          {filters.view === "map" ? <ProjectMapPanel selectionSearch={projectSelectionSearch(filters)} projects={mapProjects} onZoneChange={zone=>set("zone")(zone)} /> : null}
+          {list.length && filters.view !== "map" ? (
             <div className="ie-grid">
               {list.slice(0, limit).map((p) => (
-                <ProjectTile key={p.id} p={p} feed={feed} />
+                <ProjectTile key={p.id} p={p} feed={feed} selectionSearch={projectSelectionSearch(filters)} />
               ))}
             </div>
           ) : null}
-          {list.length > limit ? (
+          {list.length > limit && filters.view !== "map" ? (
             <div style={{ textAlign: "center", marginTop: 28 }}>
               <button type="button" className="ie-btn ie-btn--ink" onClick={() => setLimit((n) => n + 24)}>
-                Показать ещё ({list.length - limit})
+                Показать ещё проекты · осталось {list.length - limit}
               </button>
             </div>
           ) : null}
           {list.length === 0 ? (
             <div className="ie-empty">
-              <h3>Ничего не нашлось</h3>
-              <p>Попробуйте убрать часть условий или расширить бюджет.</p>
+              <h3>Проекты по выбранным условиям не найдены</h3>
+              <p>{filters.budget || filters.ownership || filters.bedrooms ? "Нет опубликованных предложений с подтверждёнными условиями под этот запрос. У части проектов цены или параметры пока неизвестны; это не означает, что они дороже бюджета или распроданы. Уберите ограничение, чтобы посмотреть их отдельно." : "Попробуйте другое название, район или снимите часть условий."}</p>
               <button
                 type="button"
                 className="ie-btn ie-btn--ink"
                 onClick={() => {
                   setDraft("");
-                  apply(EMPTY_FILTERS);
+                  apply({...EMPTY_FILTERS,view:filters.view});
                 }}
               >
                 Показать все проекты
@@ -288,7 +321,7 @@ export function HomeExperience({
               <p style={{ marginTop: 16 }}>
                 Не нашли подходящий?{" "}
                 <Link href="/market" style={{ textDecoration: "underline" }}>
-                  Откройте расширенный каталог с аналитикой
+                  Посмотрите весь каталог
                 </Link>
               </p>
             </div>
@@ -296,37 +329,6 @@ export function HomeExperience({
         </div>
       </section>
 
-      <section className="ie-trustband" aria-label="О каталоге">
-        <div className="ie-wrap">
-          <div className="ie-trust">
-            <div>
-              <b>{stats.projects}</b>
-              <small>проектов в каталоге</small>
-            </div>
-            <div>
-              <b>{stats.developers}</b>
-              <small>застройщиков с досье</small>
-            </div>
-            <div>
-              {stats.verified > 0 ? (
-                <>
-                  <b>{stats.verified}</b>
-                  <small>проектов прошли проверку реестра</small>
-                </>
-              ) : (
-                <>
-                  <b>3 уровня</b>
-                  <small>проверки: заявлено, документы, независимая проверка</small>
-                </>
-              )}
-            </div>
-            <div>
-              <b>30 дней</b>
-              <small>цены без подтверждения старше этого срока скрываются</small>
-            </div>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

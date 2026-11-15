@@ -8,7 +8,8 @@ export async function verifyCaptcha(
   ip?: string,
 ): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
+  // A partial configuration is a deployment error, not permission to bypass CAPTCHA.
+  if (!secret) return !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   if (!token) return false;
   try {
     const body = new URLSearchParams({ secret, response: token });

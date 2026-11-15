@@ -11,7 +11,7 @@ import { Bars } from "./Bars";
 
 type Row = Pick<CatalogProject, "id" | "n" | "dev" | "dt" | "zone" | "type" | "stK" | "pN" | "pT" | "sqmP" | "units" | "yN" | "compY" | "compQ"> & { slug: string; locRu: string; href: string };
 
-const STAGE = { offplan: "Старт продаж", building: "Строится", ready: "Сдан" } as const;
+const STAGE = {unknown:"Стадия не подтверждена", offplan: "Старт продаж", building: "Строится", ready: "Сдан" } as const;
 const FILTERS = ["loc", "type", "stage", "dev", "year"] as const;
 type FKey = (typeof FILTERS)[number];
 
@@ -51,12 +51,12 @@ export function AnalyticsExplorer({ rows, locNames }: { rows: Row[]; locNames: R
 
   const locOpts = useMemo(() => [...new Map(rows.map((r) => [r.slug, r.locRu])).entries()].sort((a, b) => a[1].localeCompare(b[1], "ru")), [rows]);
   const devOpts = useMemo(() => [...new Map(rows.map((r) => [developerSlug(r.dt), r.dev])).entries()].sort((a, b) => a[1].localeCompare(b[1])), [rows]);
-  const years = useMemo(() => [...new Set(rows.map((r) => r.compY))].sort(), [rows]);
+  const years = useMemo(() => [...new Set(rows.map((r) => r.compY).filter((y): y is number => y != null))].sort(), [rows]);
   const active = FILTERS.some((k) => f[k]);
 
   const sorted = useMemo(() => {
     const val = (r: Row): string | number =>
-      sort.k === "n" ? r.n.toLowerCase() : sort.k === "loc" ? r.locRu : sort.k === "dev" ? r.dev.toLowerCase() : sort.k === "price" ? r.pN || Infinity : sort.k === "yield" ? r.yN : sort.k === "year" ? r.compY : sort.k === "sqm" ? parseSqmPrice(r.sqmP) ?? -1 : sort.k === "units" ? parseUnits(r.units) ?? -1 : 0;
+      sort.k === "n" ? r.n.toLowerCase() : sort.k === "loc" ? r.locRu : sort.k === "dev" ? r.dev.toLowerCase() : sort.k === "price" ? r.pN || Infinity : sort.k === "yield" ? r.yN : sort.k === "year" ? r.compY ?? Infinity : sort.k === "sqm" ? parseSqmPrice(r.sqmP) ?? -1 : sort.k === "units" ? parseUnits(r.units) ?? -1 : 0;
     return [...list].sort((a, b) => {
       const x = val(a), y = val(b);
       return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
@@ -75,7 +75,7 @@ export function AnalyticsExplorer({ rows, locNames }: { rows: Row[]; locNames: R
   const exportCsv = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const head = ["Проект", "Локация", "Застройщик", "Тип", "Стадия", "Цена от, млн THB", "Цена за м², THB", "Лотов", "Доходность %", "Сдача"];
-    const body = sorted.map((r) => [r.n, r.locRu, r.dev, TYPE_RU[r.type] ?? r.type, STAGE[r.stK as keyof typeof STAGE] ?? r.stK, r.pN || "", parseSqmPrice(r.sqmP) ?? "", parseUnits(r.units) ?? "", r.yN || "", r.compQ || r.compY]);
+    const body = sorted.map((r) => [r.n, r.locRu, r.dev, TYPE_RU[r.type] ?? r.type, STAGE[r.stK as keyof typeof STAGE] ?? r.stK, r.pN || "", parseSqmPrice(r.sqmP) ?? "", parseUnits(r.units) ?? "", r.yN || "", r.compQ || r.compY || ""]);
     const csv = "﻿" + [head, ...body].map((l) => l.map(esc).join(";")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -112,7 +112,7 @@ export function AnalyticsExplorer({ rows, locNames }: { rows: Row[]; locNames: R
       </div>
 
       <div className="ie-kpis" aria-live="polite">
-        <div className="ie-kpi"><small>Проектов</small><b>{s.projects}</b><span>{s.stage.ready} сдано · {s.stage.building} строится · {s.stage.offplan} старт</span></div>
+        <div className="ie-kpi"><small>Проектов</small><b>{s.projects}</b><span>{s.stage.ready} сдано · {s.stage.building} строится · {s.stage.offplan} старт · {s.stage.unknown} стадия уточняется</span></div>
         <div className="ie-kpi"><small>Локаций</small><b>{s.locations}</b><span>в выборке</span></div>
         <div className="ie-kpi"><small>Застройщиков</small><b>{s.developers}</b><span>в выборке</span></div>
         <div className="ie-kpi"><small>Медиана цены</small><b>{fmtM(s.price.median)}</b><span>от {fmtM(s.price.min)} до {fmtM(s.price.max)} (n={s.price.n})</span></div>
@@ -176,7 +176,7 @@ export function AnalyticsExplorer({ rows, locNames }: { rows: Row[]; locNames: R
                   <td>{parseSqmPrice(r.sqmP) ? fmtInt(parseSqmPrice(r.sqmP)) : "—"}</td>
                   <td>{parseUnits(r.units) ?? "—"}</td>
                   <td>{r.yN ? fmtPct(r.yN) : "—"}</td>
-                  <td>{r.compQ && r.compQ !== String(r.compY) ? r.compQ : r.compY}</td>
+                  <td>{r.compQ && r.compQ !== String(r.compY) ? r.compQ : r.compY ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

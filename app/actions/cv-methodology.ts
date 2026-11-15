@@ -51,7 +51,8 @@ export async function cvGetVersion(id: string): Promise<{ row: VersionRow; confi
 export async function cvCreateDraft(): Promise<Res & { id?: string }> {
   try {
     const db = await admin();
-    const { data: all } = await db.from("cv_methodology_versions").select("id, version, status, config").eq("jurisdiction_code", "TH");
+    const { data: all, error: listError } = await db.from("cv_methodology_versions").select("id, version, status, config").eq("jurisdiction_code", "TH");
+    if (listError) return { ok: false, error: listError.message };
     const pub = (all ?? []).find((r) => r.status === "published");
     const config: CvConfig = pub && isCvConfig(pub.config) ? pub.config : CLEARVIEW_V22;
     const version = nextVersion((all ?? []).map((r) => r.version as string));
@@ -69,11 +70,11 @@ export async function cvCreateDraft(): Promise<Res & { id?: string }> {
 export async function cvSaveDraft(id: string, config: CvConfig): Promise<Res & { errors?: string[]; warnings?: string[] }> {
   try {
     const db = await admin();
-    if (!isCvConfig(config)) return { ok: false, error: "Некорректная структура методологии" };
-    if (JSON.stringify(config).length > 400_000) return { ok: false, error: "Слишком большой объём" };
+    if (!isCvConfig(config) || typeof config.title !== "string" || JSON.stringify(config).length > 400_000) return { ok: false, error: "Некорректная структура методологии" };
     const v = validateConfig(config);
-    const { error } = await db.from("cv_methodology_versions").update({ config, title: config.title.slice(0, 200) }).eq("id", id).eq("status", "draft");
-    if (error) return { ok: false, error: error.message };
+    const { data, error } = await db.from("cv_methodology_versions").update({ config, title: config.title.slice(0, 200) })
+      .eq("id", id).eq("jurisdiction_code", "TH").eq("version", config.version).eq("status", "draft").select("id").maybeSingle();
+    if (error || !data) return { ok: false, error: error?.message ?? "Черновик больше недоступен" };
     return { ok: true, errors: v.errors, warnings: v.warnings };
   } catch (e) {
     return { ok: false, error: msg(e) };
@@ -83,8 +84,9 @@ export async function cvSaveDraft(id: string, config: CvConfig): Promise<Res & {
 export async function cvDeleteDraft(id: string): Promise<Res> {
   try {
     const db = await admin();
-    const { error } = await db.from("cv_methodology_versions").delete().eq("id", id).eq("status", "draft");
-    if (error) return { ok: false, error: error.message };
+    const { data, error } = await db.from("cv_methodology_versions").delete()
+      .eq("id", id).eq("jurisdiction_code", "TH").eq("status", "draft").select("id").maybeSingle();
+    if (error || !data) return { ok: false, error: error?.message ?? "Черновик больше недоступен" };
     revalidatePath("/owner/methodology");
     return { ok: true };
   } catch (e) {
@@ -95,12 +97,10 @@ export async function cvDeleteDraft(id: string): Promise<Res> {
 export async function cvSubmit(id: string, config: CvConfig, summary: string): Promise<Res> {
   try {
     const db = await admin();
-    if (!isCvConfig(config)) return { ok: false, error: "Некорректная структура методологии" };
+    if (!isCvConfig(config) || typeof config.title !== "string" || JSON.stringify(config).length > 400_000) return { ok: false, error: "Некорректная структура методологии" };
     const v = validateConfig(config);
     if (!v.ok) return { ok: false, error: `Исправьте ошибки: ${v.errors[0]}` };
-    const saved = await db.from("cv_methodology_versions").update({ config, title: config.title.slice(0, 200) }).eq("id", id).eq("status", "draft");
-    if (saved.error) return { ok: false, error: saved.error.message };
-    const { error } = await db.rpc("cv_submit_for_review", { p_id: id, p_summary: summary });
+    const { error } = await db.rpc("cv_submit_for_review", { p_id: id, p_summary: summary, p_config: config });
     if (error) return { ok: false, error: error.message };
     revalidatePath("/owner/methodology");
     revalidatePath("/registry/methodology");
@@ -119,17 +119,17 @@ export async function cvPublishNow(id: string, config: CvConfig, summary: string
     const owner = await requireOwner();
     if (!hasSupabaseServiceConfig()) return { ok: false, error: "Не задан SUPABASE_SERVICE_ROLE_KEY" };
     const db = createServiceRoleClient();
-    if (!isCvConfig(config)) return { ok: false, error: "Некорректная структура методологии" };
+    if (!isCvConfig(config) || typeof config.title !== "string" || JSON.stringify(config).length > 400_000) return { ok: false, error: "Некорректная структура методологии" };
     const v = validateConfig(config);
     if (!v.ok) return { ok: false, error: `Исправьте ошибки: ${v.errors[0]}` };
-    if (summary.trim().length < 20) return { ok: false, error: "Опишите изменение (20+ символов): оно станет публичным" };
-    const saved = await db.from("cv_methodology_versions").update({ config, title: config.title.slice(0, 200) }).eq("id", id).in("status", ["draft"]);
-    if (saved.error) return { ok: false, error: saved.error.message };
-    const { error } = await db.rpc("cv_owner_publish", { p_id: id, p_email: owner.email, p_summary: summary.trim() });
+    if (typeof summary !== "string" || summary.trim().length < 20 || summary.trim().length > 4000) {
+      return { ok: false, error: "Опишите изменение (20–4000 символов): оно станет публичным" };
+    }
+    const { error } = await db.rpc("cv_owner_publish", { p_id: id, p_owner_id: owner.id, p_config: config, p_summary: summary });
     if (error) return { ok: false, error: error.message };
     revalidatePath("/owner/methodology");
     revalidatePath("/methodology");
-    revalidatePath("/quick-assessment");
+    revalidatePath("/registry/methodology");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: msg(e) };

@@ -38,7 +38,7 @@ describe("summarize / groupBy", () => {
     expect(s.price).toMatchObject({ min: 5, max: 15, median: 10, n: 2 });
     expect(s.units).toEqual({ total: 110, coveredProjects: 2 });
     expect(s.yield).toMatchObject({ avg: 6, n: 2 });
-    expect(s.stage).toEqual({ offplan: 1, building: 1, ready: 1 });
+    expect(s.stage).toEqual({ offplan: 1, building: 1, ready: 1, unknown: 0 });
     expect(s.byType).toEqual({ villa: 1, condo: 2 });
     expect(s.byYear.map((y) => y.year)).toEqual([2025, 2027, 2028]);
     expect(s.buckets.find((b) => b.key === "lt5")?.projects).toBe(1);

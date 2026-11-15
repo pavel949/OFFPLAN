@@ -3,6 +3,15 @@ import rawProjects from "@/data/seed/projects.json";
 import { catalogProjectsSchema, catalogProjectSchema, parseCatalogRows } from "./schema";
 
 describe("catalogue schema", () => {
+  it("accepts explicit unknowns without inventing completion, bedrooms or risk", () => {
+    const row = { ...rawProjects[0], compY: null, minBR: null, rat: null, risk: null,
+      seg: "unknown", type: "unknown", stK: "unknown", beach: "unknown", own: "unknown", mgmt: "unknown", focus: "unknown" };
+    const parsed = parseCatalogRows([row]);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].compY).toBeNull();
+    expect(parsed[0].minBR).toBeNull();
+    expect(parsed[0].risk).toBeNull();
+  });
   it("accepts every seed project (taxonomy drift guard)", () => {
     const r = catalogProjectsSchema.safeParse(rawProjects);
     if (!r.success) {

@@ -219,6 +219,7 @@ export async function adminListProjectDocuments(
     .from("project_documents")
     .select("id, kind, title, storage_path, mime, file_size, notes, created_at")
     .eq("project_id", projectId)
+    .not("storage_path", "like", "%/price-monitor/%")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as ProjectDocRow[];
@@ -280,18 +281,24 @@ export async function adminDeleteProjectDocument(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const supabase = await requireAdmin();
-    const { data: row } = await supabase
+    const { data: row, error: lookupError } = await supabase
       .from("project_documents")
       .select("storage_path")
       .eq("id", docId)
+      .eq("project_id", projectId)
       .maybeSingle();
-    if (row?.storage_path) {
+    if (lookupError) throw lookupError;
+    if (!row || row.storage_path.includes("/price-monitor/")) {
+      return { ok: false, error: "Документ не найден или относится к архиву прайсов." };
+    }
+    if (row.storage_path) {
       await supabase.storage.from("project-docs").remove([row.storage_path]);
     }
     const { error } = await supabase
       .from("project_documents")
       .delete()
-      .eq("id", docId);
+      .eq("id", docId)
+      .eq("project_id", projectId);
     if (error) return { ok: false, error: error.message };
     revalidatePath(`/admin/projects/${projectId}`);
     return { ok: true };
@@ -380,16 +387,22 @@ export async function adminImportProjectUnits(
     const mode = formData.get("mode") === "apply" ? "apply" : "preview";
     if (!projectId) return { ok: false, error: "Нет project_id" };
     const res = await runUnitImport({ db, projectId, text, mode, source: "operator", actorId: null });
-    if (res.ok && res.mode === "apply") {
+    const wroteRows = !!res.applied && res.applied.inserted + res.applied.updated > 0;
+    if (res.mode === "apply" && (res.ok || wroteRows)) {
+      // A partially failed import can still have committed rows. Refresh the
+      // active editor as well as the legacy inventory route in either case.
+      revalidatePath("/");
+      revalidatePath("/admin/projects");
+      revalidatePath(`/admin/projects/${projectId}`);
+      revalidatePath(`/admin/projects/${projectId}/inventory`);
+      revalidatePath("/project", "layout");
       await insertCatalogAuditLog({
         entity_type: "unit",
         entity_id: projectId,
         actor_id: null,
         action: "units_imported_by_operator",
-        diff: { ...res.applied, summary: res.summary },
-      });
-      revalidatePath("/");
-      revalidatePath(`/admin/projects/${projectId}/inventory`);
+        diff: { ...res.applied, summary: res.summary, complete: res.ok },
+      }).catch(error => console.error("[inventory] import audit failed", error));
     }
     return res;
   } catch (e) {
@@ -430,6 +443,7 @@ export async function adminListInterests(projectId: string): Promise<{ interests
     db.from("project_commercial_interests").select("org_id, kind, note, orgs(name_ru)").eq("project_id", projectId),
     db.from("orgs").select("id, name_ru").eq("kind", "broker").order("name_ru"),
   ]);
+  if (i.error || o.error) throw new Error("Не удалось загрузить коммерческие интересы и организации");
   return {
     interests: ((i.data ?? []) as unknown as { org_id: string; kind: string; note: string; orgs: { name_ru: string } | null }[]).map((r) => ({
       org_id: r.org_id,
@@ -474,3 +488,5 @@ export async function adminRemoveInterest(projectId: string, orgId: string, kind
     return { ok: false, error: e instanceof Error ? e.message : "Ошибка" };
   }
 }
+
+
